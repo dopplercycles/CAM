@@ -42,7 +42,9 @@ logger = logging.getLogger("cam.dashboard")
 HEARTBEAT_INTERVAL = 10
 
 # How long before we consider an agent offline (seconds)
-HEARTBEAT_TIMEOUT = 30
+# Set higher than the agent's heartbeat interval (default 30s) to
+# allow for network jitter without false offline flickers.
+HEARTBEAT_TIMEOUT = 45
 
 # Path to static files directory (index.html lives here)
 STATIC_DIR = Path(__file__).parent / "static"
