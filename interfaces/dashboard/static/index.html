@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAM Dashboard</title>
+    <style>
+        /* --- Reset & Base --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+            background: #0f1923;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* --- Header --- */
+        header {
+            background: #1a2332;
+            border-bottom: 1px solid #2a3a4a;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .logo span {
+            color: #5b9bd5;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e74c3c;
+        }
+
+        .status-dot.connected {
+            background: #00d672;
+        }
+
+        /* --- Main Content --- */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #8ab4d6;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        /* --- Agent Grid --- */
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        /* --- Agent Card --- */
+        .agent-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1.25rem;
+            transition: border-color 0.2s;
+        }
+
+        .agent-card:hover {
+            border-color: #3a5a7a;
+        }
+
+        .agent-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .agent-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .agent-status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+        }
+
+        .agent-status-badge.online {
+            background: rgba(0, 214, 114, 0.15);
+            color: #00d672;
+        }
+
+        .agent-status-badge.offline {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .agent-status-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .agent-status-badge.online .dot {
+            background: #00d672;
+        }
+
+        .agent-status-badge.offline .dot {
+            background: #e74c3c;
+        }
+
+        .agent-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .agent-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .agent-detail .label {
+            color: #6a7a8a;
+        }
+
+        .agent-detail .value {
+            color: #c0c8d0;
+            font-family: monospace;
+        }
+
+        /* --- Empty State --- */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #4a5a6a;
+        }
+
+        .empty-state h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #6a7a8a;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .empty-state code {
+            background: #1a2332;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 640px) {
+            header {
+                flex-direction: column;
+                gap: 0.5rem;
+                text-align: center;
+            }
+
+            .agent-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo"><span>CAM</span> Dashboard</div>
+        <div class="connection-status">
+            <div class="status-dot" id="ws-status-dot"></div>
+            <span id="ws-status-text">Connecting...</span>
+        </div>
+    </header>
+
+    <main>
+        <h2>Agent Status Board</h2>
+        <div id="agent-board">
+            <!-- Agent cards rendered here by JS -->
+        </div>
+    </main>
+
+    <script>
+        // ---------------------------------------------------------------
+        // State
+        // ---------------------------------------------------------------
+        let agents = [];
+        let ws = null;
+        let reconnectTimer = null;
+
+        const board = document.getElementById("agent-board");
+        const statusDot = document.getElementById("ws-status-dot");
+        const statusText = document.getElementById("ws-status-text");
+
+        // ---------------------------------------------------------------
+        // WebSocket connection
+        // ---------------------------------------------------------------
+        function connect() {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/dashboard`);
+
+            ws.onopen = () => {
+                statusDot.classList.add("connected");
+                statusText.textContent = "Connected";
+                // Clear any pending reconnect
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === "agent_status") {
+                    agents = data.agents;
+                    renderAgents();
+                }
+            };
+
+            ws.onclose = () => {
+                statusDot.classList.remove("connected");
+                statusText.textContent = "Disconnected — retrying...";
+                // Auto-reconnect after 3 seconds
+                reconnectTimer = setTimeout(connect, 3000);
+            };
+
+            ws.onerror = () => {
+                // onclose will fire after this, which handles reconnect
+                ws.close();
+            };
+        }
+
+        // ---------------------------------------------------------------
+        // Render agent cards
+        // ---------------------------------------------------------------
+        function renderAgents() {
+            if (agents.length === 0) {
+                board.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No agents connected</h3>
+                        <p>Agents will appear here when they connect via WebSocket.<br>
+                        Endpoint: <code>ws://&lt;dashboard-ip&gt;:8080/ws/agent/&lt;agent-id&gt;</code></p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort: online agents first, then alphabetical by name
+            const sorted = [...agents].sort((a, b) => {
+                if (a.status !== b.status) return a.status === "online" ? -1 : 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            board.innerHTML = '<div class="agent-grid">' +
+                sorted.map(agent => agentCard(agent)).join("") +
+                '</div>';
+        }
+
+        function agentCard(agent) {
+            const isOnline = agent.status === "online";
+            const statusClass = isOnline ? "online" : "offline";
+
+            return `
+                <div class="agent-card">
+                    <div class="agent-card-header">
+                        <div class="agent-name">${escapeHtml(agent.name)}</div>
+                        <div class="agent-status-badge ${statusClass}">
+                            <div class="dot"></div>
+                            ${agent.status}
+                        </div>
+                    </div>
+                    <div class="agent-details">
+                        <div class="agent-detail">
+                            <span class="label">IP Address</span>
+                            <span class="value">${escapeHtml(agent.ip_address)}</span>
+                        </div>
+                        <div class="agent-detail">
+                            <span class="label">Last Heartbeat</span>
+                            <span class="value">${formatTime(agent.last_heartbeat)}</span>
+                        </div>
+                        <div class="agent-detail">
+                            <span class="label">Connected Since</span>
+                            <span class="value">${formatTime(agent.connected_at)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ---------------------------------------------------------------
+        // Utility functions
+        // ---------------------------------------------------------------
+        function formatTime(isoString) {
+            if (!isoString) return "—";
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+
+            if (diffSec < 5) return "just now";
+            if (diffSec < 60) return `${diffSec}s ago`;
+            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+            if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+            return date.toLocaleString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Update relative timestamps every 5 seconds
+        setInterval(() => {
+            if (agents.length > 0) renderAgents();
+        }, 5000);
+
+        // ---------------------------------------------------------------
+        // Start
+        // ---------------------------------------------------------------
+        connect();
+    </script>
+</body>
+</html>
