@@ -22,6 +22,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from core.agent_registry import AgentRegistry
+from core.task import TaskQueue, TaskComplexity
+from core.orchestrator import Orchestrator
 
 
 # ---------------------------------------------------------------------------
@@ -68,8 +70,18 @@ agent_websockets: dict[str, WebSocket] = {}
 # Browser clients watching the dashboard (receive status pushes)
 dashboard_clients: list[WebSocket] = []
 
+# Task queue — shared between dashboard and orchestrator
+task_queue = TaskQueue()
+
+# Pending task dispatch responses — task_id → asyncio.Future
+# Used by dispatch_to_agent() to wait for agent command_responses
+pending_task_responses: dict[str, asyncio.Future] = {}
+
 # Kill switch state — when True, all autonomous action is halted
 kill_switch_active: bool = False
+
+# Background task handle for the orchestrator loop
+orchestrator_task: asyncio.Task | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +114,157 @@ async def broadcast_agent_status():
     await broadcast_to_dashboards({"type": "agent_status", "agents": data})
 
 
+async def broadcast_task_status():
+    """Push current task queue state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "task_status",
+        "tasks": task_queue.to_broadcast_list(),
+        "counts": task_queue.get_status(),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator callbacks — push OATI phase changes to dashboards in real time
+# ---------------------------------------------------------------------------
+
+async def on_task_phase_change(task, phase, detail):
+    """Called by the orchestrator at each OATI phase boundary."""
+    await broadcast_to_dashboards({
+        "type": "task_phase",
+        "task_id": task.task_id,
+        "short_id": task.short_id,
+        "phase": phase,
+        "detail": detail,
+    })
+
+
+async def on_task_update():
+    """Called by the orchestrator when any task's status changes."""
+    await broadcast_task_status()
+
+
+# ---------------------------------------------------------------------------
+# Agent dispatch — sends tasks to remote agents, waits for response
+# ---------------------------------------------------------------------------
+
+# How long to wait for an agent to respond before timing out (seconds)
+AGENT_DISPATCH_TIMEOUT = 120
+
+
+async def dispatch_to_agent(task, plan):
+    """Dispatch a task to an available remote agent.
+
+    Routing logic:
+    1. If task.assigned_agent is set and that agent is online → use it
+    2. Otherwise → pick the first available agent from the registry
+    3. If no agents available → return None (orchestrator falls back to model response)
+
+    Sends the task description as a command via the agent's WebSocket,
+    then waits for the agent's command_response with a matching task_id.
+
+    Args:
+        task: The Task being executed.
+        plan: The plan dict from the THINK phase (unused for now, available for future).
+
+    Returns:
+        The agent's response string, or None if no agent was available.
+    """
+    # --- Routing: find the target agent ---
+    agent_id = None
+
+    if task.assigned_agent:
+        # Check if the pre-assigned agent is online and connected
+        agent_info = registry.get_by_id(task.assigned_agent)
+        if agent_info and agent_info.status == "online" and task.assigned_agent in agent_websockets:
+            agent_id = task.assigned_agent
+
+    if agent_id is None:
+        # Pick the first available agent
+        available = registry.get_available()
+        for agent_info in available:
+            if agent_info.agent_id in agent_websockets:
+                agent_id = agent_info.agent_id
+                break
+
+    if agent_id is None:
+        logger.info("No agents available for task %s — falling back to model", task.short_id)
+        return None
+
+    agent_info = registry.get_by_id(agent_id)
+    agent_name = agent_info.name if agent_info else agent_id
+
+    # --- Mark agent busy, set task assignment ---
+    task.assigned_agent = agent_name
+    if agent_info:
+        agent_info.status = "busy"
+    await broadcast_agent_status()
+
+    logger.info(
+        "Dispatching task %s to agent '%s' (%s)",
+        task.short_id, agent_name, agent_id,
+    )
+    await broadcast_to_dashboards({
+        "type": "task_phase",
+        "task_id": task.task_id,
+        "short_id": task.short_id,
+        "phase": "ACT",
+        "detail": f"Dispatching to {agent_name}",
+    })
+
+    # --- Send command and wait for response ---
+    future = asyncio.get_event_loop().create_future()
+    pending_task_responses[task.task_id] = future
+
+    try:
+        ws = agent_websockets[agent_id]
+        await ws.send_json({
+            "type": "command",
+            "command": task.description,
+            "task_id": task.task_id,
+        })
+
+        # Wait for the agent to respond (or timeout)
+        result = await asyncio.wait_for(future, timeout=AGENT_DISPATCH_TIMEOUT)
+        logger.info(
+            "Agent '%s' responded to task %s: %.200s",
+            agent_name, task.short_id, result,
+        )
+        return result
+
+    except asyncio.TimeoutError:
+        logger.warning(
+            "Agent '%s' timed out on task %s after %ds",
+            agent_name, task.short_id, AGENT_DISPATCH_TIMEOUT,
+        )
+        return f"[timeout] Agent '{agent_name}' did not respond within {AGENT_DISPATCH_TIMEOUT}s"
+
+    except Exception as e:
+        logger.warning(
+            "Dispatch to agent '%s' failed for task %s: %s",
+            agent_name, task.short_id, e,
+        )
+        return None
+
+    finally:
+        pending_task_responses.pop(task.task_id, None)
+        # Restore agent to online
+        if agent_info and agent_info.status == "busy":
+            agent_info.status = "online"
+        await broadcast_agent_status()
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator instance — uses the shared task queue and callbacks
+# ---------------------------------------------------------------------------
+
+orchestrator = Orchestrator(
+    queue=task_queue,
+    on_phase_change=on_task_phase_change,
+    on_task_update=on_task_update,
+    on_dispatch_to_agent=dispatch_to_agent,
+)
+
+
 # ---------------------------------------------------------------------------
 # Kill switch — CAM Constitution: "Prominent, always visible. One click
 # halts all autonomous action across all agents."
@@ -121,6 +284,9 @@ async def activate_kill_switch():
     global kill_switch_active
     kill_switch_active = True
     logger.critical("KILL SWITCH ACTIVATED — shutting down all agents")
+
+    # Stop the orchestrator loop
+    orchestrator.stop()
 
     shutdown_msg = {"type": "shutdown", "reason": "kill_switch"}
 
@@ -176,9 +342,14 @@ async def check_heartbeats():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start background tasks on startup, clean up on shutdown."""
+    global orchestrator_task
     logger.info("CAM Dashboard starting up")
     heartbeat_task = asyncio.create_task(check_heartbeats())
+    orchestrator_task = asyncio.create_task(orchestrator.run())
+    logger.info("Orchestrator loop started as background task")
     yield
+    orchestrator.stop()
+    orchestrator_task.cancel()
     heartbeat_task.cancel()
     logger.info("CAM Dashboard shutting down")
 
@@ -211,6 +382,15 @@ async def get_agents():
     then switches to WebSocket for real-time updates.
     """
     return registry.to_broadcast_list()
+
+
+@app.get("/api/tasks")
+async def get_tasks():
+    """Return current task queue state as JSON."""
+    return {
+        "tasks": task_queue.to_broadcast_list(),
+        "counts": task_queue.get_status(),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -266,17 +446,27 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                 await broadcast_agent_status()
 
             elif msg_type == "command_response":
-                # Agent is responding to a command — relay to dashboards
+                response_text = data.get("response", "")
+                task_id = data.get("task_id")
+
                 logger.info(
-                    "Agent '%s' response: %s",
-                    agent_id, data.get("response", ""),
+                    "Agent '%s' response (task_id=%s): %s",
+                    agent_id, task_id, response_text,
                 )
-                await broadcast_to_dashboards({
-                    "type": "command_response",
-                    "agent_id": agent_id,
-                    "command": data.get("command", ""),
-                    "response": data.get("response", ""),
-                })
+
+                # If this response is for a dispatched task, resolve the Future
+                if task_id and task_id in pending_task_responses:
+                    future = pending_task_responses[task_id]
+                    if not future.done():
+                        future.set_result(response_text)
+                else:
+                    # Manual command from dashboard — relay as before
+                    await broadcast_to_dashboards({
+                        "type": "command_response",
+                        "agent_id": agent_id,
+                        "command": data.get("command", ""),
+                        "response": response_text,
+                    })
 
     except WebSocketDisconnect:
         logger.info("Agent '%s' disconnected", agent_id)
@@ -315,8 +505,15 @@ async def dashboard_websocket(websocket: WebSocket):
     # Also send current kill switch state
     await websocket.send_json({"type": "kill_switch", "active": kill_switch_active})
 
+    # Send current task queue state
+    await websocket.send_json({
+        "type": "task_status",
+        "tasks": task_queue.to_broadcast_list(),
+        "counts": task_queue.get_status(),
+    })
+
     try:
-        # Listen for dashboard commands (kill switch, future: agent controls)
+        # Listen for dashboard commands (kill switch, task submit, agent controls)
         while True:
             raw = await websocket.receive_text()
             try:
@@ -364,6 +561,50 @@ async def dashboard_websocket(websocket: WebSocket):
                         "command": command_text,
                         "response": "[error] Agent is offline",
                     })
+
+            elif msg.get("type") == "task_submit":
+                # Submit a new task to the queue
+                description = (msg.get("description") or "").strip()
+                complexity_str = (msg.get("complexity") or "low").lower()
+
+                if not description:
+                    await websocket.send_json({
+                        "type": "task_submitted",
+                        "ok": False,
+                        "error": "Description is required",
+                    })
+                    continue
+
+                try:
+                    complexity = TaskComplexity(complexity_str)
+                except ValueError:
+                    complexity = TaskComplexity.LOW
+
+                task = task_queue.add_task(
+                    description=description,
+                    source="dashboard",
+                    complexity=complexity,
+                )
+                logger.info(
+                    "Task %s submitted from dashboard: %s",
+                    task.short_id, description,
+                )
+
+                await websocket.send_json({
+                    "type": "task_submitted",
+                    "ok": True,
+                    "task_id": task.task_id,
+                    "short_id": task.short_id,
+                })
+                await broadcast_task_status()
+
+            elif msg.get("type") == "task_list":
+                # Dashboard requesting a full task list refresh
+                await websocket.send_json({
+                    "type": "task_status",
+                    "tasks": task_queue.to_broadcast_list(),
+                    "counts": task_queue.get_status(),
+                })
 
     except WebSocketDisconnect:
         if websocket in dashboard_clients:

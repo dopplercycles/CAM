@@ -5,8 +5,8 @@ The brain of CAM. Runs the main OBSERVE → THINK → ACT → ITERATE loop
 that drives all autonomous behavior.
 
 THINK uses the ModelRouter to send the task description to the right
-model based on complexity. ACT is still a placeholder — tool execution
-and sub-agent dispatch come later.
+model based on complexity. ACT dispatches tasks to remote agents when
+available, falling back to the model response from THINK.
 
 Usage:
     from core.orchestrator import Orchestrator
@@ -66,12 +66,27 @@ class Orchestrator:
         self,
         queue: TaskQueue | None = None,
         router: ModelRouter | None = None,
+        on_phase_change=None,
+        on_task_update=None,
+        on_dispatch_to_agent=None,
     ):
         # Task queue — shared with other components (dashboard, CLI, etc.)
-        self.queue = queue or TaskQueue()
+        # Note: can't use `queue or TaskQueue()` because an empty queue is falsy
+        self.queue = queue if queue is not None else TaskQueue()
 
         # Model router — sends prompts to the right model by complexity
-        self.router = router or ModelRouter()
+        self.router = router if router is not None else ModelRouter()
+
+        # Optional callbacks for real-time dashboard updates.
+        # on_phase_change(task, phase, detail) — called at each OATI boundary
+        # on_task_update() — called when any task's status changes
+        self._on_phase_change = on_phase_change
+        self._on_task_update = on_task_update
+
+        # Optional callback for dispatching tasks to remote agents.
+        # Signature: async (task: Task, plan: dict) -> str | None
+        # Returns the agent's response string, or None to fall back to model response.
+        self._on_dispatch_to_agent = on_dispatch_to_agent
 
         # Flag to stop the loop gracefully (kill switch, shutdown, etc.)
         self._running: bool = False
@@ -81,6 +96,32 @@ class Orchestrator:
         self._poll_interval: float = 1.0
 
         logger.info("Orchestrator initialized (router=%s)", type(self.router).__name__)
+
+    # -------------------------------------------------------------------
+    # Callback helpers — errors here must never break the OATI loop
+    # -------------------------------------------------------------------
+
+    async def _notify_phase(self, task: Task, phase: str, detail: str = ""):
+        """Push a phase change to the dashboard (if callback is set)."""
+        if self._on_phase_change is None:
+            return
+        try:
+            result = self._on_phase_change(task, phase, detail)
+            if asyncio.iscoroutine(result):
+                await result
+        except Exception:
+            logger.debug("Phase callback error (non-fatal)", exc_info=True)
+
+    async def _notify_task_update(self):
+        """Push a task status change to the dashboard (if callback is set)."""
+        if self._on_task_update is None:
+            return
+        try:
+            result = self._on_task_update()
+            if asyncio.iscoroutine(result):
+                await result
+        except Exception:
+            logger.debug("Task update callback error (non-fatal)", exc_info=True)
 
     # -------------------------------------------------------------------
     # The four phases
@@ -106,6 +147,8 @@ class Orchestrator:
 
         # Claim the task — mark it as running so nobody else grabs it
         task.status = TaskStatus.RUNNING
+        await self._notify_phase(task, "OBSERVE", "Picked up task")
+        await self._notify_task_update()
         logger.info(
             "[OBSERVE] Picked up task %s: %s",
             task.short_id, task.description,
@@ -130,6 +173,7 @@ class Orchestrator:
             A plan dictionary with the model's response and metadata.
         """
         router_complexity = self.COMPLEXITY_MAP.get(task.complexity, "simple")
+        await self._notify_phase(task, "THINK", f"Routing to {router_complexity} model")
 
         logger.info(
             "[THINK] Analyzing task %s (complexity=%s → %s): %s",
@@ -175,13 +219,10 @@ class Orchestrator:
     async def act(self, task: Task, plan: dict) -> str:
         """ACT — Execute the plan.
 
-        This is where tools get called, sub-agents get dispatched,
-        and model responses get generated. The security framework
-        will classify every action before execution (safe/logged/
-        gated/blocked per the Constitution).
-
-        For now: returns the model's response from the THINK phase.
-        Tool execution and sub-agent dispatch come later.
+        Tries to dispatch the task to a remote agent first. If an agent
+        handles it, its response becomes the result. If no agents are
+        available (or no dispatch callback is set), falls back to the
+        model response from the THINK phase.
 
         Args:
             task: The task being executed.
@@ -190,14 +231,37 @@ class Orchestrator:
         Returns:
             A result string describing what was done.
         """
+        # Try agent dispatch first
+        if self._on_dispatch_to_agent is not None:
+            await self._notify_phase(task, "ACT", "Checking for available agents")
+            logger.info(
+                "[ACT] Task %s — attempting agent dispatch",
+                task.short_id,
+            )
+            try:
+                agent_result = await self._on_dispatch_to_agent(task, plan)
+            except Exception as e:
+                logger.warning(
+                    "[ACT] Agent dispatch failed for task %s: %s",
+                    task.short_id, e,
+                )
+                agent_result = None
+
+            if agent_result is not None:
+                logger.info(
+                    "[ACT] Task %s handled by agent '%s': %.200s%s",
+                    task.short_id, task.assigned_agent or "unknown",
+                    agent_result, "..." if len(agent_result) > 200 else "",
+                )
+                return agent_result
+
+        # Fallback — use the model response from THINK
+        await self._notify_phase(task, "ACT", f"Executing via {plan.get('model', 'unknown')}")
         logger.info(
-            "[ACT] Executing task %s (model=%s): %s",
-            task.short_id, plan.get("model", "unknown"), task.description,
+            "[ACT] Task %s — no agent available, using model response (model=%s)",
+            task.short_id, plan.get("model", "unknown"),
         )
 
-        # For now, the model's response IS the result.
-        # When tools are added, this is where we'd parse the plan
-        # for tool calls and execute them.
         result = plan.get("model_response", f"Completed: {task.description}")
 
         logger.info(
@@ -222,10 +286,14 @@ class Orchestrator:
             task:   The completed task.
             result: The output from the ACT phase.
         """
+        await self._notify_phase(task, "ITERATE", "Wrapping up")
+
         task.status = TaskStatus.COMPLETED
         task.completed_at = datetime.now(timezone.utc)
         task.result = result
 
+        await self._notify_phase(task, "COMPLETED", "Done")
+        await self._notify_task_update()
         logger.info(
             "[ITERATE] Task %s completed: %s",
             task.short_id, result,
@@ -278,6 +346,8 @@ class Orchestrator:
                     task.status = TaskStatus.FAILED
                     task.completed_at = datetime.now(timezone.utc)
                     task.result = str(e)
+                    await self._notify_phase(task, "FAILED", str(e))
+                    await self._notify_task_update()
                     logger.error(
                         "Task %s failed: %s", task.short_id, e, exc_info=True,
                     )

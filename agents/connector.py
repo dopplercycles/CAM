@@ -132,16 +132,21 @@ async def listen_for_commands(ws):
 
         elif msg_type == "command":
             command_text = msg.get("command", "")
-            logger.info("Command received: %s", command_text)
+            task_id = msg.get("task_id")
+            logger.info("Command received: %s (task_id=%s)", command_text, task_id)
 
             # Acknowledge receipt — actual execution comes later
             # when the orchestrator and tool framework are built
-            response = json.dumps({
+            resp = {
                 "type": "command_response",
                 "command": command_text,
                 "response": f"Acknowledged: {command_text}",
-            })
-            await ws.send(response)
+            }
+            # Echo task_id back so the orchestrator can correlate responses
+            if task_id is not None:
+                resp["task_id"] = task_id
+
+            await ws.send(json.dumps(resp))
             logger.info("Acknowledgment sent for: %s", command_text)
 
     # Connection closed without shutdown command
