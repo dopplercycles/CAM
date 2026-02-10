@@ -4,9 +4,9 @@ CAM Core Orchestrator
 The brain of CAM. Runs the main OBSERVE → THINK → ACT → ITERATE loop
 that drives all autonomous behavior.
 
-Right now this is the skeleton — placeholders where the model router,
-memory system, and tool framework will plug in later. But the loop
-structure and task flow are real and ready to build on.
+THINK uses the ModelRouter to send the task description to the right
+model based on complexity. ACT is still a placeholder — tool execution
+and sub-agent dispatch come later.
 
 Usage:
     from core.orchestrator import Orchestrator
@@ -21,6 +21,7 @@ import logging
 from datetime import datetime, timezone
 
 from core.task import Task, TaskQueue, TaskStatus, TaskComplexity
+from core.model_router import ModelRouter, ModelResponse
 
 
 # ---------------------------------------------------------------------------
@@ -45,21 +46,32 @@ class Orchestrator:
     The orchestrator runs a continuous loop with four phases:
 
         OBSERVE  — Check for new tasks from the queue
-        THINK    — Analyze the task, plan an approach
-        ACT      — Execute the plan (tools, model calls, sub-agents)
+        THINK    — Send task to the model router, get analysis/plan
+        ACT      — Execute the plan (placeholder — tools come later)
         ITERATE  — Log results, update memory, check for follow-ups
 
-    Right now THINK and ACT are placeholders. As we build out the model
-    router, memory system, and tool framework, they'll gain real logic.
-
-    The TaskQueue is in-memory for now. Phase 1 gets this loop running;
-    persistent task storage (JSON/SQLite) comes with the working memory
-    module in core/memory/working.py.
+    THINK uses the ModelRouter to route tasks to the right model based
+    on complexity. The TaskQueue is in-memory for now; persistent task
+    storage (JSON/SQLite) comes with core/memory/working.py.
     """
 
-    def __init__(self, queue: TaskQueue | None = None):
+    # Map TaskComplexity → model router complexity tier
+    COMPLEXITY_MAP = {
+        TaskComplexity.LOW: "simple",       # → glm-4.7-flash (local, free)
+        TaskComplexity.MEDIUM: "routine",   # → gpt-oss:20b (local, free)
+        TaskComplexity.HIGH: "complex",     # → Claude API (quality matters)
+    }
+
+    def __init__(
+        self,
+        queue: TaskQueue | None = None,
+        router: ModelRouter | None = None,
+    ):
         # Task queue — shared with other components (dashboard, CLI, etc.)
         self.queue = queue or TaskQueue()
+
+        # Model router — sends prompts to the right model by complexity
+        self.router = router or ModelRouter()
 
         # Flag to stop the loop gracefully (kill switch, shutdown, etc.)
         self._running: bool = False
@@ -68,7 +80,7 @@ class Orchestrator:
         # Keeps CPU usage near zero when there's nothing to do.
         self._poll_interval: float = 1.0
 
-        logger.info("Orchestrator initialized")
+        logger.info("Orchestrator initialized (router=%s)", type(self.router).__name__)
 
     # -------------------------------------------------------------------
     # The four phases
@@ -101,41 +113,62 @@ class Orchestrator:
         return task
 
     async def think(self, task: Task) -> dict:
-        """THINK — Analyze the task and plan an approach.
+        """THINK — Analyze the task using the model router.
 
-        This is where the model router will be called to:
-        - Classify the task complexity (low/medium/high)
-        - Retrieve relevant memory (long-term knowledge, past episodes)
-        - Choose the right model for the job
-        - Break complex tasks into sub-steps
-        - Determine which tools or sub-agents are needed
+        Sends the task description to the appropriate model (determined
+        by task complexity) and returns the model's analysis as the plan.
 
-        For now: logs the task and returns a placeholder plan.
+        Future enhancements:
+        - Retrieve relevant memory before prompting
+        - Ask the model to break complex tasks into sub-steps
+        - Identify which tools or sub-agents are needed
 
         Args:
             task: The task to analyze.
 
         Returns:
-            A plan dictionary describing what to do.
+            A plan dictionary with the model's response and metadata.
         """
+        router_complexity = self.COMPLEXITY_MAP.get(task.complexity, "simple")
+
         logger.info(
-            "[THINK] Analyzing task %s: %s",
-            task.short_id, task.description,
+            "[THINK] Analyzing task %s (complexity=%s → %s): %s",
+            task.short_id, task.complexity.value, router_complexity,
+            task.description,
         )
 
-        # Placeholder — will be replaced by model router + memory lookup
+        # Build the prompt — ask the model to analyze and plan
+        system_prompt = (
+            "You are CAM, an AI assistant for Doppler Cycles, a motorcycle "
+            "diagnostics and content creation business. Analyze the task and "
+            "provide a concise, actionable response. Be specific and practical."
+        )
+
+        response: ModelResponse = await self.router.route(
+            prompt=task.description,
+            task_complexity=router_complexity,
+            system_prompt=system_prompt,
+        )
+
         plan = {
             "task_id": task.task_id,
             "description": task.description,
             "complexity": task.complexity.value,
-            "model": "placeholder",       # Future: route to Ollama/Kimi/Claude
-            "tools_needed": [],           # Future: identify required tools
-            "sub_tasks": [],              # Future: break into steps
+            "model": response.model,
+            "backend": response.backend,
+            "model_response": response.text,
+            "tokens": response.total_tokens,
+            "latency_ms": response.latency_ms,
+            "cost_usd": response.cost_usd,
+            "tools_needed": [],           # Future: parse from model response
+            "sub_tasks": [],              # Future: parse from model response
         }
 
         logger.info(
-            "[THINK] Plan for task %s: complexity=%s",
-            task.short_id, plan["complexity"],
+            "[THINK] Task %s plan ready — model=%s, tokens=%d, "
+            "latency=%.0fms, cost=$%.6f",
+            task.short_id, response.model, response.total_tokens,
+            response.latency_ms, response.cost_usd,
         )
         return plan
 
@@ -147,7 +180,8 @@ class Orchestrator:
         will classify every action before execution (safe/logged/
         gated/blocked per the Constitution).
 
-        For now: returns a mock result string.
+        For now: returns the model's response from the THINK phase.
+        Tool execution and sub-agent dispatch come later.
 
         Args:
             task: The task being executed.
@@ -157,16 +191,19 @@ class Orchestrator:
             A result string describing what was done.
         """
         logger.info(
-            "[ACT] Executing task %s: %s",
-            task.short_id, task.description,
+            "[ACT] Executing task %s (model=%s): %s",
+            task.short_id, plan.get("model", "unknown"), task.description,
         )
 
-        # Placeholder — will be replaced by tool execution + model calls
-        result = f"Completed: {task.description}"
+        # For now, the model's response IS the result.
+        # When tools are added, this is where we'd parse the plan
+        # for tool calls and execute them.
+        result = plan.get("model_response", f"Completed: {task.description}")
 
         logger.info(
-            "[ACT] Task %s result: %s",
-            task.short_id, result,
+            "[ACT] Task %s result (%.0f tokens): %.200s%s",
+            task.short_id, plan.get("tokens", 0),
+            result, "..." if len(result) > 200 else "",
         )
         return result
 
@@ -273,12 +310,15 @@ class Orchestrator:
     def get_status(self) -> dict:
         """Return a snapshot of the orchestrator's current state.
 
-        Useful for the dashboard status panel.
+        Useful for the dashboard status panel. Includes queue status
+        and session cost tracking from the model router.
         """
         queue_status = self.queue.get_status()
+        cost_status = self.router.get_session_costs()
         return {
             "running": self._running,
             **queue_status,
+            "session_costs": cost_status,
         }
 
 
@@ -287,34 +327,46 @@ class Orchestrator:
 # ---------------------------------------------------------------------------
 
 async def _test():
-    """Quick smoke test: add tasks via the queue and run the loop."""
+    """Smoke test: submit a task and watch it flow through the full loop.
+
+    Uses a LOW complexity task so it routes to the local Ollama model
+    (glm-4.7-flash) — fast, free, no API keys needed.
+    """
     orch = Orchestrator()
 
-    # Add tasks through the queue (not the orchestrator directly)
+    # Add a task — LOW complexity routes to local Ollama
     orch.queue.add_task(
-        "research Harley-Davidson M-8 oil pump recall",
+        "What year was the Harley-Davidson Sportster first introduced? "
+        "Reply in one sentence.",
         source="cli",
-        complexity=TaskComplexity.MEDIUM,
-    )
-    orch.queue.add_task(
-        "draft YouTube script for barn find CB750",
-        source="dashboard",
-        complexity=TaskComplexity.HIGH,
+        complexity=TaskComplexity.LOW,
     )
 
-    # Run the loop — it will process both tasks and then idle
-    # We'll stop it after a short delay
-    async def stop_after_delay():
-        await asyncio.sleep(3)
+    # Run the loop — stop after it processes the task
+    async def stop_when_done():
+        while orch.queue.pending or orch.queue.running:
+            await asyncio.sleep(0.5)
+        # Give ITERATE a moment to finish
+        await asyncio.sleep(0.5)
         orch.stop()
 
-    await asyncio.gather(orch.run(), stop_after_delay())
+    await asyncio.gather(orch.run(), stop_when_done())
 
-    # Print final status
-    print(f"\nOrchestrator status: {orch.get_status()}")
-    print(f"Queue: {orch.queue}")
+    # Print results
+    print("\n" + "=" * 60)
+    print("ORCHESTRATOR TEST RESULTS")
+    print("=" * 60)
+
+    status = orch.get_status()
+    print(f"\nQueue: {status['completed']} completed, {status['failed']} failed")
+
+    costs = status["session_costs"]
+    print(f"Session: {costs['call_count']} model calls, "
+          f"{costs['total_tokens']} tokens, ${costs['total_cost_usd']}")
+
     for task in orch.queue.list_all():
-        print(f"  [{task.status.value:>9}] {task.short_id} — {task.description} → {task.result}")
+        print(f"\n[{task.status.value}] {task.short_id} — {task.description}")
+        print(f"  Result: {task.result}")
 
 
 if __name__ == "__main__":
