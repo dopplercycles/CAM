@@ -864,6 +864,115 @@
             color: #4a5a6a;
         }
 
+        /* --- Analytics Section --- */
+        .analytics-section {
+            margin-bottom: 2rem;
+        }
+
+        .analytics-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .analytics-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .analytics-card .card-label {
+            font-size: 0.75rem;
+            color: #6a7a8a;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .analytics-card .card-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #e0e0e0;
+        }
+
+        .analytics-card .card-value.accent {
+            color: #5b9bd5;
+        }
+
+        .analytics-card .card-value.success {
+            color: #00d672;
+        }
+
+        .analytics-card .card-value.cost {
+            color: #f59e0b;
+        }
+
+        .analytics-bar-chart {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+        }
+
+        .analytics-bar-chart h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8ab4d6;
+            margin-bottom: 0.75rem;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .bar-label {
+            flex: 0 0 140px;
+            font-size: 0.8rem;
+            color: #c0c8d0;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 20px;
+            background: #0f1923;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: #5b9bd5;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+            min-width: 2px;
+        }
+
+        .bar-count {
+            flex: 0 0 40px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            color: #8ab4d6;
+        }
+
+        .analytics-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
         /* --- Responsive --- */
         @media (max-width: 640px) {
             header {
@@ -941,6 +1050,42 @@
 
             <div class="task-history" id="task-history">
                 <div class="task-empty-state">No tasks yet. Submit one above.</div>
+            </div>
+        </section>
+
+        <section class="analytics-section">
+            <h2>Analytics</h2>
+            <div class="analytics-stats" id="analytics-stats">
+                <div class="analytics-card">
+                    <span class="card-label">Total Tasks</span>
+                    <span class="card-value" id="an-total-tasks">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="card-label">Success Rate</span>
+                    <span class="card-value success" id="an-success-rate">--</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="card-label">Avg Completion</span>
+                    <span class="card-value" id="an-avg-completion">--</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="card-label">Total Model Cost</span>
+                    <span class="card-value cost" id="an-model-cost">$0.00</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="card-label">Model Calls</span>
+                    <span class="card-value accent" id="an-model-calls">0</span>
+                </div>
+                <div class="analytics-card">
+                    <span class="card-label">Total Tokens</span>
+                    <span class="card-value" id="an-total-tokens">0</span>
+                </div>
+            </div>
+            <div class="analytics-bar-chart" id="analytics-bar-chart">
+                <h3>Tasks per Agent</h3>
+                <div id="agent-bar-chart">
+                    <div class="analytics-empty">No task data yet.</div>
+                </div>
             </div>
         </section>
 
@@ -1023,6 +1168,8 @@
                     handleEventLog(data.events || []);
                 } else if (data.type === "event") {
                     handleNewEvent(data.event);
+                } else if (data.type === "analytics") {
+                    handleAnalytics(data.data);
                 }
             };
 
@@ -1597,6 +1744,74 @@
             if (agents.length > 0) renderAgents();
             if (tasks.length > 0) renderTaskHistory();
         }, 5000);
+
+        // ---------------------------------------------------------------
+        // Analytics
+        // ---------------------------------------------------------------
+        let analyticsData = null;
+
+        function handleAnalytics(data) {
+            analyticsData = data;
+            renderAnalytics();
+        }
+
+        function renderAnalytics() {
+            if (!analyticsData) return;
+            const d = analyticsData;
+
+            document.getElementById("an-total-tasks").textContent = formatNumber(d.total_tasks);
+            document.getElementById("an-success-rate").textContent =
+                d.total_tasks > 0 ? d.success_rate.toFixed(1) + "%" : "--";
+            document.getElementById("an-avg-completion").textContent =
+                d.total_tasks > 0 ? formatDuration(d.avg_completion_seconds) : "--";
+            document.getElementById("an-model-cost").textContent = "$" + d.total_model_cost_usd.toFixed(4);
+            document.getElementById("an-model-calls").textContent = formatNumber(d.total_model_calls);
+            document.getElementById("an-total-tokens").textContent = formatNumber(d.total_model_tokens);
+
+            renderAgentBarChart(d.tasks_per_agent || {});
+        }
+
+        function renderAgentBarChart(agentTasks) {
+            const container = document.getElementById("agent-bar-chart");
+            const entries = Object.entries(agentTasks);
+
+            if (entries.length === 0) {
+                container.innerHTML = '<div class="analytics-empty">No task data yet.</div>';
+                return;
+            }
+
+            // Sort by count descending
+            entries.sort((a, b) => b[1] - a[1]);
+            const maxCount = entries[0][1];
+
+            container.innerHTML = entries.map(([agent, count]) => {
+                const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                return `
+                    <div class="bar-row">
+                        <span class="bar-label" title="${escapeHtml(agent)}">${escapeHtml(agent)}</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width:${pct}%"></div>
+                        </div>
+                        <span class="bar-count">${count}</span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function formatDuration(seconds) {
+            if (seconds == null || seconds === 0) return "--";
+            if (seconds < 60) return seconds.toFixed(1) + "s";
+            const m = Math.floor(seconds / 60);
+            const s = Math.round(seconds % 60);
+            return m + "m " + s + "s";
+        }
+
+        function formatNumber(n) {
+            if (n == null) return "0";
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+            if (n >= 1000) return (n / 1000).toFixed(1) + "K";
+            return String(n);
+        }
 
         // ---------------------------------------------------------------
         // Start

@@ -26,6 +26,7 @@ from core.event_logger import EventLogger
 from core.health_monitor import HealthMonitor
 from core.task import TaskQueue, TaskComplexity
 from core.orchestrator import Orchestrator
+from core.analytics import Analytics
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +72,9 @@ health_monitor = HealthMonitor(registry=registry, heartbeat_interval=30.0)
 
 # Event logger — centralized audit trail for all CAM activity
 event_logger = EventLogger(max_events=1000)
+
+# Analytics — SQLite-backed task history and model cost tracking
+analytics = Analytics(db_path="data/analytics.db")
 
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
@@ -151,6 +155,11 @@ async def broadcast_event(event_dict: dict):
 event_logger.set_broadcast_callback(broadcast_event)
 
 
+async def broadcast_analytics():
+    """Push current analytics summary to all connected dashboard browsers."""
+    await broadcast_to_dashboards({"type": "analytics", "data": analytics.get_summary()})
+
+
 # ---------------------------------------------------------------------------
 # Orchestrator callbacks — push OATI phase changes to dashboards in real time
 # ---------------------------------------------------------------------------
@@ -169,6 +178,11 @@ async def on_task_phase_change(task, phase, detail):
         "task", f"[{phase}] {detail or task.short_id}",
         task_id=task.short_id, phase=phase,
     )
+
+    # Record completed/failed tasks in analytics DB and push to dashboards
+    if phase in ("COMPLETED", "FAILED"):
+        analytics.record_task(task)
+        await broadcast_analytics()
 
 
 async def on_task_update():
@@ -315,6 +329,11 @@ def on_model_call(model, backend, tokens, latency_ms, cost_usd, task_short_id):
         latency_ms=round(latency_ms, 1), cost_usd=round(cost_usd, 6),
         task_id=task_short_id,
     )
+    analytics.record_model_call(
+        model=model, backend=backend, tokens=tokens,
+        latency_ms=latency_ms, cost_usd=cost_usd,
+        task_short_id=task_short_id,
+    )
 
 
 orchestrator = Orchestrator(
@@ -420,6 +439,7 @@ async def lifespan(app: FastAPI):
     orchestrator.stop()
     orchestrator_task.cancel()
     heartbeat_task.cancel()
+    analytics.close()
     logger.info("CAM Dashboard shutting down")
 
 
@@ -466,6 +486,12 @@ async def get_tasks():
 async def get_health():
     """Return current agent health metrics as JSON."""
     return health_monitor.to_broadcast_dict()
+
+
+@app.get("/api/analytics")
+async def get_analytics():
+    """Return aggregate analytics summary as JSON."""
+    return analytics.get_summary()
 
 
 @app.get("/api/events")
@@ -633,6 +659,9 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "event_log",
         "events": event_logger.get_recent(200),
     })
+
+    # Send current analytics summary
+    await websocket.send_json({"type": "analytics", "data": analytics.get_summary()})
 
     try:
         # Listen for dashboard commands (kill switch, task submit, agent controls)
