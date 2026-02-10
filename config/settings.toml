@@ -1,0 +1,58 @@
+# CAM Configuration
+# Edit values here. Reload from the dashboard without restarting.
+# Environment variables override: CAM_<SECTION>_<KEY> (e.g. CAM_DASHBOARD_PORT=9090)
+
+[dashboard]
+host = "0.0.0.0"
+port = 8080
+log_level = "info"
+heartbeat_check_interval = 10      # seconds between heartbeat sweeps
+heartbeat_timeout = 120             # fallback offline threshold (seconds)
+agent_dispatch_timeout = 120        # max wait for agent task response (seconds)
+default_event_count = 200           # events sent to dashboard on connect
+
+[orchestrator]
+poll_interval = 1.0                 # seconds between queue checks when idle
+
+[health]
+heartbeat_interval = 30.0           # expected seconds between agent heartbeats
+missed_heartbeat_threshold = 3      # consecutive misses before marking offline
+success_rate_threshold = 75.0       # below this % -> yellow health indicator
+
+[events]
+max_events = 1000                   # in-memory event log capacity
+
+[analytics]
+db_path = "data/analytics.db"
+
+[models]
+ollama_url = "http://localhost:11434"
+
+[models.routing]
+simple = "glm-4.7-flash"
+routine = "gpt-oss:20b"
+agentic = "kimi-k2.5"
+complex = "claude"
+nuanced = "claude"
+
+[models.costs.claude]
+input = 3.00                        # USD per million input tokens
+output = 15.00                      # USD per million output tokens
+
+[models.costs."kimi-k2.5"]
+input = 0.50
+output = 1.50
+
+[commands]
+status_report = 30
+system_info = 30
+restart_service = 60
+run_diagnostic = 90
+capture_sensor_data = 45
+
+[connector]
+heartbeat_interval = 30
+reconnect_delay = 3
+dashboard_host = "192.168.12.232"
+dashboard_port = 8080
+systemctl_timeout = 30

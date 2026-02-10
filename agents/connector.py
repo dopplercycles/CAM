@@ -91,6 +91,11 @@ def get_local_ip() -> str:
 # Track when the connector started so we can report agent uptime
 _CONNECTOR_START = time.monotonic()
 
+# Module-level settings — set from CLI args (which may come from config)
+_SYSTEMCTL_TIMEOUT: int = 30
+_DASHBOARD_HOST: str = "192.168.12.232"
+_DASHBOARD_PORT: int = 8080
+
 
 def parse_command(text: str) -> tuple[str, dict[str, str]]:
     """Parse a command string into (command_name, params_dict).
@@ -245,7 +250,7 @@ async def handle_restart_service(params: dict[str, str]) -> str:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=_SYSTEMCTL_TIMEOUT)
 
         stdout_text = stdout.decode().strip()
         stderr_text = stderr.decode().strip()
@@ -262,7 +267,7 @@ async def handle_restart_service(params: dict[str, str]) -> str:
 
         return result
     except asyncio.TimeoutError:
-        return f"Error: restart of '{service_name}' timed out after 30s"
+        return f"Error: restart of '{service_name}' timed out after {_SYSTEMCTL_TIMEOUT}s"
     except Exception as e:
         return f"Error restarting service '{service_name}': {e}"
 
@@ -314,7 +319,7 @@ async def handle_run_diagnostic() -> str:
         # Network connectivity: can we resolve the dashboard host?
         try:
             # Try to resolve the main machine IP (dashboard)
-            socket.getaddrinfo("192.168.12.232", 8080, socket.AF_INET, socket.SOCK_STREAM)
+            socket.getaddrinfo(_DASHBOARD_HOST, _DASHBOARD_PORT, socket.AF_INET, socket.SOCK_STREAM)
             lines.append("  Network:        dashboard host reachable")
         except socket.gaierror:
             warnings.append("  WARN: Cannot resolve dashboard host")
@@ -486,7 +491,8 @@ async def listen_for_commands(ws):
 
 
 async def heartbeat_loop(dashboard_url: str, agent_id: str, agent_name: str,
-                         interval: int, capabilities: list[str] | None = None):
+                         interval: int, capabilities: list[str] | None = None,
+                         reconnect_delay: int = 3):
     """Connect to the dashboard, send heartbeats, and listen for commands.
 
     Runs two concurrent tasks:
@@ -497,14 +503,14 @@ async def heartbeat_loop(dashboard_url: str, agent_id: str, agent_name: str,
     If a shutdown command is received, exits cleanly.
 
     Args:
-        dashboard_url:  WebSocket URL of the dashboard, e.g. ws://192.168.1.100:8080
-        agent_id:       Unique ID for this agent (used in the URL path)
-        agent_name:     Human-readable display name shown on the dashboard
-        interval:       Seconds between heartbeats
-        capabilities:   List of things this agent can do (e.g., ["research", "content"])
+        dashboard_url:   WebSocket URL of the dashboard, e.g. ws://192.168.1.100:8080
+        agent_id:        Unique ID for this agent (used in the URL path)
+        agent_name:      Human-readable display name shown on the dashboard
+        interval:        Seconds between heartbeats
+        capabilities:    List of things this agent can do (e.g., ["research", "content"])
+        reconnect_delay: Seconds to wait before retrying after disconnect
     """
     ws_url = f"{dashboard_url}/ws/agent/{agent_id}"
-    reconnect_delay = 3  # seconds to wait before retrying after disconnect
 
     while True:
         try:
@@ -585,6 +591,23 @@ def parse_args():
         default=None,
         help="List of capabilities (e.g., --capabilities research content tts)",
     )
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="Path to CAM settings.toml (optional — connector works without it)",
+    )
+    parser.add_argument(
+        "--reconnect-delay",
+        type=int,
+        default=None,
+        help="Seconds to wait before reconnecting after disconnect (default: 3)",
+    )
+    parser.add_argument(
+        "--systemctl-timeout",
+        type=int,
+        default=None,
+        help="Timeout for systemctl restart commands in seconds (default: 30)",
+    )
     return parser.parse_args()
 
 
@@ -660,17 +683,48 @@ DEPLOY_INSTRUCTIONS = """
 # ---------------------------------------------------------------------------
 
 def main():
+    global _SYSTEMCTL_TIMEOUT, _DASHBOARD_HOST, _DASHBOARD_PORT
+
     args = parse_args()
+
+    # Load config file if provided (optional — connector works without it)
+    connector_cfg = {}
+    if args.config:
+        try:
+            import tomllib
+            with open(args.config, "rb") as f:
+                toml_data = tomllib.load(f)
+            connector_cfg = toml_data.get("connector", {})
+            logger.info("Loaded config from %s", args.config)
+        except Exception as e:
+            logger.warning("Failed to load config %s: %s — using defaults", args.config, e)
 
     hostname = get_hostname()
     agent_id = args.id or hostname.lower().replace(" ", "-")
     agent_name = args.name or hostname
     capabilities = args.capabilities
 
+    # Resolve settings: CLI args > config file > hardcoded defaults
+    interval = args.interval  # CLI default is 30
+    reconnect_delay = (
+        args.reconnect_delay
+        if args.reconnect_delay is not None
+        else connector_cfg.get("reconnect_delay", 3)
+    )
+    _SYSTEMCTL_TIMEOUT = (
+        args.systemctl_timeout
+        if args.systemctl_timeout is not None
+        else connector_cfg.get("systemctl_timeout", 30)
+    )
+    _DASHBOARD_HOST = connector_cfg.get("dashboard_host", "192.168.12.232")
+    _DASHBOARD_PORT = connector_cfg.get("dashboard_port", 8080)
+
     logger.info("Agent ID:      %s", agent_id)
     logger.info("Agent Name:    %s", agent_name)
     logger.info("Dashboard:     %s", args.dashboard)
-    logger.info("Interval:      %ds", args.interval)
+    logger.info("Interval:      %ds", interval)
+    logger.info("Reconnect:     %ds", reconnect_delay)
+    logger.info("Systemctl TO:  %ds", _SYSTEMCTL_TIMEOUT)
     if capabilities:
         logger.info("Capabilities:  %s", capabilities)
 
@@ -679,8 +733,9 @@ def main():
             dashboard_url=args.dashboard,
             agent_id=agent_id,
             agent_name=agent_name,
-            interval=args.interval,
+            interval=interval,
             capabilities=capabilities,
+            reconnect_delay=reconnect_delay,
         ))
     except KeyboardInterrupt:
         logger.info("Stopped by user")

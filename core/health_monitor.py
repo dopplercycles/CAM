@@ -65,19 +65,23 @@ class AgentHealthMetrics:
     active_tasks: int = 0
     last_ping_rtt_ms: float | None = None
 
+    # Thresholds — set by HealthMonitor from config, defaults for safety
+    missed_hb_threshold: int = 3
+    success_rate_threshold: float = 75.0
+
     @property
     def health_level(self) -> str:
         """Green / yellow / red health indicator.
 
-        - green: 0 missed heartbeats AND error rate < 25%
-        - yellow: 1-2 missed OR error rate >= 25%
-        - red: 3+ missed heartbeats
+        - green: 0 missed heartbeats AND error rate above threshold
+        - yellow: 1+ missed OR error rate below threshold
+        - red: missed >= configured threshold (default 3)
         """
-        if self.missed_heartbeats >= 3:
+        if self.missed_heartbeats >= self.missed_hb_threshold:
             return "red"
         if self.missed_heartbeats >= 1:
             return "yellow"
-        if self.success_rate < 75.0 and (self.tasks_completed + self.tasks_failed) > 0:
+        if self.success_rate < self.success_rate_threshold and (self.tasks_completed + self.tasks_failed) > 0:
             return "yellow"
         return "green"
 
@@ -137,6 +141,16 @@ class HealthMonitor:
         self._registry = registry
         self._heartbeat_interval = heartbeat_interval
 
+        # Read thresholds from config, fall back to safe defaults
+        try:
+            from core.config import get_config
+            cfg = get_config()
+            self._missed_hb_threshold = cfg.health.missed_heartbeat_threshold
+            self._success_rate_threshold = cfg.health.success_rate_threshold
+        except Exception:
+            self._missed_hb_threshold = 3
+            self._success_rate_threshold = 75.0
+
         # agent_id -> AgentHealthMetrics
         self._metrics: dict[str, AgentHealthMetrics] = {}
 
@@ -144,8 +158,10 @@ class HealthMonitor:
         self._pending_pings: dict[str, tuple[str, float]] = {}
 
         logger.info(
-            "HealthMonitor initialized (heartbeat_interval=%.0fs)",
-            heartbeat_interval,
+            "HealthMonitor initialized (heartbeat_interval=%.0fs, "
+            "missed_threshold=%d, success_threshold=%.0f%%)",
+            heartbeat_interval, self._missed_hb_threshold,
+            self._success_rate_threshold,
         )
 
     # -------------------------------------------------------------------
@@ -155,7 +171,10 @@ class HealthMonitor:
     def _ensure_metrics(self, agent_id: str) -> AgentHealthMetrics:
         """Get or create metrics for an agent."""
         if agent_id not in self._metrics:
-            self._metrics[agent_id] = AgentHealthMetrics()
+            m = AgentHealthMetrics()
+            m.missed_hb_threshold = self._missed_hb_threshold
+            m.success_rate_threshold = self._success_rate_threshold
+            self._metrics[agent_id] = m
         return self._metrics[agent_id]
 
     # -------------------------------------------------------------------
@@ -245,7 +264,7 @@ class HealthMonitor:
             missed = int(elapsed / self._heartbeat_interval)
             metrics.missed_heartbeats = missed
 
-            if missed >= 3:
+            if missed >= self._missed_hb_threshold:
                 self._registry.deregister(agent_id)
                 newly_offline.append(agent_id)
                 logger.warning(

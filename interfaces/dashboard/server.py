@@ -22,11 +22,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from core.agent_registry import AgentRegistry
+from core.config import get_config
 from core.event_logger import EventLogger
 from core.health_monitor import HealthMonitor
 from core.task import TaskQueue, TaskComplexity
 from core.orchestrator import Orchestrator
 from core.analytics import Analytics
+from core.commands import CommandLibrary
 
 
 # ---------------------------------------------------------------------------
@@ -42,16 +44,10 @@ logger = logging.getLogger("cam.dashboard")
 
 
 # ---------------------------------------------------------------------------
-# Constants
+# Configuration — loaded once at startup, hot-reloadable via dashboard
 # ---------------------------------------------------------------------------
 
-# How often to run the heartbeat check (seconds)
-HEARTBEAT_CHECK_INTERVAL = 10
-
-# How long before we consider an agent offline (seconds)
-# Safety net — the HealthMonitor's 3-missed-heartbeats logic is the
-# primary offline detection mechanism now. This is just a fallback.
-HEARTBEAT_TIMEOUT = 120
+config = get_config()
 
 # Path to static files directory (index.html lives here)
 STATIC_DIR = Path(__file__).parent / "static"
@@ -65,16 +61,22 @@ STATIC_DIR = Path(__file__).parent / "static"
 # ---------------------------------------------------------------------------
 
 # Agent registry — tracks all agents, shared with orchestrator later
-registry = AgentRegistry(heartbeat_timeout=HEARTBEAT_TIMEOUT)
+# Note: heartbeat_timeout is read at construction — needs restart to change.
+registry = AgentRegistry(heartbeat_timeout=config.dashboard.heartbeat_timeout)
 
 # Health monitor — per-agent health metrics, 3-miss heartbeat policy
-health_monitor = HealthMonitor(registry=registry, heartbeat_interval=30.0)
+health_monitor = HealthMonitor(registry=registry, heartbeat_interval=config.health.heartbeat_interval)
 
 # Event logger — centralized audit trail for all CAM activity
-event_logger = EventLogger(max_events=1000)
+# Note: max_events is read at construction — needs restart to change.
+event_logger = EventLogger(max_events=config.events.max_events)
 
 # Analytics — SQLite-backed task history and model cost tracking
-analytics = Analytics(db_path="data/analytics.db")
+# Note: db_path is read at construction — needs restart to change.
+analytics = Analytics(db_path=config.analytics.db_path)
+
+# Command library — predefined commands for the dashboard command palette
+command_library = CommandLibrary()
 
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
@@ -194,8 +196,7 @@ async def on_task_update():
 # Agent dispatch — sends tasks to remote agents, waits for response
 # ---------------------------------------------------------------------------
 
-# How long to wait for an agent to respond before timing out (seconds)
-AGENT_DISPATCH_TIMEOUT = 120
+# Dispatch timeout is read from config at call time (hot-reloadable)
 
 
 async def dispatch_to_agent(task, plan):
@@ -284,7 +285,8 @@ async def dispatch_to_agent(task, plan):
         })
 
         # Wait for the agent to respond (or timeout)
-        result = await asyncio.wait_for(future, timeout=AGENT_DISPATCH_TIMEOUT)
+        dispatch_timeout = config.dashboard.agent_dispatch_timeout
+        result = await asyncio.wait_for(future, timeout=dispatch_timeout)
         logger.info(
             "Agent '%s' responded to task %s: %.200s",
             agent_name, task.short_id, result,
@@ -297,13 +299,13 @@ async def dispatch_to_agent(task, plan):
     except asyncio.TimeoutError:
         logger.warning(
             "Agent '%s' timed out on task %s after %ds",
-            agent_name, task.short_id, AGENT_DISPATCH_TIMEOUT,
+            agent_name, task.short_id, dispatch_timeout,
         )
         health_monitor.on_task_failed(agent_id)
         event_logger.warn("task", f"Agent {agent_name} timed out on {task.short_id}",
                           task_id=task.short_id, agent=agent_name,
-                          timeout=AGENT_DISPATCH_TIMEOUT)
-        return f"[timeout] Agent '{agent_name}' did not respond within {AGENT_DISPATCH_TIMEOUT}s"
+                          timeout=dispatch_timeout)
+        return f"[timeout] Agent '{agent_name}' did not respond within {dispatch_timeout}s"
 
     except Exception as e:
         logger.warning(
@@ -419,7 +421,7 @@ async def check_heartbeats():
     the dashboard indicators stay current.
     """
     while True:
-        await asyncio.sleep(HEARTBEAT_CHECK_INTERVAL)
+        await asyncio.sleep(config.dashboard.heartbeat_check_interval)
         newly_offline = health_monitor.check_heartbeats()
         if newly_offline:
             for aid in newly_offline:
@@ -506,6 +508,12 @@ async def get_analytics():
 async def get_events(count: int = 200):
     """Return recent events from the event log."""
     return event_logger.get_recent(count)
+
+
+@app.get("/api/config")
+async def get_config_endpoint():
+    """Return current configuration as JSON."""
+    return {"config": config.to_dict(), "last_loaded": config.last_loaded}
 
 
 @app.post("/api/events/export")
@@ -665,11 +673,24 @@ async def dashboard_websocket(websocket: WebSocket):
     # Send recent event log so the panel isn't empty on connect
     await websocket.send_json({
         "type": "event_log",
-        "events": event_logger.get_recent(200),
+        "events": event_logger.get_recent(config.dashboard.default_event_count),
+    })
+
+    # Send current config so the settings panel renders immediately
+    await websocket.send_json({
+        "type": "config",
+        "config": config.to_dict(),
+        "last_loaded": config.last_loaded,
     })
 
     # Send current analytics summary
     await websocket.send_json({"type": "analytics", "data": analytics.get_summary()})
+
+    # Send command library for the command palette
+    await websocket.send_json({
+        "type": "command_library",
+        "commands": command_library.to_broadcast_list(),
+    })
 
     try:
         # Listen for dashboard commands (kill switch, task submit, agent controls)
@@ -795,6 +816,102 @@ async def dashboard_websocket(websocket: WebSocket):
                         "error": "Agent is offline",
                     })
 
+            elif msg.get("type") == "command_execute":
+                # Execute a predefined command from the command palette
+                command_name = msg.get("command_name", "")
+                target_id = msg.get("agent_id", "")
+                params = msg.get("params", {})
+
+                cmd = command_library.get(command_name)
+                if not cmd:
+                    await websocket.send_json({
+                        "type": "command_execute_result",
+                        "ok": False,
+                        "error": f"Unknown command: {command_name}",
+                    })
+                    continue
+
+                # Build command string from name + params
+                param_parts = [command_name]
+                for p in cmd.parameters:
+                    value = params.get(p["name"])
+                    if value is None and p.get("default") is not None:
+                        value = p["default"]
+                    if value is not None:
+                        param_parts.append(f"{p['name']}={value}")
+                command_text = " ".join(param_parts)
+
+                if target_id not in agent_websockets:
+                    await websocket.send_json({
+                        "type": "command_execute_result",
+                        "ok": False,
+                        "error": "Agent is offline",
+                        "agent_id": target_id,
+                        "command_name": command_name,
+                    })
+                    event_logger.warn(
+                        "command",
+                        f"Command '{command_name}' failed: agent '{target_id}' offline",
+                        command=command_name, agent_id=target_id,
+                    )
+                    continue
+
+                try:
+                    await agent_websockets[target_id].send_json({
+                        "type": "command",
+                        "command": command_text,
+                    })
+                    logger.info(
+                        "Command palette: sent '%s' to agent '%s'",
+                        command_text, target_id,
+                    )
+                    event_logger.info(
+                        "command",
+                        f"Executed '{command_name}' on agent '{target_id}'",
+                        command=command_name, agent_id=target_id,
+                        params=params or None,
+                    )
+                    await websocket.send_json({
+                        "type": "command_execute_result",
+                        "ok": True,
+                        "agent_id": target_id,
+                        "command_name": command_name,
+                        "command_text": command_text,
+                    })
+                except Exception:
+                    logger.warning(
+                        "Failed to send command '%s' to agent '%s'",
+                        command_name, target_id,
+                    )
+                    await websocket.send_json({
+                        "type": "command_execute_result",
+                        "ok": False,
+                        "error": "Agent connection lost",
+                        "agent_id": target_id,
+                        "command_name": command_name,
+                    })
+
+            elif msg.get("type") == "command_list":
+                # Dashboard requesting a command library refresh
+                await websocket.send_json({
+                    "type": "command_library",
+                    "commands": command_library.to_broadcast_list(),
+                })
+
+            elif msg.get("type") == "config_reload":
+                # Reload config from disk and broadcast to all dashboards
+                changes = config.reload()
+                event_logger.info(
+                    "system",
+                    f"Configuration reloaded ({len(changes)} change(s))",
+                    changes=changes if changes else None,
+                )
+                await broadcast_to_dashboards({
+                    "type": "config",
+                    "config": config.to_dict(),
+                    "last_loaded": config.last_loaded,
+                })
+
     except WebSocketDisconnect:
         if websocket in dashboard_clients:
             dashboard_clients.remove(websocket)
@@ -808,4 +925,9 @@ async def dashboard_websocket(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
+    uvicorn.run(
+        app,
+        host=config.dashboard.host,
+        port=config.dashboard.port,
+        log_level=config.dashboard.log_level,
+    )

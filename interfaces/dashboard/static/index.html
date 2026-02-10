@@ -973,6 +973,221 @@
             font-size: 0.85rem;
         }
 
+        /* --- Command Palette --- */
+        .command-palette-section {
+            margin-bottom: 2rem;
+        }
+
+        .command-palette-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .command-palette-form select {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.5rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .command-palette-form select:focus {
+            border-color: #5b9bd5;
+        }
+
+        .command-params {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .command-param-group {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .command-param-group label {
+            font-size: 0.8rem;
+            color: #6a7a8a;
+            white-space: nowrap;
+        }
+
+        .command-param-group input {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.6rem;
+            outline: none;
+            width: 160px;
+        }
+
+        .command-param-group input:focus {
+            border-color: #5b9bd5;
+        }
+
+        .command-param-group input::placeholder {
+            color: #4a5a6a;
+        }
+
+        .command-description {
+            font-size: 0.8rem;
+            color: #6a7a8a;
+            margin-bottom: 0.5rem;
+        }
+
+        .command-execute-btn {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1.2rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .command-execute-btn:hover {
+            background: #3b82f6;
+        }
+
+        .command-execute-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .command-result-panel {
+            margin-top: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            color: #a0b0c0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.4;
+            display: none;
+        }
+
+        .command-result-panel.visible {
+            display: block;
+        }
+
+        .command-result-panel .result-header {
+            color: #5b9bd5;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .command-result-panel .result-error {
+            color: #e74c3c;
+        }
+
+        .command-result-panel .result-pending {
+            color: #f59e0b;
+        }
+
+        /* --- Settings Panel --- */
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .settings-header h2 {
+            margin-bottom: 0;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .settings-last-loaded {
+            font-size: 0.75rem;
+            color: #6a7a8a;
+            font-family: monospace;
+        }
+
+        .settings-reload-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .settings-reload-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .settings-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+
+        .settings-card h3 {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #5b9bd5;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.5rem;
+        }
+
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.2rem 0;
+            font-size: 0.78rem;
+        }
+
+        .settings-row .key {
+            color: #6a7a8a;
+        }
+
+        .settings-row .val {
+            color: #c0c8d0;
+            font-family: monospace;
+        }
+
         /* --- Responsive --- */
         @media (max-width: 640px) {
             header {
@@ -1055,6 +1270,23 @@
             </div>
         </section>
 
+        <section class="command-palette-section">
+            <h2>Command Palette</h2>
+
+            <div class="command-palette-form">
+                <select id="cmd-select" onchange="onCommandSelect()">
+                    <option value="">-- Select command --</option>
+                </select>
+                <select id="cmd-agent-select">
+                    <option value="">-- Select agent --</option>
+                </select>
+                <button class="command-execute-btn" id="cmd-execute-btn" onclick="executeCommand()" disabled>Execute</button>
+            </div>
+            <div class="command-description" id="cmd-description"></div>
+            <div class="command-params" id="cmd-params"></div>
+            <div class="command-result-panel" id="cmd-result-panel"></div>
+        </section>
+
         <section class="analytics-section">
             <h2>Analytics</h2>
             <div class="analytics-stats" id="analytics-stats">
@@ -1104,6 +1336,19 @@
             </div>
         </section>
 
+        <section class="settings-section">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <div class="settings-actions">
+                    <span class="settings-last-loaded" id="settings-last-loaded"></span>
+                    <button class="settings-reload-btn" onclick="reloadConfig()">Reload Config</button>
+                </div>
+            </div>
+            <div class="settings-grid" id="settings-grid">
+                <div class="analytics-empty">Waiting for config...</div>
+            </div>
+        </section>
+
         <h2>Agent Status Board</h2>
         <div id="agent-board">
             <!-- Agent cards rendered here by JS -->
@@ -1123,6 +1368,11 @@
 
         // Per-agent health metrics: { agent_id: {...metrics} }
         let agentHealth = {};
+
+        // Command library from server
+        let commandLibrary = [];
+        // Track pending command palette execution: { agent_id, command_name }
+        let pendingCommand = null;
 
         const board = document.getElementById("agent-board");
         const statusDot = document.getElementById("ws-status-dot");
@@ -1154,6 +1404,11 @@
                     setKillSwitchState(data.active);
                 } else if (data.type === "command_response") {
                     addChatMessage(data.agent_id, "received", data.response);
+                    // Also route to command palette result if this is our pending command
+                    if (pendingCommand && data.agent_id === pendingCommand.agent_id) {
+                        showCommandResult(data.response, false);
+                        pendingCommand = null;
+                    }
                 } else if (data.type === "task_status") {
                     handleTaskStatus(data);
                 } else if (data.type === "task_phase") {
@@ -1172,6 +1427,13 @@
                     handleNewEvent(data.event);
                 } else if (data.type === "analytics") {
                     handleAnalytics(data.data);
+                } else if (data.type === "command_library") {
+                    commandLibrary = data.commands || [];
+                    renderCommandSelect();
+                } else if (data.type === "command_execute_result") {
+                    handleCommandExecuteResult(data);
+                } else if (data.type === "config") {
+                    handleConfig(data);
                 }
             };
 
@@ -1827,6 +2089,218 @@
             if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
             if (n >= 1000) return (n / 1000).toFixed(1) + "K";
             return String(n);
+        }
+
+        // ---------------------------------------------------------------
+        // Command Palette
+        // ---------------------------------------------------------------
+        function renderCommandSelect() {
+            const select = document.getElementById("cmd-select");
+            // Keep the placeholder option
+            select.innerHTML = '<option value="">-- Select command --</option>';
+            commandLibrary.forEach(cmd => {
+                const opt = document.createElement("option");
+                opt.value = cmd.name;
+                opt.textContent = cmd.name.replace(/_/g, " ");
+                select.appendChild(opt);
+            });
+            updateCommandExecuteBtn();
+        }
+
+        function renderAgentSelect() {
+            const select = document.getElementById("cmd-agent-select");
+            const prev = select.value;
+            select.innerHTML = '<option value="">-- Select agent --</option>';
+            agents.filter(a => a.status === "online" || a.status === "busy").forEach(a => {
+                const opt = document.createElement("option");
+                opt.value = a.agent_id;
+                opt.textContent = a.name + (a.status === "busy" ? " (busy)" : "");
+                select.appendChild(opt);
+            });
+            // Restore previous selection if still valid
+            if (prev && select.querySelector(`option[value="${prev}"]`)) {
+                select.value = prev;
+            }
+            updateCommandExecuteBtn();
+        }
+
+        function onCommandSelect() {
+            const cmdName = document.getElementById("cmd-select").value;
+            const descEl = document.getElementById("cmd-description");
+            const paramsEl = document.getElementById("cmd-params");
+
+            if (!cmdName) {
+                descEl.textContent = "";
+                paramsEl.innerHTML = "";
+                updateCommandExecuteBtn();
+                return;
+            }
+
+            const cmd = commandLibrary.find(c => c.name === cmdName);
+            if (!cmd) return;
+
+            descEl.textContent = cmd.description;
+
+            // Render parameter inputs
+            if (cmd.parameters && cmd.parameters.length > 0) {
+                paramsEl.innerHTML = cmd.parameters.map(p => {
+                    const placeholder = p.required ? "required" : (p.default || "optional");
+                    return `
+                        <div class="command-param-group">
+                            <label>${escapeHtml(p.name)}:</label>
+                            <input type="text"
+                                data-param="${escapeHtml(p.name)}"
+                                placeholder="${escapeHtml(placeholder)}"
+                                value="${p.default && !p.required ? escapeHtml(p.default) : ''}">
+                        </div>
+                    `;
+                }).join("");
+            } else {
+                paramsEl.innerHTML = "";
+            }
+            updateCommandExecuteBtn();
+        }
+
+        function updateCommandExecuteBtn() {
+            const cmdName = document.getElementById("cmd-select").value;
+            const agentId = document.getElementById("cmd-agent-select").value;
+            const btn = document.getElementById("cmd-execute-btn");
+
+            // Check required params are filled
+            let paramsOk = true;
+            if (cmdName) {
+                const cmd = commandLibrary.find(c => c.name === cmdName);
+                if (cmd && cmd.parameters) {
+                    cmd.parameters.filter(p => p.required).forEach(p => {
+                        const input = document.querySelector(`#cmd-params input[data-param="${p.name}"]`);
+                        if (!input || !input.value.trim()) paramsOk = false;
+                    });
+                }
+            }
+
+            btn.disabled = !cmdName || !agentId || !paramsOk;
+        }
+
+        function executeCommand() {
+            const cmdName = document.getElementById("cmd-select").value;
+            const agentId = document.getElementById("cmd-agent-select").value;
+            if (!cmdName || !agentId) return;
+
+            // Gather params
+            const params = {};
+            document.querySelectorAll("#cmd-params input[data-param]").forEach(input => {
+                const val = input.value.trim();
+                if (val) params[input.dataset.param] = val;
+            });
+
+            // Show pending state in result panel
+            const panel = document.getElementById("cmd-result-panel");
+            panel.classList.add("visible");
+            panel.innerHTML = `<div class="result-header">${escapeHtml(cmdName)} → ${escapeHtml(agentId)}</div>`
+                + `<div class="result-pending">Waiting for response...</div>`;
+
+            // Track this as pending so we can route the response
+            pendingCommand = { agent_id: agentId, command_name: cmdName };
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "command_execute",
+                    command_name: cmdName,
+                    agent_id: agentId,
+                    params: params,
+                }));
+            }
+        }
+
+        function handleCommandExecuteResult(data) {
+            if (!data.ok) {
+                showCommandResult(data.error || "Command failed", true);
+                pendingCommand = null;
+            }
+            // If ok, we wait for the command_response broadcast from the agent
+        }
+
+        function showCommandResult(text, isError) {
+            const panel = document.getElementById("cmd-result-panel");
+            const header = panel.querySelector(".result-header");
+            const headerText = header ? header.textContent : "";
+            panel.classList.add("visible");
+            panel.innerHTML = `<div class="result-header">${escapeHtml(headerText)}</div>`
+                + `<div class="${isError ? 'result-error' : ''}">${escapeHtml(text)}</div>`;
+        }
+
+        // Update agent dropdown whenever agents change
+        const _origRenderAgents = renderAgents;
+        renderAgents = function() {
+            _origRenderAgents();
+            renderAgentSelect();
+        };
+
+        // Also listen for param input changes to update execute button
+        document.getElementById("cmd-params").addEventListener("input", updateCommandExecuteBtn);
+        document.getElementById("cmd-agent-select").addEventListener("change", updateCommandExecuteBtn);
+
+        // ---------------------------------------------------------------
+        // Settings Panel
+        // ---------------------------------------------------------------
+        let currentConfig = null;
+        let configLastLoaded = "";
+
+        function handleConfig(data) {
+            currentConfig = data.config;
+            configLastLoaded = data.last_loaded;
+            renderSettings();
+        }
+
+        function renderSettings() {
+            if (!currentConfig) return;
+
+            // Update last-loaded timestamp
+            const loadedEl = document.getElementById("settings-last-loaded");
+            if (configLastLoaded) {
+                const d = new Date(configLastLoaded);
+                loadedEl.textContent = "Loaded: " + d.toLocaleTimeString("en-US", {
+                    hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit"
+                });
+            }
+
+            const grid = document.getElementById("settings-grid");
+            grid.innerHTML = "";
+
+            // Render each top-level section as a card
+            for (const [section, values] of Object.entries(currentConfig)) {
+                const card = document.createElement("div");
+                card.className = "settings-card";
+
+                let heading = `<h3>${escapeHtml(section)}</h3>`;
+                let rows = renderConfigRows(values, "");
+
+                card.innerHTML = heading + rows;
+                grid.appendChild(card);
+            }
+        }
+
+        function renderConfigRows(obj, prefix) {
+            let html = "";
+            for (const [key, value] of Object.entries(obj)) {
+                const fullKey = prefix ? prefix + "." + key : key;
+                if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+                    // Nested section — render inline with dotted keys
+                    html += renderConfigRows(value, fullKey);
+                } else {
+                    html += `<div class="settings-row">
+                        <span class="key">${escapeHtml(fullKey)}</span>
+                        <span class="val">${escapeHtml(String(value))}</span>
+                    </div>`;
+                }
+            }
+            return html;
+        }
+
+        function reloadConfig() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "config_reload" }));
+            }
         }
 
         // ---------------------------------------------------------------

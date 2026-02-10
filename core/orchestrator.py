@@ -97,8 +97,12 @@ class Orchestrator:
         self._running: bool = False
 
         # How long to wait between loop iterations when idle (seconds).
-        # Keeps CPU usage near zero when there's nothing to do.
-        self._poll_interval: float = 1.0
+        # Read from config (hot-reloadable — checked each loop iteration).
+        try:
+            from core.config import get_config
+            self._poll_interval: float = get_config().orchestrator.poll_interval
+        except Exception:
+            self._poll_interval: float = 1.0
 
         logger.info("Orchestrator initialized (router=%s)", type(self.router).__name__)
 

@@ -85,24 +85,21 @@ class ModelResponse:
 # Model Router
 # ---------------------------------------------------------------------------
 
-# Default models for each complexity tier (matches CLAUDE.md routing table)
-DEFAULT_MODELS = {
-    "simple": "glm-4.7-flash",     # Fast, free, handles routine queries
-    "routine": "gpt-oss:20b",      # Good enough for drafts and summaries
-    "agentic": "kimi-k2.5",        # Best cost/performance for agent tasks
-    "complex": "claude",            # Multi-step reasoning, quality matters
-    "nuanced": "claude",            # Nuanced content, debugging, planning
+# Module-level fallbacks — used if config is unavailable
+_DEFAULT_MODELS = {
+    "simple": "glm-4.7-flash",
+    "routine": "gpt-oss:20b",
+    "agentic": "kimi-k2.5",
+    "complex": "claude",
+    "nuanced": "claude",
 }
 
-# Approximate cost per million tokens for API models
-# Local models are free. Updated as pricing changes.
-API_COSTS = {
-    "claude": {"input": 3.00, "output": 15.00},       # Claude Sonnet-class pricing
-    "kimi-k2.5": {"input": 0.50, "output": 1.50},     # Moonshot pricing estimate
+_API_COSTS = {
+    "claude": {"input": 3.00, "output": 15.00},
+    "kimi-k2.5": {"input": 0.50, "output": 1.50},
 }
 
-# Ollama API base URL
-OLLAMA_URL = "http://localhost:11434"
+_OLLAMA_URL = "http://localhost:11434"
 
 
 class ModelRouter:
@@ -119,8 +116,18 @@ class ModelRouter:
     to avoid blocking the event loop (stdlib urllib is synchronous).
     """
 
-    def __init__(self, ollama_url: str = OLLAMA_URL):
-        self._ollama_url = ollama_url
+    def __init__(self, ollama_url: str | None = None):
+        # Read from config, fall back to module-level defaults
+        try:
+            from core.config import get_config
+            cfg = get_config()
+            self._ollama_url = ollama_url or cfg.models.ollama_url
+            self._models = cfg.models.routing.to_dict()
+            self._api_costs = cfg.models.costs.to_dict()
+        except Exception:
+            self._ollama_url = ollama_url or _OLLAMA_URL
+            self._models = dict(_DEFAULT_MODELS)
+            self._api_costs = {k: dict(v) for k, v in _API_COSTS.items()}
 
         # Running cost totals for the session
         self._total_cost: float = 0.0
@@ -130,7 +137,7 @@ class ModelRouter:
         # Full call log — every call recorded for audit
         self._call_log: list[ModelResponse] = []
 
-        logger.info("ModelRouter initialized (Ollama at %s)", ollama_url)
+        logger.info("ModelRouter initialized (Ollama at %s)", self._ollama_url)
 
     # -------------------------------------------------------------------
     # Main routing method
@@ -161,7 +168,7 @@ class ModelRouter:
             A ModelResponse with the text and metadata.
         """
         # Determine which model to use
-        model = model_override or DEFAULT_MODELS.get(task_complexity, "glm-4.7-flash")
+        model = model_override or self._models.get(task_complexity, "glm-4.7-flash")
 
         logger.info(
             "Routing prompt (complexity=%s, model=%s): %.80s%s",
@@ -307,7 +314,7 @@ class ModelRouter:
         # Estimate what it would cost so cost tracking stays honest
         # Rough estimate: ~4 chars per token
         est_prompt_tokens = len(prompt) // 4
-        costs = API_COSTS.get("claude", {"input": 0, "output": 0})
+        costs = self._api_costs.get("claude", {"input": 0, "output": 0})
         est_cost = (est_prompt_tokens / 1_000_000) * costs["input"]
 
         return ModelResponse(
@@ -350,7 +357,7 @@ class ModelRouter:
         logger.warning("Moonshot API not yet configured — returning placeholder")
 
         est_prompt_tokens = len(prompt) // 4
-        costs = API_COSTS.get("kimi-k2.5", {"input": 0, "output": 0})
+        costs = self._api_costs.get("kimi-k2.5", {"input": 0, "output": 0})
         est_cost = (est_prompt_tokens / 1_000_000) * costs["input"]
 
         return ModelResponse(
