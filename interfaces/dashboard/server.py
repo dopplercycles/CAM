@@ -218,24 +218,32 @@ async def dispatch_to_agent(task, plan):
     """
     # --- Routing: find the target agent ---
     agent_id = None
+    required_caps = getattr(task, "required_capabilities", []) or []
 
     if task.assigned_agent:
-        # Check if the pre-assigned agent is online and connected
+        # Check if the pre-assigned agent is online, connected, and capable
         agent_info = registry.get_by_id(task.assigned_agent)
         if agent_info and agent_info.status == "online" and task.assigned_agent in agent_websockets:
-            agent_id = task.assigned_agent
+            if not required_caps or set(required_caps).issubset(set(agent_info.capabilities)):
+                agent_id = task.assigned_agent
+            else:
+                logger.warning(
+                    "Assigned agent '%s' lacks required capabilities %s (has %s) — trying others",
+                    task.assigned_agent, required_caps, agent_info.capabilities,
+                )
 
     if agent_id is None:
-        # Pick the first available agent
-        available = registry.get_available()
-        for agent_info in available:
+        # Pick the first capable agent with an active WebSocket
+        capable = registry.get_capable(required_caps)
+        for agent_info in capable:
             if agent_info.agent_id in agent_websockets:
                 agent_id = agent_info.agent_id
                 break
 
     if agent_id is None:
-        logger.info("No agents available for task %s — falling back to model", task.short_id)
-        event_logger.info("task", f"No agents available for {task.short_id}, using model fallback",
+        caps_msg = f" (required: {required_caps})" if required_caps else ""
+        logger.info("No capable agents for task %s%s — falling back to model", task.short_id, caps_msg)
+        event_logger.info("task", f"No capable agents for {task.short_id}{caps_msg}, using model fallback",
                           task_id=task.short_id)
         return None
 
@@ -717,6 +725,8 @@ async def dashboard_websocket(websocket: WebSocket):
                 # Submit a new task to the queue
                 description = (msg.get("description") or "").strip()
                 complexity_str = (msg.get("complexity") or "low").lower()
+                raw_caps = msg.get("required_capabilities") or []
+                required_capabilities = [c.strip() for c in raw_caps if isinstance(c, str) and c.strip()]
 
                 if not description:
                     await websocket.send_json({
@@ -735,13 +745,15 @@ async def dashboard_websocket(websocket: WebSocket):
                     description=description,
                     source="dashboard",
                     complexity=complexity,
+                    required_capabilities=required_capabilities,
                 )
                 logger.info(
-                    "Task %s submitted from dashboard: %s",
-                    task.short_id, description,
+                    "Task %s submitted from dashboard (caps=%s): %s",
+                    task.short_id, required_capabilities or "none", description,
                 )
                 event_logger.info("task", f"Task {task.short_id} submitted: {description[:80]}",
                                   task_id=task.short_id, complexity=complexity.value,
+                                  required_capabilities=required_capabilities or None,
                                   source="dashboard")
 
                 await websocket.send_json({

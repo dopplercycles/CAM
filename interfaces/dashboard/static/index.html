@@ -1024,6 +1024,8 @@
                     <option value="medium">MEDIUM</option>
                     <option value="high">HIGH</option>
                 </select>
+                <input type="text" id="task-capabilities" placeholder="Capabilities (comma-separated)" autocomplete="off"
+                    style="max-width:220px" onkeydown="if(event.key==='Enter')submitTask()">
                 <button class="task-submit-btn" onclick="submitTask()">Submit</button>
             </div>
 
@@ -1616,17 +1618,25 @@
         function submitTask() {
             const input = document.getElementById("task-input");
             const select = document.getElementById("task-complexity");
+            const capsInput = document.getElementById("task-capabilities");
             const desc = input.value.trim();
             if (!desc) return;
+
+            const caps = capsInput.value
+                .split(",")
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: "task_submit",
                     description: desc,
                     complexity: select.value,
+                    required_capabilities: caps,
                 }));
             }
             input.value = "";
+            capsInput.value = "";
             input.focus();
         }
 
@@ -1722,6 +1732,11 @@
                     ? formatTime(t.completed_at)
                     : formatTime(t.created_at);
 
+                const caps = (t.required_capabilities || []);
+                const capBadges = caps.length > 0
+                    ? caps.map(c => `<span class="capability-badge">${escapeHtml(c)}</span>`).join("")
+                    : "";
+
                 return `
                     <div class="task-item">
                         <div class="task-item-header">
@@ -1729,6 +1744,7 @@
                                 <span class="task-id">${escapeHtml(t.short_id)}</span>
                                 <span class="task-status-badge ${t.status}">${t.status}</span>
                                 <span class="task-status-badge" style="background:rgba(91,155,213,0.1);color:#5b9bd5">${escapeHtml(t.complexity)}</span>
+                                ${capBadges}
                             </div>
                             <span class="task-meta">${escapeHtml(t.source)} &middot; ${timeStr}</span>
                         </div>

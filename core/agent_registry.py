@@ -292,6 +292,25 @@ class AgentRegistry:
             if a.status == "online"
         ]
 
+    def get_capable(self, capabilities: list[str]) -> list[AgentInfo]:
+        """Return online agents that have all the required capabilities.
+
+        Args:
+            capabilities: List of capability strings the agent must have.
+                          If empty, returns all online agents (same as get_available).
+
+        Returns:
+            List of AgentInfo objects matching the requirements.
+        """
+        if not capabilities:
+            return self.get_available()
+
+        required = set(capabilities)
+        return [
+            a for a in self._agents.values()
+            if a.status == "online" and required.issubset(set(a.capabilities))
+        ]
+
     def list_all(self) -> list[AgentInfo]:
         """Return all known agents (any status)."""
         return list(self._agents.values())

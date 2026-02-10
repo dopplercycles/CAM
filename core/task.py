@@ -106,6 +106,7 @@ class Task:
     complexity: TaskComplexity = TaskComplexity.LOW
     source: str = "internal"
     assigned_agent: str | None = None
+    required_capabilities: list[str] = field(default_factory=list)
     status: TaskStatus = TaskStatus.PENDING
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
@@ -125,6 +126,7 @@ class Task:
             "complexity": self.complexity.value,
             "source": self.source,
             "assigned_agent": self.assigned_agent,
+            "required_capabilities": self.required_capabilities,
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
@@ -166,6 +168,7 @@ class TaskQueue:
         source: str = "internal",
         complexity: TaskComplexity = TaskComplexity.LOW,
         assigned_agent: str | None = None,
+        required_capabilities: list[str] | None = None,
     ) -> Task:
         """Create a new task and add it to the queue.
 
@@ -173,10 +176,11 @@ class TaskQueue:
         jobs, and sub-agents all call this.
 
         Args:
-            description:    What needs to be done, in plain English.
-            source:         Where this task came from (for logging/audit).
-            complexity:     Task complexity (determines model routing).
-            assigned_agent: Optionally assign to a specific agent.
+            description:         What needs to be done, in plain English.
+            source:              Where this task came from (for logging/audit).
+            complexity:          Task complexity (determines model routing).
+            assigned_agent:      Optionally assign to a specific agent.
+            required_capabilities: Capabilities an agent must have to handle this task.
 
         Returns:
             The created Task object.
@@ -186,6 +190,7 @@ class TaskQueue:
             source=source,
             complexity=complexity,
             assigned_agent=assigned_agent,
+            required_capabilities=required_capabilities or [],
         )
         self._tasks.append(task)
 
