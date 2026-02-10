@@ -24,10 +24,16 @@ Deployment to Raspberry Pi:
 
 import argparse
 import asyncio
+import glob
 import json
 import logging
+import os
+import platform
+import re
+import shutil
 import socket
 import sys
+import time
 
 try:
     import websockets
@@ -76,6 +82,317 @@ def get_local_ip() -> str:
     except OSError:
         # Fallback: no network route available
         return "127.0.0.1"
+
+
+# ---------------------------------------------------------------------------
+# Command parsing and handlers
+# ---------------------------------------------------------------------------
+
+# Track when the connector started so we can report agent uptime
+_CONNECTOR_START = time.monotonic()
+
+
+def parse_command(text: str) -> tuple[str, dict[str, str]]:
+    """Parse a command string into (command_name, params_dict).
+
+    Format: "command_name key=value key2=value2 ..."
+    Values may be quoted: key="some value with spaces"
+
+    Returns:
+        Tuple of (command_name, dict_of_params).
+        If the text is empty, returns ("", {}).
+    """
+    text = text.strip()
+    if not text:
+        return ("", {})
+
+    parts = text.split()
+    name = parts[0]
+    params: dict[str, str] = {}
+
+    # Rejoin remaining parts in case of quoted values, then parse key=value
+    rest = text[len(name):].strip()
+    if rest:
+        # Simple state machine: split on spaces but respect quotes
+        current_key = None
+        current_val_parts: list[str] = []
+        for token in rest.split():
+            if "=" in token and current_key is None:
+                eq_idx = token.index("=")
+                current_key = token[:eq_idx]
+                val_part = token[eq_idx + 1:]
+                if val_part.startswith('"') and not val_part.endswith('"'):
+                    current_val_parts = [val_part[1:]]
+                    continue
+                # Strip surrounding quotes
+                params[current_key] = val_part.strip('"')
+                current_key = None
+            elif current_key is not None:
+                # Continuing a quoted value
+                if token.endswith('"'):
+                    current_val_parts.append(token[:-1])
+                    params[current_key] = " ".join(current_val_parts)
+                    current_key = None
+                    current_val_parts = []
+                else:
+                    current_val_parts.append(token)
+
+    return (name, params)
+
+
+async def handle_status_report() -> str:
+    """Return agent name, uptime, Python version, cwd, asyncio task count."""
+    try:
+        uptime_secs = time.monotonic() - _CONNECTOR_START
+        hours, remainder = divmod(int(uptime_secs), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        uptime_str = f"{hours}h {minutes}m {seconds}s"
+
+        task_count = len(asyncio.all_tasks())
+        return (
+            f"Status Report\n"
+            f"  Hostname:       {socket.gethostname()}\n"
+            f"  Python:         {platform.python_version()}\n"
+            f"  Platform:       {platform.platform()}\n"
+            f"  CWD:            {os.getcwd()}\n"
+            f"  Agent uptime:   {uptime_str}\n"
+            f"  Asyncio tasks:  {task_count}"
+        )
+    except Exception as e:
+        return f"Error generating status report: {e}"
+
+
+async def handle_system_info() -> str:
+    """Return CPU, memory, disk, and system uptime info."""
+    try:
+        lines = ["System Info"]
+
+        # CPU count and load averages
+        cpu_count = os.cpu_count() or "unknown"
+        try:
+            load1, load5, load15 = os.getloadavg()
+            lines.append(f"  CPUs:           {cpu_count}")
+            lines.append(f"  Load avg:       {load1:.2f} / {load5:.2f} / {load15:.2f}")
+        except OSError:
+            lines.append(f"  CPUs:           {cpu_count}")
+            lines.append("  Load avg:       not available")
+
+        # Memory from /proc/meminfo
+        try:
+            meminfo: dict[str, int] = {}
+            with open("/proc/meminfo", "r") as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        key = parts[0].rstrip(":")
+                        meminfo[key] = int(parts[1])  # value in kB
+            total_kb = meminfo.get("MemTotal", 0)
+            avail_kb = meminfo.get("MemAvailable", 0)
+            used_kb = total_kb - avail_kb
+            used_pct = (used_kb / total_kb * 100) if total_kb > 0 else 0
+            lines.append(
+                f"  Memory:         {total_kb // 1024} MB total, "
+                f"{avail_kb // 1024} MB available, "
+                f"{used_pct:.1f}% used"
+            )
+        except (OSError, ValueError):
+            lines.append("  Memory:         not available")
+
+        # Disk usage
+        try:
+            usage = shutil.disk_usage("/")
+            total_gb = usage.total / (1024 ** 3)
+            used_gb = usage.used / (1024 ** 3)
+            free_gb = usage.free / (1024 ** 3)
+            used_pct = usage.used / usage.total * 100
+            lines.append(
+                f"  Disk (/):       {total_gb:.1f} GB total, "
+                f"{used_gb:.1f} GB used, "
+                f"{free_gb:.1f} GB free ({used_pct:.1f}% used)"
+            )
+        except OSError:
+            lines.append("  Disk (/):       not available")
+
+        # System uptime from /proc/uptime
+        try:
+            with open("/proc/uptime", "r") as f:
+                uptime_secs = float(f.read().split()[0])
+            days, remainder = divmod(int(uptime_secs), 86400)
+            hours, remainder = divmod(remainder, 3600)
+            minutes, _ = divmod(remainder, 60)
+            lines.append(f"  System uptime:  {days}d {hours}h {minutes}m")
+        except (OSError, ValueError):
+            lines.append("  System uptime:  not available")
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error generating system info: {e}"
+
+
+async def handle_restart_service(params: dict[str, str]) -> str:
+    """Restart a systemd service. Requires 'service_name' param."""
+    service_name = params.get("service_name", "").strip()
+    if not service_name:
+        return "Error: 'service_name' parameter is required.\nUsage: restart_service service_name=cam-agent"
+
+    # Basic validation: only allow alphanumeric, hyphens, underscores, dots, @
+    if not re.match(r'^[a-zA-Z0-9._@-]+$', service_name):
+        return f"Error: invalid service name '{service_name}'"
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "systemctl", "restart", service_name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+
+        stdout_text = stdout.decode().strip()
+        stderr_text = stderr.decode().strip()
+
+        if proc.returncode == 0:
+            result = f"Service '{service_name}' restarted successfully (exit code 0)."
+        else:
+            result = f"Service '{service_name}' restart failed (exit code {proc.returncode})."
+
+        if stdout_text:
+            result += f"\nstdout: {stdout_text}"
+        if stderr_text:
+            result += f"\nstderr: {stderr_text}"
+
+        return result
+    except asyncio.TimeoutError:
+        return f"Error: restart of '{service_name}' timed out after 30s"
+    except Exception as e:
+        return f"Error restarting service '{service_name}': {e}"
+
+
+async def handle_run_diagnostic() -> str:
+    """Run a suite of health checks and return a diagnostic report."""
+    try:
+        lines = ["Diagnostic Report"]
+        warnings = []
+
+        # Python version
+        lines.append(f"  Python:         {platform.python_version()}")
+
+        # websockets version
+        try:
+            import websockets
+            lines.append(f"  websockets:     {websockets.__version__}")
+        except AttributeError:
+            lines.append("  websockets:     installed (version unknown)")
+
+        # Disk space warning if >90% used
+        try:
+            usage = shutil.disk_usage("/")
+            used_pct = usage.used / usage.total * 100
+            lines.append(f"  Disk usage:     {used_pct:.1f}%")
+            if used_pct > 90:
+                warnings.append(f"  WARN: Disk usage is {used_pct:.1f}% (>90%)")
+        except OSError:
+            lines.append("  Disk usage:     not available")
+
+        # Memory warning if available <10%
+        try:
+            with open("/proc/meminfo", "r") as f:
+                meminfo: dict[str, int] = {}
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        key = parts[0].rstrip(":")
+                        meminfo[key] = int(parts[1])
+            total = meminfo.get("MemTotal", 0)
+            avail = meminfo.get("MemAvailable", 0)
+            avail_pct = (avail / total * 100) if total > 0 else 0
+            lines.append(f"  Memory avail:   {avail_pct:.1f}%")
+            if avail_pct < 10:
+                warnings.append(f"  WARN: Available memory is {avail_pct:.1f}% (<10%)")
+        except (OSError, ValueError):
+            lines.append("  Memory avail:   not available")
+
+        # Network connectivity: can we resolve the dashboard host?
+        try:
+            # Try to resolve the main machine IP (dashboard)
+            socket.getaddrinfo("192.168.12.232", 8080, socket.AF_INET, socket.SOCK_STREAM)
+            lines.append("  Network:        dashboard host reachable")
+        except socket.gaierror:
+            warnings.append("  WARN: Cannot resolve dashboard host")
+            lines.append("  Network:        dashboard host NOT reachable")
+
+        # Agent uptime
+        uptime_secs = time.monotonic() - _CONNECTOR_START
+        hours, remainder = divmod(int(uptime_secs), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        lines.append(f"  Agent uptime:   {hours}h {minutes}m {seconds}s")
+
+        if warnings:
+            lines.append("\nWarnings:")
+            lines.extend(warnings)
+        else:
+            lines.append("\n  All checks passed.")
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error running diagnostic: {e}"
+
+
+async def handle_capture_sensor_data(params: dict[str, str]) -> str:
+    """Read CPU temperature from thermal zones. Optional 'sensor_type' filter."""
+    try:
+        sensor_type = params.get("sensor_type", "").strip().lower()
+        thermal_paths = sorted(glob.glob("/sys/class/thermal/thermal_zone*/temp"))
+
+        if not thermal_paths:
+            return "Sensor Data\n  No thermal zones found on this system."
+
+        lines = ["Sensor Data"]
+        found_any = False
+
+        for temp_path in thermal_paths:
+            zone_dir = os.path.dirname(temp_path)
+            zone_name = os.path.basename(zone_dir)
+
+            # Read the sensor type for this zone
+            type_path = os.path.join(zone_dir, "type")
+            try:
+                with open(type_path, "r") as f:
+                    zone_type = f.read().strip()
+            except OSError:
+                zone_type = "unknown"
+
+            # If sensor_type filter is set, skip non-matching zones
+            if sensor_type and sensor_type not in zone_type.lower():
+                continue
+
+            # Read temperature (millidegrees Celsius)
+            try:
+                with open(temp_path, "r") as f:
+                    temp_milli = int(f.read().strip())
+                temp_c = temp_milli / 1000.0
+                lines.append(f"  {zone_name} ({zone_type}): {temp_c:.1f}°C")
+                found_any = True
+            except (OSError, ValueError):
+                lines.append(f"  {zone_name} ({zone_type}): read error")
+                found_any = True
+
+        if not found_any and sensor_type:
+            lines.append(f"  No sensors matching '{sensor_type}' found.")
+
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error capturing sensor data: {e}"
+
+
+# Map command names to their async handler functions.
+# Handlers that need params take a dict; those that don't take no args.
+COMMAND_HANDLERS = {
+    "status_report":       lambda params: handle_status_report(),
+    "system_info":         lambda params: handle_system_info(),
+    "restart_service":     lambda params: handle_restart_service(params),
+    "run_diagnostic":      lambda params: handle_run_diagnostic(),
+    "capture_sensor_data": lambda params: handle_capture_sensor_data(params),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -139,19 +456,30 @@ async def listen_for_commands(ws):
             task_id = msg.get("task_id")
             logger.info("Command received: %s (task_id=%s)", command_text, task_id)
 
-            # Acknowledge receipt — actual execution comes later
-            # when the orchestrator and tool framework are built
+            # Parse command and dispatch to handler
+            cmd_name, cmd_params = parse_command(command_text)
+            handler = COMMAND_HANDLERS.get(cmd_name)
+
+            if handler:
+                try:
+                    response_text = await handler(cmd_params)
+                except Exception as e:
+                    response_text = f"Error executing '{cmd_name}': {e}"
+                    logger.exception("Handler error for %s", cmd_name)
+            else:
+                response_text = f"Unknown command: {cmd_name}"
+
             resp = {
                 "type": "command_response",
                 "command": command_text,
-                "response": f"Acknowledged: {command_text}",
+                "response": response_text,
             }
             # Echo task_id back so the orchestrator can correlate responses
             if task_id is not None:
                 resp["task_id"] = task_id
 
             await ws.send(json.dumps(resp))
-            logger.info("Acknowledgment sent for: %s", command_text)
+            logger.info("Response sent for: %s", cmd_name)
 
     # Connection closed without shutdown command
     return False
