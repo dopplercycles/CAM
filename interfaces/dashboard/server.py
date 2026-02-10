@@ -96,16 +96,12 @@ kill_switch_active: bool = False
 # Broadcast helper
 # ---------------------------------------------------------------------------
 
-async def broadcast_agent_status():
-    """Push current agent status to all connected dashboard browsers.
+async def broadcast_to_dashboards(message: dict):
+    """Push a message to all connected dashboard browsers.
 
-    Sends the full agent list each time — simple and correct for a
-    small number of agents. Optimize later if needed.
+    Handles cleanup of any clients that have disconnected.
+    Used by both agent status broadcasts and command responses.
     """
-    data = [agent.model_dump(mode="json") for agent in connected_agents.values()]
-    message = {"type": "agent_status", "agents": data}
-
-    # Send to all dashboard clients, clean up any that disconnected
     disconnected = []
     for client in dashboard_clients:
         try:
@@ -115,6 +111,16 @@ async def broadcast_agent_status():
 
     for client in disconnected:
         dashboard_clients.remove(client)
+
+
+async def broadcast_agent_status():
+    """Push current agent status to all connected dashboard browsers.
+
+    Sends the full agent list each time — simple and correct for a
+    small number of agents. Optimize later if needed.
+    """
+    data = [agent.model_dump(mode="json") for agent in connected_agents.values()]
+    await broadcast_to_dashboards({"type": "agent_status", "agents": data})
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +277,9 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
         while True:
             data = await websocket.receive_json()
 
-            if data.get("type") == "heartbeat":
+            msg_type = data.get("type")
+
+            if msg_type == "heartbeat":
                 now = datetime.now(timezone.utc)
 
                 if agent_id not in connected_agents:
@@ -299,6 +307,19 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                     agent.heartbeat_count += 1
 
                 await broadcast_agent_status()
+
+            elif msg_type == "command_response":
+                # Agent is responding to a command — relay to dashboards
+                logger.info(
+                    "Agent '%s' response: %s",
+                    agent_id, data.get("response", ""),
+                )
+                await broadcast_to_dashboards({
+                    "type": "command_response",
+                    "agent_id": agent_id,
+                    "command": data.get("command", ""),
+                    "response": data.get("response", ""),
+                })
 
     except WebSocketDisconnect:
         logger.info("Agent '%s' disconnected", agent_id)
@@ -346,6 +367,44 @@ async def dashboard_websocket(websocket: WebSocket):
 
             if msg.get("type") == "kill_switch":
                 await activate_kill_switch()
+
+            elif msg.get("type") == "command":
+                # Route a command to a specific agent
+                target_id = msg.get("agent_id", "")
+                command_text = msg.get("command", "")
+
+                if target_id in agent_websockets:
+                    try:
+                        await agent_websockets[target_id].send_json({
+                            "type": "command",
+                            "command": command_text,
+                        })
+                        logger.info(
+                            "Command sent to agent '%s': %s",
+                            target_id, command_text,
+                        )
+                    except Exception:
+                        logger.warning(
+                            "Failed to send command to agent '%s'",
+                            target_id,
+                        )
+                        await broadcast_to_dashboards({
+                            "type": "command_response",
+                            "agent_id": target_id,
+                            "command": command_text,
+                            "response": "[error] Agent connection lost",
+                        })
+                else:
+                    logger.warning(
+                        "Command for unknown/offline agent '%s'",
+                        target_id,
+                    )
+                    await broadcast_to_dashboards({
+                        "type": "command_response",
+                        "agent_id": target_id,
+                        "command": command_text,
+                        "response": "[error] Agent is offline",
+                    })
 
     except WebSocketDisconnect:
         if websocket in dashboard_clients:

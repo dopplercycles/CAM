@@ -108,6 +108,10 @@ async def listen_for_commands(ws):
           Per the CAM Constitution: "One click halts all autonomous
           action across all agents. Graceful degradation kicks in."
 
+        - {"type": "command", "command": "..."} — command from George
+          Logged and acknowledged. Actual execution comes later when
+          the tool/security framework is built.
+
     Returns True if the agent should shut down, False if just disconnected.
     """
     async for raw in ws:
@@ -116,10 +120,26 @@ async def listen_for_commands(ws):
         except json.JSONDecodeError:
             continue
 
-        if msg.get("type") == "shutdown":
+        msg_type = msg.get("type")
+
+        if msg_type == "shutdown":
             reason = msg.get("reason", "unknown")
             logger.critical("SHUTDOWN received from dashboard (reason: %s)", reason)
             return True
+
+        elif msg_type == "command":
+            command_text = msg.get("command", "")
+            logger.info("Command received: %s", command_text)
+
+            # Acknowledge receipt — actual execution comes later
+            # when the orchestrator and tool framework are built
+            response = json.dumps({
+                "type": "command_response",
+                "command": command_text,
+                "response": f"Acknowledged: {command_text}",
+            })
+            await ws.send(response)
+            logger.info("Acknowledgment sent for: %s", command_text)
 
     # Connection closed without shutdown command
     return False

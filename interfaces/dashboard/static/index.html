@@ -221,6 +221,95 @@
             font-family: monospace;
         }
 
+        /* --- Agent Chat Log --- */
+        .agent-chat {
+            margin-top: 0.75rem;
+            border-top: 1px solid #2a3a4a;
+            padding-top: 0.75rem;
+        }
+
+        .chat-log {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            font-family: monospace;
+            margin-bottom: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .chat-msg {
+            padding: 0.25rem 0.4rem;
+            border-radius: 4px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .chat-msg.sent {
+            color: #5b9bd5;
+        }
+
+        .chat-msg.received {
+            color: #00d672;
+        }
+
+        .chat-msg.error {
+            color: #e74c3c;
+        }
+
+        .chat-msg .chat-prefix {
+            font-weight: 600;
+            margin-right: 0.3rem;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.6rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: #5b9bd5;
+        }
+
+        .chat-input::placeholder {
+            color: #4a5a6a;
+        }
+
+        .chat-send-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .chat-send-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .chat-send-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
         /* --- Empty State --- */
         .empty-state {
             text-align: center;
@@ -300,6 +389,9 @@
         let ws = null;
         let reconnectTimer = null;
 
+        // Per-agent chat logs: { agent_id: [{type, text}, ...] }
+        const chatLogs = {};
+
         const board = document.getElementById("agent-board");
         const statusDot = document.getElementById("ws-status-dot");
         const statusText = document.getElementById("ws-status-text");
@@ -328,6 +420,8 @@
                     renderAgents();
                 } else if (data.type === "kill_switch") {
                     setKillSwitchState(data.active);
+                } else if (data.type === "command_response") {
+                    addChatMessage(data.agent_id, "received", data.response);
                 }
             };
 
@@ -359,6 +453,14 @@
                 return;
             }
 
+            // Save any in-progress input text before re-render
+            const savedInputs = {};
+            document.querySelectorAll(".chat-input").forEach(input => {
+                if (input.value) {
+                    savedInputs[input.dataset.agentId] = input.value;
+                }
+            });
+
             // Sort: online agents first, then alphabetical by name
             const sorted = [...agents].sort((a, b) => {
                 if (a.status !== b.status) return a.status === "online" ? -1 : 1;
@@ -368,11 +470,31 @@
             board.innerHTML = '<div class="agent-grid">' +
                 sorted.map(agent => agentCard(agent)).join("") +
                 '</div>';
+
+            // Restore saved input text
+            for (const [agentId, value] of Object.entries(savedInputs)) {
+                const input = document.querySelector(`.chat-input[data-agent-id="${agentId}"]`);
+                if (input) input.value = value;
+            }
+
+            // Auto-scroll chat logs to bottom
+            document.querySelectorAll(".chat-log").forEach(log => {
+                log.scrollTop = log.scrollHeight;
+            });
         }
 
         function agentCard(agent) {
             const isOnline = agent.status === "online";
             const statusClass = isOnline ? "online" : "offline";
+            const agentId = agent.agent_id;
+            const messages = chatLogs[agentId] || [];
+
+            // Render chat message history
+            const chatHtml = messages.map(m => {
+                const prefix = m.type === "sent" ? "you>" : "agent>";
+                const cssClass = m.type === "error" ? "error" : m.type;
+                return `<div class="chat-msg ${cssClass}"><span class="chat-prefix">${prefix}</span>${escapeHtml(m.text)}</div>`;
+            }).join("");
 
             return `
                 <div class="agent-card">
@@ -399,6 +521,20 @@
                         <div class="agent-detail">
                             <span class="label">Last Seen</span>
                             <span class="value">${formatTime(agent.last_heartbeat)}</span>
+                        </div>
+                    </div>
+                    <div class="agent-chat">
+                        <div class="chat-log" id="chat-log-${agentId}">${chatHtml}</div>
+                        <div class="chat-input-row">
+                            <input type="text"
+                                class="chat-input"
+                                data-agent-id="${agentId}"
+                                placeholder="Send command..."
+                                onkeydown="if(event.key==='Enter')sendCommand('${agentId}')"
+                                ${isOnline ? "" : "disabled"}>
+                            <button class="chat-send-btn"
+                                onclick="sendCommand('${agentId}')"
+                                ${isOnline ? "" : "disabled"}>Send</button>
                         </div>
                     </div>
                 </div>
@@ -433,6 +569,54 @@
                 btn.classList.remove("activated");
                 btn.textContent = "Kill Switch";
                 status.classList.remove("active");
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Agent commands
+        // ---------------------------------------------------------------
+        function sendCommand(agentId) {
+            const input = document.querySelector(`.chat-input[data-agent-id="${agentId}"]`);
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Show the sent message in the chat log
+            addChatMessage(agentId, "sent", text);
+
+            // Send to server for routing to the agent
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "command",
+                    agent_id: agentId,
+                    command: text,
+                }));
+            }
+
+            input.value = "";
+            input.focus();
+        }
+
+        function addChatMessage(agentId, type, text) {
+            // type: "sent", "received", or "error"
+            if (!chatLogs[agentId]) chatLogs[agentId] = [];
+            chatLogs[agentId].push({ type, text });
+
+            // Keep last 50 messages per agent to avoid unbounded growth
+            if (chatLogs[agentId].length > 50) {
+                chatLogs[agentId] = chatLogs[agentId].slice(-50);
+            }
+
+            // Update the chat log in the DOM directly (avoid full re-render)
+            const logEl = document.getElementById(`chat-log-${agentId}`);
+            if (logEl) {
+                const prefix = type === "sent" ? "you>" : "agent>";
+                const cssClass = type === "error" ? "error" : type;
+                const msgEl = document.createElement("div");
+                msgEl.className = `chat-msg ${cssClass}`;
+                msgEl.innerHTML = `<span class="chat-prefix">${prefix}</span>${escapeHtml(text)}`;
+                logEl.appendChild(msgEl);
+                logEl.scrollTop = logEl.scrollHeight;
             }
         }
 
