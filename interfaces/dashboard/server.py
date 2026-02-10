@@ -20,7 +20,8 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+
+from core.agent_registry import AgentRegistry
 
 
 # ---------------------------------------------------------------------------
@@ -39,12 +40,12 @@ logger = logging.getLogger("cam.dashboard")
 # Constants
 # ---------------------------------------------------------------------------
 
-# How often agents should send heartbeats (seconds)
-HEARTBEAT_INTERVAL = 10
+# How often to run the heartbeat check (seconds)
+HEARTBEAT_CHECK_INTERVAL = 10
 
 # How long before we consider an agent offline (seconds)
-# Set higher than the agent's heartbeat interval (default 30s) to
-# allow for network jitter without false offline flickers.
+# Passed to the AgentRegistry. Set higher than the agent's heartbeat
+# interval (default 30s) to allow for network jitter.
 HEARTBEAT_TIMEOUT = 45
 
 # Path to static files directory (index.html lives here)
@@ -52,37 +53,16 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 
 # ---------------------------------------------------------------------------
-# Data model
-# ---------------------------------------------------------------------------
-
-class AgentStatus(BaseModel):
-    """Tracks the current status of a connected agent.
-
-    Each agent that connects via WebSocket gets one of these.
-    The dashboard broadcasts the full list to browser clients
-    whenever anything changes.
-    """
-
-    agent_id: str
-    name: str
-    ip_address: str
-    status: str = "online"  # "online" or "offline"
-    last_heartbeat: datetime | None = None
-    connected_at: datetime | None = None
-    heartbeat_count: int = 0
-
-
-# ---------------------------------------------------------------------------
-# In-memory state
+# Shared state
 #
-# Ephemeral — lost on restart, rebuilt as agents reconnect.
-# No database needed for a handful of agents on a local network.
+# The registry is the single source of truth for agent status.
+# WebSocket connections and dashboard clients are server-specific.
 # ---------------------------------------------------------------------------
 
-# agent_id -> AgentStatus
-connected_agents: dict[str, AgentStatus] = {}
+# Agent registry — tracks all agents, shared with orchestrator later
+registry = AgentRegistry(heartbeat_timeout=HEARTBEAT_TIMEOUT)
 
-# agent_id -> WebSocket (live connections, needed for kill switch relay)
+# agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
 
 # Browser clients watching the dashboard (receive status pushes)
@@ -116,10 +96,9 @@ async def broadcast_to_dashboards(message: dict):
 async def broadcast_agent_status():
     """Push current agent status to all connected dashboard browsers.
 
-    Sends the full agent list each time — simple and correct for a
-    small number of agents. Optimize later if needed.
+    Reads from the registry — the single source of truth.
     """
-    data = [agent.model_dump(mode="json") for agent in connected_agents.values()]
+    data = registry.to_broadcast_list()
     await broadcast_to_dashboards({"type": "agent_status", "agents": data})
 
 
@@ -158,8 +137,8 @@ async def activate_kill_switch():
     for agent_id in disconnected:
         del agent_websockets[agent_id]
 
-    # Mark all agents offline
-    for agent in connected_agents.values():
+    # Mark all agents offline in the registry
+    for agent in registry.list_all():
         agent.status = "offline"
 
     # Notify all dashboard browsers
@@ -180,30 +159,13 @@ async def activate_kill_switch():
 async def check_heartbeats():
     """Background task: mark agents offline if heartbeat times out.
 
-    Runs every HEARTBEAT_INTERVAL seconds. If an agent hasn't sent
-    a heartbeat within HEARTBEAT_TIMEOUT seconds, mark it offline
-    and notify all dashboard browsers.
-
-    This catches "dirty" disconnects where the WebSocket drops
-    without a clean close frame (e.g., network cable pulled).
+    Delegates the actual check to the registry's heartbeat_check()
+    method, which knows the timeout and handles the status changes.
     """
     while True:
-        await asyncio.sleep(HEARTBEAT_INTERVAL)
-        now = datetime.now(timezone.utc)
-        changed = False
-
-        for agent in connected_agents.values():
-            if agent.status == "online" and agent.last_heartbeat:
-                elapsed = (now - agent.last_heartbeat).total_seconds()
-                if elapsed > HEARTBEAT_TIMEOUT:
-                    agent.status = "offline"
-                    changed = True
-                    logger.warning(
-                        "Agent '%s' (%s) timed out after %.0fs",
-                        agent.name, agent.agent_id, elapsed,
-                    )
-
-        if changed:
+        await asyncio.sleep(HEARTBEAT_CHECK_INTERVAL)
+        timed_out = registry.heartbeat_check()
+        if timed_out:
             await broadcast_agent_status()
 
 
@@ -248,7 +210,7 @@ async def get_agents():
     The browser fetches this on page load to get initial state,
     then switches to WebSocket for real-time updates.
     """
-    return list(connected_agents.values())
+    return registry.to_broadcast_list()
 
 
 # ---------------------------------------------------------------------------
@@ -260,11 +222,12 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
     """WebSocket endpoint for agents to connect and send heartbeats.
 
     Agents open a connection to /ws/agent/{their_id} and send JSON:
-        {"type": "heartbeat", "name": "AgentName", "ip": "192.168.1.x"}
+        {"type": "heartbeat", "name": "AgentName", "ip": "192.168.1.x",
+         "capabilities": ["research", "content"]}
 
-    On connect: agent is registered and marked online.
+    On connect: agent is registered in the registry.
     On heartbeat: last_heartbeat timestamp updated.
-    On disconnect: agent marked offline immediately.
+    On disconnect: agent marked offline in the registry.
     """
     await websocket.accept()
     client_host = websocket.client.host if websocket.client else "unknown"
@@ -280,31 +243,25 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
             msg_type = data.get("type")
 
             if msg_type == "heartbeat":
-                now = datetime.now(timezone.utc)
+                name = data.get("name", agent_id)
+                ip = data.get("ip", client_host)
+                capabilities = data.get("capabilities")
 
-                if agent_id not in connected_agents:
-                    # First heartbeat — register the agent
-                    connected_agents[agent_id] = AgentStatus(
+                if registry.get_by_id(agent_id) is None:
+                    # First heartbeat — register in the registry
+                    registry.register(
                         agent_id=agent_id,
-                        name=data.get("name", agent_id),
-                        ip_address=data.get("ip", client_host),
-                        status="online",
-                        last_heartbeat=now,
-                        connected_at=now,
-                        heartbeat_count=1,
-                    )
-                    logger.info(
-                        "Agent registered: %s (%s) at %s",
-                        data.get("name", agent_id), agent_id,
-                        data.get("ip", client_host),
+                        name=name,
+                        ip_address=ip,
+                        capabilities=capabilities,
                     )
                 else:
-                    # Subsequent heartbeat — update timestamp and count
-                    agent = connected_agents[agent_id]
-                    agent.last_heartbeat = now
-                    agent.status = "online"
-                    agent.ip_address = data.get("ip", agent.ip_address)
-                    agent.heartbeat_count += 1
+                    # Subsequent heartbeat — update via registry
+                    registry.update_heartbeat(
+                        agent_id=agent_id,
+                        ip_address=ip,
+                        capabilities=capabilities,
+                    )
 
                 await broadcast_agent_status()
 
@@ -325,9 +282,9 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
         logger.info("Agent '%s' disconnected", agent_id)
         # Remove from live WebSocket tracking
         agent_websockets.pop(agent_id, None)
-        if agent_id in connected_agents:
-            connected_agents[agent_id].status = "offline"
-            await broadcast_agent_status()
+        # Mark offline in registry (keeps the record for dashboard display)
+        registry.deregister(agent_id)
+        await broadcast_agent_status()
 
 
 # ---------------------------------------------------------------------------
@@ -350,8 +307,10 @@ async def dashboard_websocket(websocket: WebSocket):
     )
 
     # Send current state right away so the page doesn't start blank
-    data = [agent.model_dump(mode="json") for agent in connected_agents.values()]
-    await websocket.send_json({"type": "agent_status", "agents": data})
+    await websocket.send_json({
+        "type": "agent_status",
+        "agents": registry.to_broadcast_list(),
+    })
 
     # Also send current kill switch state
     await websocket.send_json({"type": "kill_switch", "active": kill_switch_active})

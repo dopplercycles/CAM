@@ -221,6 +221,25 @@
             font-family: monospace;
         }
 
+        /* --- Agent Capabilities --- */
+        .agent-capabilities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-top: 0.5rem;
+        }
+
+        .capability-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(91, 155, 213, 0.15);
+            color: #5b9bd5;
+        }
+
         /* --- Agent Chat Log --- */
         .agent-chat {
             margin-top: 0.75rem;
@@ -523,6 +542,7 @@
                             <span class="value">${formatTime(agent.last_heartbeat)}</span>
                         </div>
                     </div>
+                    ${renderCapabilities(agent.capabilities)}
                     <div class="agent-chat">
                         <div class="chat-log" id="chat-log-${agentId}">${chatHtml}</div>
                         <div class="chat-input-row">
@@ -658,6 +678,14 @@
             if (h < 24) return `${h}h ${m}m`;
             const d = Math.floor(h / 24);
             return `${d}d ${h % 24}h`;
+        }
+
+        function renderCapabilities(caps) {
+            if (!caps || caps.length === 0) return "";
+            const badges = caps.map(c =>
+                `<span class="capability-badge">${escapeHtml(c)}</span>`
+            ).join("");
+            return `<div class="agent-capabilities">${badges}</div>`;
         }
 
         function escapeHtml(text) {

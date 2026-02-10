@@ -82,19 +82,22 @@ def get_local_ip() -> str:
 # Heartbeat loop
 # ---------------------------------------------------------------------------
 
-async def send_heartbeats(ws, agent_name: str, interval: int):
+async def send_heartbeats(ws, agent_name: str, interval: int,
+                          capabilities: list[str] | None = None):
     """Send periodic heartbeats to the dashboard.
 
     Runs as a concurrent task alongside the message listener.
     """
     while True:
         ip = get_local_ip()
-        heartbeat = json.dumps({
+        heartbeat = {
             "type": "heartbeat",
             "name": agent_name,
             "ip": ip,
-        })
-        await ws.send(heartbeat)
+        }
+        if capabilities:
+            heartbeat["capabilities"] = capabilities
+        await ws.send(json.dumps(heartbeat))
         logger.info("Heartbeat sent (ip=%s)", ip)
         await asyncio.sleep(interval)
 
@@ -146,7 +149,7 @@ async def listen_for_commands(ws):
 
 
 async def heartbeat_loop(dashboard_url: str, agent_id: str, agent_name: str,
-                         interval: int):
+                         interval: int, capabilities: list[str] | None = None):
     """Connect to the dashboard, send heartbeats, and listen for commands.
 
     Runs two concurrent tasks:
@@ -157,10 +160,11 @@ async def heartbeat_loop(dashboard_url: str, agent_id: str, agent_name: str,
     If a shutdown command is received, exits cleanly.
 
     Args:
-        dashboard_url: WebSocket URL of the dashboard, e.g. ws://192.168.1.100:8080
-        agent_id:      Unique ID for this agent (used in the URL path)
-        agent_name:    Human-readable display name shown on the dashboard
-        interval:      Seconds between heartbeats
+        dashboard_url:  WebSocket URL of the dashboard, e.g. ws://192.168.1.100:8080
+        agent_id:       Unique ID for this agent (used in the URL path)
+        agent_name:     Human-readable display name shown on the dashboard
+        interval:       Seconds between heartbeats
+        capabilities:   List of things this agent can do (e.g., ["research", "content"])
     """
     ws_url = f"{dashboard_url}/ws/agent/{agent_id}"
     reconnect_delay = 3  # seconds to wait before retrying after disconnect
@@ -174,7 +178,7 @@ async def heartbeat_loop(dashboard_url: str, agent_id: str, agent_name: str,
                 # Run heartbeats and command listener concurrently.
                 # If either finishes, cancel the other.
                 heartbeat_task = asyncio.create_task(
-                    send_heartbeats(ws, agent_name, interval)
+                    send_heartbeats(ws, agent_name, interval, capabilities)
                 )
                 listener_task = asyncio.create_task(
                     listen_for_commands(ws)
@@ -237,6 +241,12 @@ def parse_args():
         type=int,
         default=30,
         help="Heartbeat interval in seconds (default: 30)",
+    )
+    parser.add_argument(
+        "--capabilities", "-c",
+        nargs="+",
+        default=None,
+        help="List of capabilities (e.g., --capabilities research content tts)",
     )
     return parser.parse_args()
 
@@ -318,11 +328,14 @@ def main():
     hostname = get_hostname()
     agent_id = args.id or hostname.lower().replace(" ", "-")
     agent_name = args.name or hostname
+    capabilities = args.capabilities
 
-    logger.info("Agent ID:   %s", agent_id)
-    logger.info("Agent Name: %s", agent_name)
-    logger.info("Dashboard:  %s", args.dashboard)
-    logger.info("Interval:   %ds", args.interval)
+    logger.info("Agent ID:      %s", agent_id)
+    logger.info("Agent Name:    %s", agent_name)
+    logger.info("Dashboard:     %s", args.dashboard)
+    logger.info("Interval:      %ds", args.interval)
+    if capabilities:
+        logger.info("Capabilities:  %s", capabilities)
 
     try:
         asyncio.run(heartbeat_loop(
@@ -330,6 +343,7 @@ def main():
             agent_id=agent_id,
             agent_name=agent_name,
             interval=args.interval,
+            capabilities=capabilities,
         ))
     except KeyboardInterrupt:
         logger.info("Stopped by user")
