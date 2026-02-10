@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from core.agent_registry import AgentRegistry
+from core.event_logger import EventLogger
 from core.health_monitor import HealthMonitor
 from core.task import TaskQueue, TaskComplexity
 from core.orchestrator import Orchestrator
@@ -67,6 +68,9 @@ registry = AgentRegistry(heartbeat_timeout=HEARTBEAT_TIMEOUT)
 
 # Health monitor — per-agent health metrics, 3-miss heartbeat policy
 health_monitor = HealthMonitor(registry=registry, heartbeat_interval=30.0)
+
+# Event logger — centralized audit trail for all CAM activity
+event_logger = EventLogger(max_events=1000)
 
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
@@ -135,6 +139,18 @@ async def broadcast_health_status():
     })
 
 
+async def broadcast_event(event_dict: dict):
+    """Push a single new event to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "event",
+        "event": event_dict,
+    })
+
+
+# Wire the event logger's broadcast callback
+event_logger.set_broadcast_callback(broadcast_event)
+
+
 # ---------------------------------------------------------------------------
 # Orchestrator callbacks — push OATI phase changes to dashboards in real time
 # ---------------------------------------------------------------------------
@@ -148,6 +164,11 @@ async def on_task_phase_change(task, phase, detail):
         "phase": phase,
         "detail": detail,
     })
+    severity = "error" if phase == "FAILED" else "info"
+    getattr(event_logger, severity)(
+        "task", f"[{phase}] {detail or task.short_id}",
+        task_id=task.short_id, phase=phase,
+    )
 
 
 async def on_task_update():
@@ -200,6 +221,8 @@ async def dispatch_to_agent(task, plan):
 
     if agent_id is None:
         logger.info("No agents available for task %s — falling back to model", task.short_id)
+        event_logger.info("task", f"No agents available for {task.short_id}, using model fallback",
+                          task_id=task.short_id)
         return None
 
     agent_info = registry.get_by_id(agent_id)
@@ -216,6 +239,8 @@ async def dispatch_to_agent(task, plan):
         "Dispatching task %s to agent '%s' (%s)",
         task.short_id, agent_name, agent_id,
     )
+    event_logger.info("task", f"Dispatching {task.short_id} to {agent_name}",
+                      task_id=task.short_id, agent=agent_name)
     await broadcast_to_dashboards({
         "type": "task_phase",
         "task_id": task.task_id,
@@ -243,6 +268,8 @@ async def dispatch_to_agent(task, plan):
             agent_name, task.short_id, result,
         )
         health_monitor.on_task_completed(agent_id)
+        event_logger.info("task", f"Agent {agent_name} completed {task.short_id}",
+                          task_id=task.short_id, agent=agent_name)
         return result
 
     except asyncio.TimeoutError:
@@ -251,6 +278,9 @@ async def dispatch_to_agent(task, plan):
             agent_name, task.short_id, AGENT_DISPATCH_TIMEOUT,
         )
         health_monitor.on_task_failed(agent_id)
+        event_logger.warn("task", f"Agent {agent_name} timed out on {task.short_id}",
+                          task_id=task.short_id, agent=agent_name,
+                          timeout=AGENT_DISPATCH_TIMEOUT)
         return f"[timeout] Agent '{agent_name}' did not respond within {AGENT_DISPATCH_TIMEOUT}s"
 
     except Exception as e:
@@ -259,6 +289,8 @@ async def dispatch_to_agent(task, plan):
             agent_name, task.short_id, e,
         )
         health_monitor.on_task_failed(agent_id)
+        event_logger.error("task", f"Dispatch to {agent_name} failed: {e}",
+                           task_id=task.short_id, agent=agent_name, error=str(e))
         return None
 
     finally:
@@ -273,11 +305,24 @@ async def dispatch_to_agent(task, plan):
 # Orchestrator instance — uses the shared task queue and callbacks
 # ---------------------------------------------------------------------------
 
+def on_model_call(model, backend, tokens, latency_ms, cost_usd, task_short_id):
+    """Called by the orchestrator after each model router call."""
+    event_logger.info(
+        "model",
+        f"Model call: {model} ({backend}) — {tokens} tokens, "
+        f"{latency_ms:.0f}ms, ${cost_usd:.6f}",
+        model=model, backend=backend, tokens=tokens,
+        latency_ms=round(latency_ms, 1), cost_usd=round(cost_usd, 6),
+        task_id=task_short_id,
+    )
+
+
 orchestrator = Orchestrator(
     queue=task_queue,
     on_phase_change=on_task_phase_change,
     on_task_update=on_task_update,
     on_dispatch_to_agent=dispatch_to_agent,
+    on_model_call=on_model_call,
 )
 
 
@@ -300,6 +345,7 @@ async def activate_kill_switch():
     global kill_switch_active
     kill_switch_active = True
     logger.critical("KILL SWITCH ACTIVATED — shutting down all agents")
+    event_logger.error("system", "KILL SWITCH ACTIVATED — all agents halting")
 
     # Stop the orchestrator loop
     orchestrator.stop()
@@ -349,6 +395,9 @@ async def check_heartbeats():
         await asyncio.sleep(HEARTBEAT_CHECK_INTERVAL)
         newly_offline = health_monitor.check_heartbeats()
         if newly_offline:
+            for aid in newly_offline:
+                event_logger.warn("agent", f"Agent '{aid}' went offline (3 missed heartbeats)",
+                                  agent_id=aid)
             await broadcast_agent_status()
         # Always broadcast health so dashboard indicators update
         await broadcast_health_status()
@@ -363,6 +412,7 @@ async def lifespan(app: FastAPI):
     """Start background tasks on startup, clean up on shutdown."""
     global orchestrator_task
     logger.info("CAM Dashboard starting up")
+    event_logger.info("system", "CAM Dashboard starting up")
     heartbeat_task = asyncio.create_task(check_heartbeats())
     orchestrator_task = asyncio.create_task(orchestrator.run())
     logger.info("Orchestrator loop started as background task")
@@ -418,6 +468,21 @@ async def get_health():
     return health_monitor.to_broadcast_dict()
 
 
+@app.get("/api/events")
+async def get_events(count: int = 200):
+    """Return recent events from the event log."""
+    return event_logger.get_recent(count)
+
+
+@app.post("/api/events/export")
+async def export_events():
+    """Export all events to a JSON file in data/logs/."""
+    from datetime import datetime as dt
+    filepath = Path("data/logs") / f"events_{dt.now().strftime('%Y%m%d_%H%M%S')}.json"
+    num = event_logger.export_json(filepath)
+    return {"ok": True, "filepath": str(filepath), "event_count": num}
+
+
 # ---------------------------------------------------------------------------
 # WebSocket: agents connect here to send heartbeats
 # ---------------------------------------------------------------------------
@@ -463,6 +528,8 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                         ip_address=ip,
                         capabilities=capabilities,
                     )
+                    event_logger.info("agent", f"Agent '{name}' connected from {ip}",
+                                      agent_id=agent_id, ip=ip)
                 else:
                     # Subsequent heartbeat — update via registry
                     registry.update_heartbeat(
@@ -510,6 +577,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
 
     except WebSocketDisconnect:
         logger.info("Agent '%s' disconnected", agent_id)
+        event_logger.warn("agent", f"Agent '{agent_id}' disconnected", agent_id=agent_id)
         # Remove from live WebSocket tracking
         agent_websockets.pop(agent_id, None)
         # Accumulate uptime in health monitor before marking offline
@@ -558,6 +626,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "health_status",
         "health": health_monitor.to_broadcast_dict(),
+    })
+
+    # Send recent event log so the panel isn't empty on connect
+    await websocket.send_json({
+        "type": "event_log",
+        "events": event_logger.get_recent(200),
     })
 
     try:
@@ -637,6 +711,9 @@ async def dashboard_websocket(websocket: WebSocket):
                     "Task %s submitted from dashboard: %s",
                     task.short_id, description,
                 )
+                event_logger.info("task", f"Task {task.short_id} submitted: {description[:80]}",
+                                  task_id=task.short_id, complexity=complexity.value,
+                                  source="dashboard")
 
                 await websocket.send_json({
                     "type": "task_submitted",

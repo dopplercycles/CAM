@@ -747,6 +747,123 @@
             background: #f59e0b;
         }
 
+        /* --- Event Log --- */
+        .event-log-section {
+            margin-bottom: 2rem;
+        }
+
+        .event-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .event-log-header h2 {
+            margin-bottom: 0;
+        }
+
+        .event-log-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .event-log-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .event-log-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .event-log-container {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+
+        .event-entry {
+            padding: 0.3rem 0.75rem;
+            border-bottom: 1px solid #1f2d3d;
+            display: flex;
+            gap: 0.5rem;
+            align-items: baseline;
+        }
+
+        .event-entry:last-child {
+            border-bottom: none;
+        }
+
+        .event-time {
+            color: #4a5a6a;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+        }
+
+        .event-severity {
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 0.05rem 0.3rem;
+            border-radius: 3px;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .event-severity.info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .event-severity.warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .event-severity.error {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .event-category {
+            color: #5b9bd5;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+        }
+
+        .event-message {
+            color: #c0c8d0;
+            word-break: break-word;
+        }
+
+        .event-message.warn {
+            color: #f59e0b;
+        }
+
+        .event-message.error {
+            color: #e74c3c;
+        }
+
+        .event-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+        }
+
         /* --- Responsive --- */
         @media (max-width: 640px) {
             header {
@@ -827,6 +944,19 @@
             </div>
         </section>
 
+        <section class="event-log-section">
+            <div class="event-log-header">
+                <h2>Activity Log</h2>
+                <div class="event-log-actions">
+                    <button class="event-log-btn" onclick="clearEventLog()">Clear</button>
+                    <button class="event-log-btn" onclick="exportEventLog()">Export</button>
+                </div>
+            </div>
+            <div class="event-log-container" id="event-log">
+                <div class="event-empty">No events yet. Activity will appear here.</div>
+            </div>
+        </section>
+
         <h2>Agent Status Board</h2>
         <div id="agent-board">
             <!-- Agent cards rendered here by JS -->
@@ -889,6 +1019,10 @@
                     renderAgents();
                 } else if (data.type === "ping_result") {
                     handlePingResult(data);
+                } else if (data.type === "event_log") {
+                    handleEventLog(data.events || []);
+                } else if (data.type === "event") {
+                    handleNewEvent(data.event);
                 }
             };
 
@@ -1234,6 +1368,94 @@
             const div = document.createElement("div");
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // ---------------------------------------------------------------
+        // Event Log
+        // ---------------------------------------------------------------
+        let eventLog = [];
+        const MAX_DISPLAY_EVENTS = 500;
+
+        function handleEventLog(events) {
+            eventLog = events;
+            renderEventLog();
+        }
+
+        function handleNewEvent(event) {
+            eventLog.push(event);
+            // Trim oldest if over limit
+            if (eventLog.length > MAX_DISPLAY_EVENTS) {
+                eventLog = eventLog.slice(-MAX_DISPLAY_EVENTS);
+            }
+            appendEventEntry(event);
+        }
+
+        function renderEventLog() {
+            const container = document.getElementById("event-log");
+            if (eventLog.length === 0) {
+                container.innerHTML = '<div class="event-empty">No events yet. Activity will appear here.</div>';
+                return;
+            }
+            container.innerHTML = eventLog.map(e => eventEntryHtml(e)).join("");
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendEventEntry(event) {
+            const container = document.getElementById("event-log");
+            // Remove empty state if present
+            const empty = container.querySelector(".event-empty");
+            if (empty) empty.remove();
+
+            const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 40;
+
+            const div = document.createElement("div");
+            div.className = "event-entry";
+            div.innerHTML = eventEntryInner(event);
+            container.appendChild(div);
+
+            // Auto-scroll only if user was already at the bottom
+            if (wasAtBottom) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function eventEntryHtml(event) {
+            return `<div class="event-entry">${eventEntryInner(event)}</div>`;
+        }
+
+        function eventEntryInner(event) {
+            const time = formatEventTime(event.timestamp);
+            const sev = (event.severity || "INFO").toLowerCase();
+            const cat = event.category || "";
+            const msg = event.message || "";
+            const msgClass = sev === "error" ? " error" : (sev === "warn" ? " warn" : "");
+            return `<span class="event-time">${time}</span>`
+                + `<span class="event-severity ${sev}">${event.severity}</span>`
+                + `<span class="event-category">[${escapeHtml(cat)}]</span>`
+                + `<span class="event-message${msgClass}">${escapeHtml(msg)}</span>`;
+        }
+
+        function formatEventTime(isoString) {
+            if (!isoString) return "";
+            const d = new Date(isoString);
+            return d.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        }
+
+        function clearEventLog() {
+            eventLog = [];
+            renderEventLog();
+        }
+
+        function exportEventLog() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            fetch("/api/events/export", { method: "POST" })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) {
+                        alert(`Exported ${data.event_count} events to ${data.filepath}`);
+                    }
+                })
+                .catch(err => console.error("Export failed:", err));
         }
 
         // ---------------------------------------------------------------

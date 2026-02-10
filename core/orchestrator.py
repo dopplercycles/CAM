@@ -69,6 +69,7 @@ class Orchestrator:
         on_phase_change=None,
         on_task_update=None,
         on_dispatch_to_agent=None,
+        on_model_call=None,
     ):
         # Task queue — shared with other components (dashboard, CLI, etc.)
         # Note: can't use `queue or TaskQueue()` because an empty queue is falsy
@@ -87,6 +88,10 @@ class Orchestrator:
         # Signature: async (task: Task, plan: dict) -> str | None
         # Returns the agent's response string, or None to fall back to model response.
         self._on_dispatch_to_agent = on_dispatch_to_agent
+
+        # Optional callback for logging model router calls.
+        # Signature: (model, backend, tokens, latency_ms, cost_usd, task_short_id)
+        self._on_model_call = on_model_call
 
         # Flag to stop the loop gracefully (kill switch, shutdown, etc.)
         self._running: bool = False
@@ -214,6 +219,21 @@ class Orchestrator:
             task.short_id, response.model, response.total_tokens,
             response.latency_ms, response.cost_usd,
         )
+
+        # Notify model call listener (event logger in server.py)
+        if self._on_model_call is not None:
+            try:
+                self._on_model_call(
+                    model=response.model,
+                    backend=response.backend,
+                    tokens=response.total_tokens,
+                    latency_ms=response.latency_ms,
+                    cost_usd=response.cost_usd,
+                    task_short_id=task.short_id,
+                )
+            except Exception:
+                logger.debug("Model call callback error (non-fatal)", exc_info=True)
+
         return plan
 
     async def act(self, task: Task, plan: dict) -> str:
