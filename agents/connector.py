@@ -82,12 +82,59 @@ def get_local_ip() -> str:
 # Heartbeat loop
 # ---------------------------------------------------------------------------
 
+async def send_heartbeats(ws, agent_name: str, interval: int):
+    """Send periodic heartbeats to the dashboard.
+
+    Runs as a concurrent task alongside the message listener.
+    """
+    while True:
+        ip = get_local_ip()
+        heartbeat = json.dumps({
+            "type": "heartbeat",
+            "name": agent_name,
+            "ip": ip,
+        })
+        await ws.send(heartbeat)
+        logger.info("Heartbeat sent (ip=%s)", ip)
+        await asyncio.sleep(interval)
+
+
+async def listen_for_commands(ws):
+    """Listen for incoming commands from the dashboard.
+
+    Handles:
+        - {"type": "shutdown", "reason": "..."} — graceful shutdown
+          Triggered by the Kill Switch on the dashboard.
+          Per the CAM Constitution: "One click halts all autonomous
+          action across all agents. Graceful degradation kicks in."
+
+    Returns True if the agent should shut down, False if just disconnected.
+    """
+    async for raw in ws:
+        try:
+            msg = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+
+        if msg.get("type") == "shutdown":
+            reason = msg.get("reason", "unknown")
+            logger.critical("SHUTDOWN received from dashboard (reason: %s)", reason)
+            return True
+
+    # Connection closed without shutdown command
+    return False
+
+
 async def heartbeat_loop(dashboard_url: str, agent_id: str, agent_name: str,
                          interval: int):
-    """Connect to the dashboard and send heartbeats forever.
+    """Connect to the dashboard, send heartbeats, and listen for commands.
+
+    Runs two concurrent tasks:
+    1. Sending periodic heartbeats so the dashboard knows we're alive
+    2. Listening for incoming commands (e.g., kill switch shutdown)
 
     If the connection drops, waits a few seconds and retries.
-    Runs until the process is killed (Ctrl+C or systemd stop).
+    If a shutdown command is received, exits cleanly.
 
     Args:
         dashboard_url: WebSocket URL of the dashboard, e.g. ws://192.168.1.100:8080
@@ -104,16 +151,30 @@ async def heartbeat_loop(dashboard_url: str, agent_id: str, agent_name: str,
             async with websockets.connect(ws_url) as ws:
                 logger.info("Connected to dashboard")
 
-                while True:
-                    ip = get_local_ip()
-                    heartbeat = json.dumps({
-                        "type": "heartbeat",
-                        "name": agent_name,
-                        "ip": ip,
-                    })
-                    await ws.send(heartbeat)
-                    logger.info("Heartbeat sent (ip=%s)", ip)
-                    await asyncio.sleep(interval)
+                # Run heartbeats and command listener concurrently.
+                # If either finishes, cancel the other.
+                heartbeat_task = asyncio.create_task(
+                    send_heartbeats(ws, agent_name, interval)
+                )
+                listener_task = asyncio.create_task(
+                    listen_for_commands(ws)
+                )
+
+                # Wait for whichever finishes first
+                done, pending = await asyncio.wait(
+                    [heartbeat_task, listener_task],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                # Cancel the other task
+                for task in pending:
+                    task.cancel()
+
+                # Check if we got a shutdown command
+                for task in done:
+                    if task == listener_task and task.result() is True:
+                        logger.info("Kill switch shutdown — exiting")
+                        return
 
         except (websockets.ConnectionClosed, ConnectionRefusedError, OSError) as e:
             logger.warning("Connection lost: %s", e)

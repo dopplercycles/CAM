@@ -58,6 +58,63 @@
             background: #00d672;
         }
 
+        /* --- Kill Switch — Constitution: "Prominent, always visible" --- */
+        .kill-switch-bar {
+            background: #1a2332;
+            border-bottom: 1px solid #2a3a4a;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kill-switch-btn {
+            background: #c0392b;
+            color: #fff;
+            border: 2px solid #e74c3c;
+            border-radius: 6px;
+            padding: 0.6rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: inherit;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s, box-shadow 0.15s;
+        }
+
+        .kill-switch-btn:hover {
+            background: #e74c3c;
+            box-shadow: 0 0 12px rgba(231, 76, 60, 0.5);
+        }
+
+        .kill-switch-btn:active {
+            background: #a93226;
+        }
+
+        .kill-switch-btn.activated {
+            background: #7f1d1d;
+            border-color: #991b1b;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        .kill-switch-label {
+            font-size: 0.8rem;
+            color: #6a7a8a;
+        }
+
+        .kill-switch-status {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e74c3c;
+            display: none;
+        }
+
+        .kill-switch-status.active {
+            display: inline;
+        }
+
         /* --- Main Content --- */
         main {
             max-width: 1200px;
@@ -197,6 +254,12 @@
                 text-align: center;
             }
 
+            .kill-switch-bar {
+                flex-direction: column;
+                gap: 0.5rem;
+                text-align: center;
+            }
+
             .agent-grid {
                 grid-template-columns: 1fr;
             }
@@ -211,6 +274,16 @@
             <span id="ws-status-text">Connecting...</span>
         </div>
     </header>
+
+    <div class="kill-switch-bar">
+        <div>
+            <button class="kill-switch-btn" id="kill-switch-btn" onclick="killSwitch()">
+                Kill Switch
+            </button>
+            <span class="kill-switch-label"> — halt all agents</span>
+        </div>
+        <span class="kill-switch-status" id="kill-switch-status">ALL AGENTS HALTED</span>
+    </div>
 
     <main>
         <h2>Agent Status Board</h2>
@@ -253,6 +326,8 @@
                 if (data.type === "agent_status") {
                     agents = data.agents;
                     renderAgents();
+                } else if (data.type === "kill_switch") {
+                    setKillSwitchState(data.active);
                 }
             };
 
@@ -314,12 +389,16 @@
                             <span class="value">${escapeHtml(agent.ip_address)}</span>
                         </div>
                         <div class="agent-detail">
-                            <span class="label">Last Heartbeat</span>
-                            <span class="value">${formatTime(agent.last_heartbeat)}</span>
+                            <span class="label">Uptime</span>
+                            <span class="value">${formatUptime(agent.connected_at, isOnline)}</span>
                         </div>
                         <div class="agent-detail">
-                            <span class="label">Connected Since</span>
-                            <span class="value">${formatTime(agent.connected_at)}</span>
+                            <span class="label">Heartbeats</span>
+                            <span class="value">${agent.heartbeat_count ?? 0}</span>
+                        </div>
+                        <div class="agent-detail">
+                            <span class="label">Last Seen</span>
+                            <span class="value">${formatTime(agent.last_heartbeat)}</span>
                         </div>
                     </div>
                 </div>
@@ -327,20 +406,74 @@
         }
 
         // ---------------------------------------------------------------
+        // Kill switch
+        // ---------------------------------------------------------------
+        let killSwitchActive = false;
+
+        function killSwitch() {
+            if (killSwitchActive) return;
+            // Confirmation — this is a big red button, make sure they mean it
+            if (!confirm("KILL SWITCH: This will shut down ALL connected agents immediately.\n\nAre you sure?")) {
+                return;
+            }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "kill_switch" }));
+            }
+        }
+
+        function setKillSwitchState(active) {
+            killSwitchActive = active;
+            const btn = document.getElementById("kill-switch-btn");
+            const status = document.getElementById("kill-switch-status");
+            if (active) {
+                btn.classList.add("activated");
+                btn.textContent = "Kill Switch Active";
+                status.classList.add("active");
+            } else {
+                btn.classList.remove("activated");
+                btn.textContent = "Kill Switch";
+                status.classList.remove("active");
+            }
+        }
+
+        // ---------------------------------------------------------------
         // Utility functions
         // ---------------------------------------------------------------
         function formatTime(isoString) {
-            if (!isoString) return "—";
+            if (!isoString) return "\u2014";
             const date = new Date(isoString);
             const now = new Date();
-            const diffMs = now - date;
-            const diffSec = Math.floor(diffMs / 1000);
+            const diffSec = Math.floor((now - date) / 1000);
 
             if (diffSec < 5) return "just now";
             if (diffSec < 60) return `${diffSec}s ago`;
-            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-            if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ${diffSec % 60}s ago`;
+            if (diffSec < 86400) {
+                const h = Math.floor(diffSec / 3600);
+                const m = Math.floor((diffSec % 3600) / 60);
+                return `${h}h ${m}m ago`;
+            }
             return date.toLocaleString();
+        }
+
+        function formatUptime(isoString, isOnline) {
+            if (!isoString) return "\u2014";
+            if (!isOnline) return "offline";
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffSec = Math.floor((now - date) / 1000);
+
+            if (diffSec < 60) return `${diffSec}s`;
+            if (diffSec < 3600) {
+                const m = Math.floor(diffSec / 60);
+                const s = diffSec % 60;
+                return `${m}m ${s}s`;
+            }
+            const h = Math.floor(diffSec / 3600);
+            const m = Math.floor((diffSec % 3600) / 60);
+            if (h < 24) return `${h}h ${m}m`;
+            const d = Math.floor(h / 24);
+            return `${d}d ${h % 24}h`;
         }
 
         function escapeHtml(text) {
@@ -349,7 +482,7 @@
             return div.innerHTML;
         }
 
-        // Update relative timestamps every 5 seconds
+        // Update relative timestamps every 5 seconds (uptime + last seen)
         setInterval(() => {
             if (agents.length > 0) renderAgents();
         }, 5000);

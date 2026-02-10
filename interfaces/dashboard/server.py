@@ -11,6 +11,7 @@ Run with:
 """
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
@@ -68,6 +69,7 @@ class AgentStatus(BaseModel):
     status: str = "online"  # "online" or "offline"
     last_heartbeat: datetime | None = None
     connected_at: datetime | None = None
+    heartbeat_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -80,8 +82,14 @@ class AgentStatus(BaseModel):
 # agent_id -> AgentStatus
 connected_agents: dict[str, AgentStatus] = {}
 
+# agent_id -> WebSocket (live connections, needed for kill switch relay)
+agent_websockets: dict[str, WebSocket] = {}
+
 # Browser clients watching the dashboard (receive status pushes)
 dashboard_clients: list[WebSocket] = []
+
+# Kill switch state — when True, all autonomous action is halted
+kill_switch_active: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +115,56 @@ async def broadcast_agent_status():
 
     for client in disconnected:
         dashboard_clients.remove(client)
+
+
+# ---------------------------------------------------------------------------
+# Kill switch — CAM Constitution: "Prominent, always visible. One click
+# halts all autonomous action across all agents."
+# ---------------------------------------------------------------------------
+
+async def activate_kill_switch():
+    """Send shutdown command to every connected agent.
+
+    Per the CAM Constitution, the kill switch must:
+    - Halt all autonomous action across all agents
+    - Be always visible and one-click
+    - Trigger graceful degradation — agents queue work and wait
+
+    This sends a shutdown message to each agent's WebSocket and
+    notifies all dashboard browsers of the new state.
+    """
+    global kill_switch_active
+    kill_switch_active = True
+    logger.critical("KILL SWITCH ACTIVATED — shutting down all agents")
+
+    shutdown_msg = {"type": "shutdown", "reason": "kill_switch"}
+
+    # Send shutdown to every connected agent
+    disconnected = []
+    for agent_id, ws in agent_websockets.items():
+        try:
+            await ws.send_json(shutdown_msg)
+            logger.info("Shutdown sent to agent '%s'", agent_id)
+        except Exception:
+            disconnected.append(agent_id)
+
+    # Clean up any that were already gone
+    for agent_id in disconnected:
+        del agent_websockets[agent_id]
+
+    # Mark all agents offline
+    for agent in connected_agents.values():
+        agent.status = "offline"
+
+    # Notify all dashboard browsers
+    await broadcast_agent_status()
+
+    # Also send kill switch state to dashboards
+    for client in dashboard_clients:
+        try:
+            await client.send_json({"type": "kill_switch", "active": True})
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +264,9 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
     client_host = websocket.client.host if websocket.client else "unknown"
     logger.info("Agent '%s' WebSocket opened from %s", agent_id, client_host)
 
+    # Store the WebSocket so we can send commands back (e.g., kill switch)
+    agent_websockets[agent_id] = websocket
+
     try:
         while True:
             data = await websocket.receive_json()
@@ -222,6 +283,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                         status="online",
                         last_heartbeat=now,
                         connected_at=now,
+                        heartbeat_count=1,
                     )
                     logger.info(
                         "Agent registered: %s (%s) at %s",
@@ -229,16 +291,19 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                         data.get("ip", client_host),
                     )
                 else:
-                    # Subsequent heartbeat — update timestamp and status
+                    # Subsequent heartbeat — update timestamp and count
                     agent = connected_agents[agent_id]
                     agent.last_heartbeat = now
                     agent.status = "online"
                     agent.ip_address = data.get("ip", agent.ip_address)
+                    agent.heartbeat_count += 1
 
                 await broadcast_agent_status()
 
     except WebSocketDisconnect:
         logger.info("Agent '%s' disconnected", agent_id)
+        # Remove from live WebSocket tracking
+        agent_websockets.pop(agent_id, None)
         if agent_id in connected_agents:
             connected_agents[agent_id].status = "offline"
             await broadcast_agent_status()
@@ -267,10 +332,21 @@ async def dashboard_websocket(websocket: WebSocket):
     data = [agent.model_dump(mode="json") for agent in connected_agents.values()]
     await websocket.send_json({"type": "agent_status", "agents": data})
 
+    # Also send current kill switch state
+    await websocket.send_json({"type": "kill_switch", "active": kill_switch_active})
+
     try:
-        # Keep connection alive — listen for messages (future: dashboard commands)
+        # Listen for dashboard commands (kill switch, future: agent controls)
         while True:
-            await websocket.receive_text()
+            raw = await websocket.receive_text()
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            if msg.get("type") == "kill_switch":
+                await activate_kill_switch()
+
     except WebSocketDisconnect:
         if websocket in dashboard_clients:
             dashboard_clients.remove(websocket)
