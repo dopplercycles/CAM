@@ -629,6 +629,124 @@
             font-size: 0.85rem;
         }
 
+        /* --- Agent Health --- */
+        .agent-health {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #2a3a4a;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+        }
+
+        .health-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .health-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .health-dot.green { background: #00d672; }
+        .health-dot.yellow { background: #f59e0b; }
+        .health-dot.red { background: #e74c3c; }
+
+        .health-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .health-label.green { color: #00d672; }
+        .health-label.yellow { color: #f59e0b; }
+        .health-label.red { color: #e74c3c; }
+
+        .health-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .health-row .label {
+            color: #6a7a8a;
+        }
+
+        .health-row .value {
+            color: #c0c8d0;
+            font-family: monospace;
+        }
+
+        .health-row .value.warn {
+            color: #f59e0b;
+        }
+
+        .health-bar-container {
+            height: 6px;
+            background: #0f1923;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.2rem;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .health-bar-fill.green { background: #00d672; }
+        .health-bar-fill.yellow { background: #f59e0b; }
+        .health-bar-fill.red { background: #e74c3c; }
+
+        .ping-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.2rem;
+        }
+
+        .ping-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .ping-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .ping-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .ping-result {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #c0c8d0;
+        }
+
+        .agent-status-badge.busy {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .agent-status-badge.busy .dot {
+            background: #f59e0b;
+        }
+
         /* --- Responsive --- */
         @media (max-width: 640px) {
             header {
@@ -726,6 +844,9 @@
         // Per-agent chat logs: { agent_id: [{type, text}, ...] }
         const chatLogs = {};
 
+        // Per-agent health metrics: { agent_id: {...metrics} }
+        let agentHealth = {};
+
         const board = document.getElementById("agent-board");
         const statusDot = document.getElementById("ws-status-dot");
         const statusText = document.getElementById("ws-status-text");
@@ -763,6 +884,11 @@
                 } else if (data.type === "task_submitted") {
                     // Confirmation — could show a toast, for now just log
                     if (!data.ok) console.warn("Task submit failed:", data.error);
+                } else if (data.type === "health_status") {
+                    agentHealth = data.health || {};
+                    renderAgents();
+                } else if (data.type === "ping_result") {
+                    handlePingResult(data);
                 }
             };
 
@@ -825,8 +951,8 @@
         }
 
         function agentCard(agent) {
-            const isOnline = agent.status === "online";
-            const statusClass = isOnline ? "online" : "offline";
+            const isOnline = agent.status === "online" || agent.status === "busy";
+            const statusClass = agent.status === "busy" ? "busy" : (isOnline ? "online" : "offline");
             const agentId = agent.agent_id;
             const messages = chatLogs[agentId] || [];
 
@@ -864,6 +990,7 @@
                             <span class="value">${formatTime(agent.last_heartbeat)}</span>
                         </div>
                     </div>
+                    ${renderHealthSection(agentId, isOnline)}
                     ${renderCapabilities(agent.capabilities)}
                     <div class="agent-chat">
                         <div class="chat-log" id="chat-log-${agentId}">${chatHtml}</div>
@@ -960,6 +1087,99 @@
                 logEl.appendChild(msgEl);
                 logEl.scrollTop = logEl.scrollHeight;
             }
+        }
+
+        // ---------------------------------------------------------------
+        // Agent health
+        // ---------------------------------------------------------------
+        function renderHealthSection(agentId, isOnline) {
+            const h = agentHealth[agentId];
+            if (!h) return "";
+
+            const level = h.health_level || "green";
+            const levelLabels = { green: "Healthy", yellow: "Degraded", red: "Unhealthy" };
+            const missed = h.missed_heartbeats || 0;
+            const latency = h.heartbeat_latency_ms != null ? `${h.heartbeat_latency_ms}ms` : "\u2014";
+            const completed = h.tasks_completed || 0;
+            const failed = h.tasks_failed || 0;
+            const active = h.active_tasks || 0;
+            const rate = h.success_rate != null ? h.success_rate : 100;
+            const rtt = h.last_ping_rtt_ms != null ? `${h.last_ping_rtt_ms}ms` : "\u2014";
+
+            const barColor = rate >= 75 ? "green" : (rate >= 50 ? "yellow" : "red");
+
+            return `
+                <div class="agent-health">
+                    <div class="health-indicator">
+                        <div class="health-dot ${level}"></div>
+                        <span class="health-label ${level}">${levelLabels[level]}</span>
+                    </div>
+                    <div class="health-row">
+                        <span class="label">HB Latency</span>
+                        <span class="value">${latency}</span>
+                    </div>
+                    <div class="health-row">
+                        <span class="label">Missed HBs</span>
+                        <span class="value${missed > 0 ? ' warn' : ''}">${missed}</span>
+                    </div>
+                    <div class="health-row">
+                        <span class="label">Tasks</span>
+                        <span class="value">${completed} ok / ${failed} fail</span>
+                    </div>
+                    <div class="health-row">
+                        <span class="label">Load</span>
+                        <span class="value">${active} active</span>
+                    </div>
+                    <div class="health-row">
+                        <span class="label">Success Rate</span>
+                        <span class="value">${rate.toFixed(0)}%</span>
+                    </div>
+                    <div class="health-bar-container">
+                        <div class="health-bar-fill ${barColor}" style="width:${rate}%"></div>
+                    </div>
+                    <div class="ping-row">
+                        <button class="ping-btn"
+                            onclick="pingAgent('${agentId}')"
+                            ${isOnline ? '' : 'disabled'}
+                            id="ping-btn-${agentId}">Ping</button>
+                        <span class="ping-result" id="ping-result-${agentId}">${rtt !== "\u2014" ? rtt : ""}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function pingAgent(agentId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: "ping_agent", agent_id: agentId }));
+
+            // Show pinging state
+            const resultEl = document.getElementById(`ping-result-${agentId}`);
+            if (resultEl) resultEl.textContent = "pinging...";
+            const btn = document.getElementById(`ping-btn-${agentId}`);
+            if (btn) btn.disabled = true;
+
+            // Re-enable after 5s timeout
+            setTimeout(() => {
+                if (btn) btn.disabled = false;
+                if (resultEl && resultEl.textContent === "pinging...") {
+                    resultEl.textContent = "timeout";
+                }
+            }, 5000);
+        }
+
+        function handlePingResult(data) {
+            const agentId = data.agent_id;
+            const resultEl = document.getElementById(`ping-result-${agentId}`);
+            const btn = document.getElementById(`ping-btn-${agentId}`);
+
+            if (resultEl) {
+                if (data.error) {
+                    resultEl.textContent = data.error;
+                } else if (data.rtt_ms != null) {
+                    resultEl.textContent = `${data.rtt_ms}ms`;
+                }
+            }
+            if (btn) btn.disabled = false;
         }
 
         // ---------------------------------------------------------------

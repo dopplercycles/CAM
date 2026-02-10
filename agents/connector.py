@@ -130,6 +130,10 @@ async def listen_for_commands(ws):
             logger.critical("SHUTDOWN received from dashboard (reason: %s)", reason)
             return True
 
+        elif msg_type == "ping":
+            ping_id = msg.get("ping_id")
+            await ws.send(json.dumps({"type": "pong", "ping_id": ping_id}))
+
         elif msg_type == "command":
             command_text = msg.get("command", "")
             task_id = msg.get("task_id")

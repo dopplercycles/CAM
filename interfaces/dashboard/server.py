@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from core.agent_registry import AgentRegistry
+from core.health_monitor import HealthMonitor
 from core.task import TaskQueue, TaskComplexity
 from core.orchestrator import Orchestrator
 
@@ -46,9 +47,9 @@ logger = logging.getLogger("cam.dashboard")
 HEARTBEAT_CHECK_INTERVAL = 10
 
 # How long before we consider an agent offline (seconds)
-# Passed to the AgentRegistry. Set higher than the agent's heartbeat
-# interval (default 30s) to allow for network jitter.
-HEARTBEAT_TIMEOUT = 45
+# Safety net — the HealthMonitor's 3-missed-heartbeats logic is the
+# primary offline detection mechanism now. This is just a fallback.
+HEARTBEAT_TIMEOUT = 120
 
 # Path to static files directory (index.html lives here)
 STATIC_DIR = Path(__file__).parent / "static"
@@ -63,6 +64,9 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 # Agent registry — tracks all agents, shared with orchestrator later
 registry = AgentRegistry(heartbeat_timeout=HEARTBEAT_TIMEOUT)
+
+# Health monitor — per-agent health metrics, 3-miss heartbeat policy
+health_monitor = HealthMonitor(registry=registry, heartbeat_interval=30.0)
 
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
@@ -120,6 +124,14 @@ async def broadcast_task_status():
         "type": "task_status",
         "tasks": task_queue.to_broadcast_list(),
         "counts": task_queue.get_status(),
+    })
+
+
+async def broadcast_health_status():
+    """Push current agent health metrics to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "health_status",
+        "health": health_monitor.to_broadcast_dict(),
     })
 
 
@@ -197,6 +209,7 @@ async def dispatch_to_agent(task, plan):
     task.assigned_agent = agent_name
     if agent_info:
         agent_info.status = "busy"
+    health_monitor.on_task_dispatched(agent_id)
     await broadcast_agent_status()
 
     logger.info(
@@ -229,6 +242,7 @@ async def dispatch_to_agent(task, plan):
             "Agent '%s' responded to task %s: %.200s",
             agent_name, task.short_id, result,
         )
+        health_monitor.on_task_completed(agent_id)
         return result
 
     except asyncio.TimeoutError:
@@ -236,6 +250,7 @@ async def dispatch_to_agent(task, plan):
             "Agent '%s' timed out on task %s after %ds",
             agent_name, task.short_id, AGENT_DISPATCH_TIMEOUT,
         )
+        health_monitor.on_task_failed(agent_id)
         return f"[timeout] Agent '{agent_name}' did not respond within {AGENT_DISPATCH_TIMEOUT}s"
 
     except Exception as e:
@@ -243,6 +258,7 @@ async def dispatch_to_agent(task, plan):
             "Dispatch to agent '%s' failed for task %s: %s",
             agent_name, task.short_id, e,
         )
+        health_monitor.on_task_failed(agent_id)
         return None
 
     finally:
@@ -323,16 +339,19 @@ async def activate_kill_switch():
 # ---------------------------------------------------------------------------
 
 async def check_heartbeats():
-    """Background task: mark agents offline if heartbeat times out.
+    """Background task: check agent heartbeats and broadcast health.
 
-    Delegates the actual check to the registry's heartbeat_check()
-    method, which knows the timeout and handles the status changes.
+    Uses the HealthMonitor's 3-missed-heartbeats policy as the primary
+    offline detection. Also broadcasts health_status every cycle so
+    the dashboard indicators stay current.
     """
     while True:
         await asyncio.sleep(HEARTBEAT_CHECK_INTERVAL)
-        timed_out = registry.heartbeat_check()
-        if timed_out:
+        newly_offline = health_monitor.check_heartbeats()
+        if newly_offline:
             await broadcast_agent_status()
+        # Always broadcast health so dashboard indicators update
+        await broadcast_health_status()
 
 
 # ---------------------------------------------------------------------------
@@ -393,6 +412,12 @@ async def get_tasks():
     }
 
 
+@app.get("/api/health")
+async def get_health():
+    """Return current agent health metrics as JSON."""
+    return health_monitor.to_broadcast_dict()
+
+
 # ---------------------------------------------------------------------------
 # WebSocket: agents connect here to send heartbeats
 # ---------------------------------------------------------------------------
@@ -415,6 +440,9 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
 
     # Store the WebSocket so we can send commands back (e.g., kill switch)
     agent_websockets[agent_id] = websocket
+
+    # Start health tracking for this connection session
+    health_monitor.on_agent_connected(agent_id)
 
     try:
         while True:
@@ -443,6 +471,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                         capabilities=capabilities,
                     )
 
+                health_monitor.on_heartbeat(agent_id)
                 await broadcast_agent_status()
 
             elif msg_type == "command_response":
@@ -468,10 +497,23 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                         "response": response_text,
                     })
 
+            elif msg_type == "pong":
+                ping_id = data.get("ping_id")
+                if ping_id:
+                    rtt_ms = health_monitor.resolve_pong(ping_id)
+                    await broadcast_to_dashboards({
+                        "type": "ping_result",
+                        "agent_id": agent_id,
+                        "rtt_ms": round(rtt_ms, 1) if rtt_ms is not None else None,
+                        "error": None if rtt_ms is not None else "Unknown ping_id",
+                    })
+
     except WebSocketDisconnect:
         logger.info("Agent '%s' disconnected", agent_id)
         # Remove from live WebSocket tracking
         agent_websockets.pop(agent_id, None)
+        # Accumulate uptime in health monitor before marking offline
+        health_monitor.on_agent_disconnected(agent_id)
         # Mark offline in registry (keeps the record for dashboard display)
         registry.deregister(agent_id)
         await broadcast_agent_status()
@@ -510,6 +552,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "task_status",
         "tasks": task_queue.to_broadcast_list(),
         "counts": task_queue.get_status(),
+    })
+
+    # Send current health metrics
+    await websocket.send_json({
+        "type": "health_status",
+        "health": health_monitor.to_broadcast_dict(),
     })
 
     try:
@@ -605,6 +653,29 @@ async def dashboard_websocket(websocket: WebSocket):
                     "tasks": task_queue.to_broadcast_list(),
                     "counts": task_queue.get_status(),
                 })
+
+            elif msg.get("type") == "ping_agent":
+                target_id = msg.get("agent_id", "")
+                if target_id in agent_websockets:
+                    try:
+                        ping_msg = health_monitor.create_ping(target_id)
+                        await agent_websockets[target_id].send_json(ping_msg)
+                        logger.info("Ping sent to agent '%s'", target_id)
+                    except Exception:
+                        logger.warning("Failed to ping agent '%s'", target_id)
+                        await broadcast_to_dashboards({
+                            "type": "ping_result",
+                            "agent_id": target_id,
+                            "rtt_ms": None,
+                            "error": "Failed to send ping",
+                        })
+                else:
+                    await broadcast_to_dashboards({
+                        "type": "ping_result",
+                        "agent_id": target_id,
+                        "rtt_ms": None,
+                        "error": "Agent is offline",
+                    })
 
     except WebSocketDisconnect:
         if websocket in dashboard_clients:
