@@ -278,6 +278,10 @@ class TaskQueue:
             "failed": len(self.failed),
         }
 
+    def to_broadcast_list(self) -> list[dict]:
+        """Return all tasks as dicts, newest first — for dashboard broadcast."""
+        return [t.to_dict() for t in reversed(self._tasks)]
+
     def __len__(self) -> int:
         """Total number of tasks (all statuses)."""
         return len(self._tasks)

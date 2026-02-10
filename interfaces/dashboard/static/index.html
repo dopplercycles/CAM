@@ -329,6 +329,281 @@
             cursor: default;
         }
 
+        /* --- Task Queue Section --- */
+        .task-section {
+            margin-bottom: 2rem;
+        }
+
+        .task-submit-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .task-submit-form input[type="text"] {
+            flex: 1;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+        }
+
+        .task-submit-form input[type="text"]:focus {
+            border-color: #5b9bd5;
+        }
+
+        .task-submit-form input[type="text"]::placeholder {
+            color: #4a5a6a;
+        }
+
+        .task-submit-form select {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.5rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .task-submit-btn {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1.2rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .task-submit-btn:hover {
+            background: #3b82f6;
+        }
+
+        .task-submit-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        /* Stats bar */
+        .task-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .task-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .task-stat .label {
+            color: #6a7a8a;
+        }
+
+        .task-stat .value {
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .task-stat .value.pending { color: #f59e0b; }
+        .task-stat .value.running { color: #3b82f6; }
+        .task-stat .value.completed { color: #00d672; }
+        .task-stat .value.failed { color: #e74c3c; }
+
+        /* Active task with OATI phase indicator */
+        .task-active-panel {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .task-active-panel.hidden {
+            display: none;
+        }
+
+        .task-active-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .task-active-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .task-active-id {
+            font-size: 0.8rem;
+            color: #6a7a8a;
+            font-family: monospace;
+        }
+
+        .oati-phases {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .oati-phase {
+            flex: 1;
+            text-align: center;
+            padding: 0.4rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: #0f1923;
+            color: #3a4a5a;
+            border: 1px solid #1a2a3a;
+            transition: all 0.3s;
+        }
+
+        .oati-phase.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border-color: #3b82f6;
+            animation: oati-pulse 1.5s ease-in-out infinite;
+        }
+
+        .oati-phase.done {
+            background: rgba(0, 214, 114, 0.15);
+            color: #00d672;
+            border-color: #00d672;
+            animation: none;
+        }
+
+        .oati-phase.failed {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+            border-color: #e74c3c;
+            animation: none;
+        }
+
+        @keyframes oati-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .task-active-detail {
+            font-size: 0.8rem;
+            color: #6a7a8a;
+            margin-top: 0.4rem;
+        }
+
+        /* Task history list */
+        .task-history {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+
+        .task-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .task-item-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .task-id {
+            font-size: 0.75rem;
+            font-family: monospace;
+            color: #5b9bd5;
+        }
+
+        .task-status-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+        }
+
+        .task-status-badge.pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .task-status-badge.running {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .task-status-badge.completed {
+            background: rgba(0, 214, 114, 0.15);
+            color: #00d672;
+        }
+
+        .task-status-badge.failed {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .task-meta {
+            font-size: 0.75rem;
+            color: #6a7a8a;
+        }
+
+        .task-description {
+            font-size: 0.85rem;
+            color: #c0c8d0;
+            line-height: 1.4;
+        }
+
+        .task-result {
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: #0f1923;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            color: #a0b0c0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 150px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+
+        .task-empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #4a5a6a;
+            font-size: 0.9rem;
+        }
+
         /* --- Empty State --- */
         .empty-state {
             text-align: center;
@@ -394,6 +669,46 @@
     </div>
 
     <main>
+        <section class="task-section">
+            <h2>Task Queue</h2>
+
+            <div class="task-submit-form">
+                <input type="text" id="task-input" placeholder="Describe a task..." autocomplete="off"
+                    onkeydown="if(event.key==='Enter')submitTask()">
+                <select id="task-complexity">
+                    <option value="low">LOW</option>
+                    <option value="medium">MEDIUM</option>
+                    <option value="high">HIGH</option>
+                </select>
+                <button class="task-submit-btn" onclick="submitTask()">Submit</button>
+            </div>
+
+            <div class="task-stats" id="task-stats">
+                <div class="task-stat"><span class="label">Pending</span> <span class="value pending" id="stat-pending">0</span></div>
+                <div class="task-stat"><span class="label">Running</span> <span class="value running" id="stat-running">0</span></div>
+                <div class="task-stat"><span class="label">Completed</span> <span class="value completed" id="stat-completed">0</span></div>
+                <div class="task-stat"><span class="label">Failed</span> <span class="value failed" id="stat-failed">0</span></div>
+            </div>
+
+            <div class="task-active-panel hidden" id="task-active-panel">
+                <div class="task-active-header">
+                    <span class="task-active-title" id="task-active-title"></span>
+                    <span class="task-active-id" id="task-active-id"></span>
+                </div>
+                <div class="oati-phases" id="oati-phases">
+                    <div class="oati-phase" data-phase="OBSERVE">Observe</div>
+                    <div class="oati-phase" data-phase="THINK">Think</div>
+                    <div class="oati-phase" data-phase="ACT">Act</div>
+                    <div class="oati-phase" data-phase="ITERATE">Iterate</div>
+                </div>
+                <div class="task-active-detail" id="task-active-detail"></div>
+            </div>
+
+            <div class="task-history" id="task-history">
+                <div class="task-empty-state">No tasks yet. Submit one above.</div>
+            </div>
+        </section>
+
         <h2>Agent Status Board</h2>
         <div id="agent-board">
             <!-- Agent cards rendered here by JS -->
@@ -441,6 +756,13 @@
                     setKillSwitchState(data.active);
                 } else if (data.type === "command_response") {
                     addChatMessage(data.agent_id, "received", data.response);
+                } else if (data.type === "task_status") {
+                    handleTaskStatus(data);
+                } else if (data.type === "task_phase") {
+                    handleTaskPhase(data);
+                } else if (data.type === "task_submitted") {
+                    // Confirmation — could show a toast, for now just log
+                    if (!data.ok) console.warn("Task submit failed:", data.error);
                 }
             };
 
@@ -694,9 +1016,144 @@
             return div.innerHTML;
         }
 
-        // Update relative timestamps every 5 seconds (uptime + last seen)
+        // ---------------------------------------------------------------
+        // Task Queue
+        // ---------------------------------------------------------------
+        let tasks = [];
+        let taskCounts = { pending: 0, running: 0, completed: 0, failed: 0 };
+        let activePhase = null;   // { task_id, phase, detail }
+        let phaseClearTimer = null;
+
+        function submitTask() {
+            const input = document.getElementById("task-input");
+            const select = document.getElementById("task-complexity");
+            const desc = input.value.trim();
+            if (!desc) return;
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "task_submit",
+                    description: desc,
+                    complexity: select.value,
+                }));
+            }
+            input.value = "";
+            input.focus();
+        }
+
+        function handleTaskStatus(data) {
+            tasks = data.tasks || [];
+            taskCounts = data.counts || taskCounts;
+            renderTaskStats();
+            renderTaskHistory();
+        }
+
+        function handleTaskPhase(data) {
+            // Clear any pending phase-clear timer
+            if (phaseClearTimer) {
+                clearTimeout(phaseClearTimer);
+                phaseClearTimer = null;
+            }
+
+            activePhase = {
+                task_id: data.task_id,
+                short_id: data.short_id,
+                phase: data.phase,
+                detail: data.detail || "",
+            };
+            renderActiveTask();
+
+            // Clear the phase indicator 3s after terminal states
+            if (data.phase === "COMPLETED" || data.phase === "FAILED") {
+                phaseClearTimer = setTimeout(() => {
+                    activePhase = null;
+                    renderActiveTask();
+                }, 3000);
+            }
+        }
+
+        function renderTaskStats() {
+            document.getElementById("stat-pending").textContent = taskCounts.pending || 0;
+            document.getElementById("stat-running").textContent = taskCounts.running || 0;
+            document.getElementById("stat-completed").textContent = taskCounts.completed || 0;
+            document.getElementById("stat-failed").textContent = taskCounts.failed || 0;
+        }
+
+        function renderActiveTask() {
+            const panel = document.getElementById("task-active-panel");
+            if (!activePhase) {
+                panel.classList.add("hidden");
+                return;
+            }
+
+            panel.classList.remove("hidden");
+
+            // Find the task description from our list
+            const task = tasks.find(t => t.task_id === activePhase.task_id);
+            document.getElementById("task-active-title").textContent =
+                task ? task.description : activePhase.short_id;
+            document.getElementById("task-active-id").textContent = activePhase.short_id;
+
+            // Update OATI phase boxes
+            const phaseOrder = ["OBSERVE", "THINK", "ACT", "ITERATE"];
+            const currentIdx = phaseOrder.indexOf(activePhase.phase);
+            const isFinal = activePhase.phase === "COMPLETED" || activePhase.phase === "FAILED";
+
+            document.querySelectorAll("#oati-phases .oati-phase").forEach(el => {
+                const phaseName = el.dataset.phase;
+                const idx = phaseOrder.indexOf(phaseName);
+                el.className = "oati-phase";
+
+                if (isFinal) {
+                    // All phases complete — mark them green or red
+                    el.classList.add(activePhase.phase === "COMPLETED" ? "done" : "failed");
+                } else if (idx < currentIdx) {
+                    el.classList.add("done");
+                } else if (idx === currentIdx) {
+                    el.classList.add("active");
+                }
+            });
+
+            document.getElementById("task-active-detail").textContent = activePhase.detail;
+        }
+
+        function renderTaskHistory() {
+            const container = document.getElementById("task-history");
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="task-empty-state">No tasks yet. Submit one above.</div>';
+                return;
+            }
+
+            container.innerHTML = tasks.map(t => {
+                const resultHtml = t.result
+                    ? `<div class="task-result">${escapeHtml(String(t.result))}</div>`
+                    : "";
+
+                const timeStr = t.completed_at
+                    ? formatTime(t.completed_at)
+                    : formatTime(t.created_at);
+
+                return `
+                    <div class="task-item">
+                        <div class="task-item-header">
+                            <div class="task-item-left">
+                                <span class="task-id">${escapeHtml(t.short_id)}</span>
+                                <span class="task-status-badge ${t.status}">${t.status}</span>
+                                <span class="task-status-badge" style="background:rgba(91,155,213,0.1);color:#5b9bd5">${escapeHtml(t.complexity)}</span>
+                            </div>
+                            <span class="task-meta">${escapeHtml(t.source)} &middot; ${timeStr}</span>
+                        </div>
+                        <div class="task-description">${escapeHtml(t.description)}</div>
+                        ${resultHtml}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // Update relative timestamps every 5 seconds (uptime + last seen + tasks)
         setInterval(() => {
             if (agents.length > 0) renderAgents();
+            if (tasks.length > 0) renderTaskHistory();
         }, 5000);
 
         // ---------------------------------------------------------------
