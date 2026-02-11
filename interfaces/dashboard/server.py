@@ -11,19 +11,22 @@ Run with:
 """
 
 import asyncio
+import base64
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from core.agent_registry import AgentRegistry
 from core.config import get_config
 from core.event_logger import EventLogger
+from core.file_transfer import FileTransferManager, chunk_file_data, compute_checksum
 from core.health_monitor import HealthMonitor
 from core.notifications import NotificationManager
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
@@ -100,6 +103,9 @@ kill_switch_active: bool = False
 
 # Background task handle for the orchestrator loop
 orchestrator_task: asyncio.Task | None = None
+
+# File transfer manager — tracks active/completed file transfers
+ft_manager: FileTransferManager | None = None  # initialized after broadcast_transfer_progress is defined
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +196,64 @@ async def broadcast_chain_status():
         "type": "chain_status",
         "chains": task_queue.chains_to_broadcast_list(),
     })
+
+
+async def broadcast_transfer_progress(transfer):
+    """Push file transfer progress to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "file_transfer_progress",
+        **transfer.to_dict(),
+    })
+
+
+# Now initialize the file transfer manager with the broadcast callback
+ft_manager = FileTransferManager(
+    on_progress=broadcast_transfer_progress,
+    history_size=config.file_transfer.history_size,
+    max_active=config.file_transfer.max_active_transfers,
+)
+
+# Ensure server-side receive directory exists
+Path(config.file_transfer.receive_dir).mkdir(parents=True, exist_ok=True)
+
+
+async def relay_file_to_agent(transfer, data: bytes, agent_ws):
+    """Send file data to an agent in chunks over WebSocket.
+
+    Launched as a background task from the upload endpoint or WS handler.
+    Sends file_transfer_start, then iterates chunks with brief yields.
+    The agent acks chunks asynchronously; acks update progress via the
+    agent WS handler.
+    """
+    chunk_size = config.file_transfer.chunk_size
+    chunks = chunk_file_data(data, chunk_size)
+
+    try:
+        # Tell the agent a transfer is starting
+        await agent_ws.send_json({
+            "type": "file_transfer_start",
+            "transfer_id": transfer.transfer_id,
+            "filename": transfer.filename,
+            "file_size": transfer.file_size,
+            "chunk_count": transfer.chunk_count,
+            "dest_path": transfer.dest_path,
+            "checksum": transfer.checksum,
+        })
+
+        # Stream chunks
+        for i, b64_chunk in enumerate(chunks):
+            await agent_ws.send_json({
+                "type": "file_chunk",
+                "transfer_id": transfer.transfer_id,
+                "chunk_index": i,
+                "chunk_count": transfer.chunk_count,
+                "data": b64_chunk,
+            })
+            await asyncio.sleep(0)  # yield to event loop between chunks
+
+    except Exception as e:
+        logger.warning("Relay to agent failed for %s: %s", transfer.transfer_id, e)
+        await ft_manager.fail_transfer(transfer.transfer_id, f"Relay failed: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -569,6 +633,74 @@ async def export_events():
     return {"ok": True, "filepath": str(filepath), "event_count": num}
 
 
+@app.post("/api/file/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    agent_id: str = Form(...),
+    dest_path: str = Form(""),
+):
+    """Upload a file and relay it to an agent over WebSocket.
+
+    Accepts multipart form data with:
+        file      — the file to send
+        agent_id  — target agent's ID
+        dest_path — destination path on the agent (optional)
+    """
+    # Validate agent is online
+    if agent_id not in agent_websockets:
+        return {"ok": False, "error": "Agent is offline"}
+
+    agent_info = registry.get_by_id(agent_id)
+    agent_name = agent_info.name if agent_info else agent_id
+
+    # Read file data
+    data = await file.read()
+    file_size = len(data)
+    max_size = config.file_transfer.max_file_size
+
+    if file_size > max_size:
+        return {"ok": False, "error": f"File too large ({file_size} bytes, max {max_size})"}
+    if file_size == 0:
+        return {"ok": False, "error": "Empty file"}
+
+    filename = file.filename or "upload"
+    checksum = compute_checksum(data)
+    chunk_size = config.file_transfer.chunk_size
+    chunk_count = (file_size + chunk_size - 1) // chunk_size
+
+    try:
+        transfer = ft_manager.create_transfer(
+            direction="to_agent",
+            agent_id=agent_id,
+            agent_name=agent_name,
+            filename=filename,
+            file_size=file_size,
+            chunk_count=chunk_count,
+            checksum=checksum,
+            dest_path=dest_path,
+        )
+    except ValueError as e:
+        return {"ok": False, "error": str(e)}
+
+    event_logger.info(
+        "file_transfer",
+        f"Uploading {filename} ({file_size} bytes) to {agent_name}",
+        transfer_id=transfer.transfer_id, agent=agent_name, filename=filename,
+    )
+
+    # Launch relay as background task
+    agent_ws = agent_websockets[agent_id]
+    asyncio.create_task(relay_file_to_agent(transfer, data, agent_ws))
+
+    return {
+        "ok": True,
+        "transfer_id": transfer.transfer_id,
+        "filename": filename,
+        "file_size": file_size,
+        "chunk_count": chunk_count,
+    }
+
+
 # ---------------------------------------------------------------------------
 # WebSocket: agents connect here to send heartbeats
 # ---------------------------------------------------------------------------
@@ -661,6 +793,121 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                         "error": None if rtt_ms is not None else "Unknown ping_id",
                     })
 
+            # --- File transfer: agent acking our chunks ---
+            elif msg_type == "file_chunk_ack":
+                transfer_id = data.get("transfer_id", "")
+                chunk_index = data.get("chunk_index", 0)
+                ok = data.get("ok", True)
+
+                if not ok:
+                    error = data.get("error", "Agent rejected chunk")
+                    await ft_manager.fail_transfer(transfer_id, error)
+                else:
+                    transfer = ft_manager.get_transfer(transfer_id)
+                    if transfer:
+                        await ft_manager.update_progress(transfer_id, chunk_index + 1)
+
+            elif msg_type == "file_transfer_complete":
+                transfer_id = data.get("transfer_id", "")
+                ok = data.get("ok", True)
+
+                if ok:
+                    await ft_manager.complete_transfer(transfer_id)
+                    event_logger.info(
+                        "file_transfer",
+                        f"Transfer {transfer_id} completed successfully",
+                        transfer_id=transfer_id, agent_id=agent_id,
+                    )
+                else:
+                    error = data.get("error", "Agent reported failure")
+                    await ft_manager.fail_transfer(transfer_id, error)
+                    event_logger.error(
+                        "file_transfer",
+                        f"Transfer {transfer_id} failed: {error}",
+                        transfer_id=transfer_id, agent_id=agent_id,
+                    )
+
+            # --- File transfer: agent sending a file to us ---
+            elif msg_type == "file_send_start":
+                transfer_id = data.get("transfer_id", "")
+                ok = data.get("ok", True)
+
+                if not ok:
+                    error = data.get("error", "Agent could not read file")
+                    await ft_manager.fail_transfer(transfer_id, error)
+                else:
+                    filename = data.get("filename", "")
+                    file_size = data.get("file_size", 0)
+                    chunk_count = data.get("chunk_count", 0)
+                    checksum = data.get("checksum", "")
+                    agent_info = registry.get_by_id(agent_id)
+                    agent_name = agent_info.name if agent_info else agent_id
+
+                    transfer = ft_manager.get_transfer(transfer_id)
+                    if transfer:
+                        # Update the existing transfer with file metadata
+                        transfer.filename = filename
+                        transfer.file_size = file_size
+                        transfer.chunk_count = chunk_count
+                        transfer.checksum = checksum
+                    else:
+                        transfer = ft_manager.create_transfer(
+                            direction="from_agent",
+                            agent_id=agent_id,
+                            agent_name=agent_name,
+                            filename=filename,
+                            file_size=file_size,
+                            chunk_count=chunk_count,
+                            checksum=checksum,
+                        )
+                    ft_manager.init_receive_buffer(transfer.transfer_id)
+
+            elif msg_type == "file_send_chunk":
+                transfer_id = data.get("transfer_id", "")
+                chunk_index = data.get("chunk_index", 0)
+                chunk_count = data.get("chunk_count", 0)
+                b64_data = data.get("data", "")
+
+                transfer = ft_manager.get_transfer(transfer_id)
+                if not transfer:
+                    continue
+
+                try:
+                    raw = base64.b64decode(b64_data)
+                    ft_manager.store_chunk(transfer_id, chunk_index, raw)
+                    await ft_manager.update_progress(transfer_id, chunk_index + 1)
+
+                    # Check if all chunks received
+                    if chunk_index + 1 >= chunk_count:
+                        assembled = ft_manager.assemble_chunks(transfer_id, chunk_count)
+                        if assembled is not None:
+                            # Verify checksum
+                            actual_checksum = compute_checksum(assembled)
+                            if transfer.checksum and actual_checksum != transfer.checksum:
+                                await ft_manager.fail_transfer(
+                                    transfer_id,
+                                    f"Checksum mismatch: expected {transfer.checksum}, got {actual_checksum}",
+                                )
+                                continue
+
+                            # Write to receive directory
+                            receive_dir = Path(config.file_transfer.receive_dir)
+                            receive_dir.mkdir(parents=True, exist_ok=True)
+                            dest = receive_dir / transfer.filename
+                            dest.write_bytes(assembled)
+                            transfer.dest_path = str(dest)
+                            await ft_manager.complete_transfer(transfer_id)
+                            event_logger.info(
+                                "file_transfer",
+                                f"Received {transfer.filename} from {agent_id} → {dest}",
+                                transfer_id=transfer_id, agent_id=agent_id,
+                                filename=transfer.filename,
+                            )
+
+                except Exception as e:
+                    logger.warning("Error receiving chunk %d of %s: %s", chunk_index, transfer_id, e)
+                    await ft_manager.fail_transfer(transfer_id, str(e))
+
     except WebSocketDisconnect:
         logger.info("Agent '%s' disconnected", agent_id)
         event_logger.warn("agent", f"Agent '{agent_id}' disconnected", agent_id=agent_id)
@@ -747,6 +994,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "notification_history",
         "notifications": notification_manager.get_recent(50),
         "unread_count": notification_manager.get_unread_count(),
+    })
+
+    # Send file transfer state (active + history)
+    await websocket.send_json({
+        "type": "file_transfer_history",
+        "transfers": ft_manager.get_all_transfers(),
     })
 
     try:
@@ -1037,6 +1290,133 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 await broadcast_chain_status()
                 await broadcast_task_status()
+
+            elif msg.get("type") == "file_send":
+                # Dashboard sending a small file (<1MB) via WebSocket
+                target_id = msg.get("agent_id", "")
+                filename = msg.get("filename", "")
+                dest_path = msg.get("dest_path", "")
+                b64_data = msg.get("data", "")
+
+                if target_id not in agent_websockets:
+                    await websocket.send_json({
+                        "type": "file_transfer_progress",
+                        "status": "failed",
+                        "error": "Agent is offline",
+                        "filename": filename,
+                    })
+                    continue
+
+                try:
+                    data = base64.b64decode(b64_data)
+                except Exception:
+                    await websocket.send_json({
+                        "type": "file_transfer_progress",
+                        "status": "failed",
+                        "error": "Invalid base64 data",
+                        "filename": filename,
+                    })
+                    continue
+
+                file_size = len(data)
+                max_size = config.file_transfer.max_file_size
+                if file_size > max_size:
+                    await websocket.send_json({
+                        "type": "file_transfer_progress",
+                        "status": "failed",
+                        "error": f"File too large ({file_size} bytes, max {max_size})",
+                        "filename": filename,
+                    })
+                    continue
+
+                agent_info = registry.get_by_id(target_id)
+                agent_name = agent_info.name if agent_info else target_id
+                checksum = compute_checksum(data)
+                chunk_size = config.file_transfer.chunk_size
+                chunk_count = (file_size + chunk_size - 1) // chunk_size
+
+                try:
+                    transfer = ft_manager.create_transfer(
+                        direction="to_agent",
+                        agent_id=target_id,
+                        agent_name=agent_name,
+                        filename=filename,
+                        file_size=file_size,
+                        chunk_count=chunk_count,
+                        checksum=checksum,
+                        dest_path=dest_path,
+                    )
+                except ValueError as e:
+                    await websocket.send_json({
+                        "type": "file_transfer_progress",
+                        "status": "failed",
+                        "error": str(e),
+                        "filename": filename,
+                    })
+                    continue
+
+                event_logger.info(
+                    "file_transfer",
+                    f"Sending {filename} ({file_size} bytes) to {agent_name}",
+                    transfer_id=transfer.transfer_id, agent=agent_name,
+                )
+                agent_ws = agent_websockets[target_id]
+                asyncio.create_task(relay_file_to_agent(transfer, data, agent_ws))
+
+            elif msg.get("type") == "file_request_from_agent":
+                # Dashboard requesting a file from an agent
+                target_id = msg.get("agent_id", "")
+                file_path = msg.get("file_path", "")
+
+                if target_id not in agent_websockets:
+                    await websocket.send_json({
+                        "type": "file_transfer_progress",
+                        "status": "failed",
+                        "error": "Agent is offline",
+                        "filename": file_path,
+                    })
+                    continue
+
+                agent_info = registry.get_by_id(target_id)
+                agent_name = agent_info.name if agent_info else target_id
+
+                # Create a placeholder transfer — metadata filled in by file_send_start
+                transfer = ft_manager.create_transfer(
+                    direction="from_agent",
+                    agent_id=target_id,
+                    agent_name=agent_name,
+                    filename=os.path.basename(file_path) if file_path else "unknown",
+                    file_size=0,
+                    chunk_count=0,
+                )
+
+                event_logger.info(
+                    "file_transfer",
+                    f"Requesting {file_path} from {agent_name}",
+                    transfer_id=transfer.transfer_id, agent=agent_name,
+                )
+
+                await agent_websockets[target_id].send_json({
+                    "type": "file_request",
+                    "transfer_id": transfer.transfer_id,
+                    "file_path": file_path,
+                })
+
+            elif msg.get("type") == "file_transfer_cancel":
+                transfer_id = msg.get("transfer_id", "")
+                transfer = ft_manager.get_transfer(transfer_id)
+                if transfer:
+                    # Notify agent if it's a to_agent transfer
+                    if transfer.agent_id in agent_websockets:
+                        try:
+                            await agent_websockets[transfer.agent_id].send_json({
+                                "type": "file_transfer_cancel",
+                                "transfer_id": transfer_id,
+                                "reason": "Cancelled by user",
+                            })
+                        except Exception:
+                            pass
+                    await ft_manager.cancel_transfer(transfer_id)
 
             elif msg.get("type") == "notification_dismiss":
                 notif_id = msg.get("id", "")

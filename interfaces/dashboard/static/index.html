@@ -1756,6 +1756,241 @@
             50% { box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4), 0 0 8px rgba(220, 38, 38, 0.2); }
         }
 
+        /* --- File Transfer Section --- */
+        .file-transfer-section {
+            margin-bottom: 2rem;
+        }
+
+        .ft-forms {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .ft-form {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+        }
+
+        .ft-form h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8ab4d6;
+            margin-bottom: 0.75rem;
+        }
+
+        .ft-form-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .ft-form select,
+        .ft-form input[type="text"] {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.6rem;
+            outline: none;
+        }
+
+        .ft-form select:focus,
+        .ft-form input[type="text"]:focus {
+            border-color: #5b9bd5;
+        }
+
+        .ft-form input[type="text"]::placeholder {
+            color: #4a5a6a;
+        }
+
+        .ft-form select {
+            cursor: pointer;
+        }
+
+        .ft-form input[type="file"] {
+            font-size: 0.8rem;
+            color: #a0b0c0;
+        }
+
+        .ft-form input[type="file"]::file-selector-button {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.3rem 0.6rem;
+            cursor: pointer;
+            margin-right: 0.5rem;
+        }
+
+        .ft-form input[type="file"]::file-selector-button:hover {
+            background: #3a5a7a;
+        }
+
+        .ft-btn {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.4rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .ft-btn:hover { background: #3b82f6; }
+        .ft-btn:disabled { opacity: 0.4; cursor: default; }
+
+        .ft-btn.secondary {
+            background: #2a3a4a;
+            border-color: #3a5a7a;
+            color: #8ab4d6;
+        }
+
+        .ft-btn.secondary:hover { background: #3a5a7a; }
+
+        .ft-active-transfers {
+            margin-bottom: 1rem;
+        }
+
+        .ft-transfer-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .ft-transfer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .ft-transfer-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ft-direction {
+            font-size: 0.85rem;
+        }
+
+        .ft-direction.upload { color: #5b9bd5; }
+        .ft-direction.download { color: #f59e0b; }
+
+        .ft-filename {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e0e0e0;
+        }
+
+        .ft-meta {
+            font-size: 0.75rem;
+            color: #6a7a8a;
+            font-family: monospace;
+        }
+
+        .ft-status-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+        }
+
+        .ft-status-badge.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .ft-status-badge.completed {
+            background: rgba(0, 214, 114, 0.15);
+            color: #00d672;
+        }
+
+        .ft-status-badge.failed {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .ft-status-badge.cancelled {
+            background: rgba(106, 122, 138, 0.15);
+            color: #6a7a8a;
+        }
+
+        .ft-progress-bar {
+            height: 6px;
+            background: #0f1923;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.4rem;
+        }
+
+        .ft-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+            background: #3b82f6;
+        }
+
+        .ft-progress-fill.completed { background: #00d672; }
+        .ft-progress-fill.failed { background: #e74c3c; }
+
+        .ft-error {
+            font-size: 0.75rem;
+            color: #e74c3c;
+            margin-top: 0.3rem;
+        }
+
+        .ft-cancel-btn {
+            background: none;
+            border: 1px solid #4a5a6a;
+            border-radius: 4px;
+            color: #6a7a8a;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            cursor: pointer;
+        }
+
+        .ft-cancel-btn:hover {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .ft-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .ft-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 640px) {
+            .ft-forms {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* --- Responsive --- */
         @media (max-width: 640px) {
             header {
@@ -1892,6 +2127,48 @@
             <div class="command-result-panel" id="cmd-result-panel"></div>
         </section>
 
+        <section class="file-transfer-section">
+            <h2>File Transfer</h2>
+
+            <div class="ft-forms">
+                <div class="ft-form">
+                    <h3>Send File to Agent</h3>
+                    <div class="ft-form-row">
+                        <select id="ft-send-agent">
+                            <option value="">-- Select agent --</option>
+                        </select>
+                    </div>
+                    <div class="ft-form-row">
+                        <input type="file" id="ft-send-file">
+                    </div>
+                    <div class="ft-form-row">
+                        <input type="text" id="ft-send-dest" placeholder="Dest path (optional, e.g. ~/receive/file.txt)" style="flex:1;">
+                    </div>
+                    <div class="ft-form-row">
+                        <button class="ft-btn" onclick="sendFile()" id="ft-send-btn">Send</button>
+                    </div>
+                </div>
+
+                <div class="ft-form">
+                    <h3>Request File from Agent</h3>
+                    <div class="ft-form-row">
+                        <select id="ft-request-agent">
+                            <option value="">-- Select agent --</option>
+                        </select>
+                    </div>
+                    <div class="ft-form-row">
+                        <input type="text" id="ft-request-path" placeholder="Remote file path (e.g. ~/logs/cam.log)" style="flex:1;">
+                    </div>
+                    <div class="ft-form-row">
+                        <button class="ft-btn secondary" onclick="requestFile()" id="ft-request-btn">Request</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ft-active-transfers" id="ft-active-transfers"></div>
+            <div class="ft-history" id="ft-history"></div>
+        </section>
+
         <section class="analytics-section">
             <h2>Analytics</h2>
             <div class="analytics-stats" id="analytics-stats">
@@ -1985,6 +2262,9 @@
         // Track pending command palette execution: { agent_id, command_name }
         let pendingCommand = null;
 
+        // File transfer state
+        let fileTransfers = [];  // all transfers (active + history)
+
         const board = document.getElementById("agent-board");
         const statusDot = document.getElementById("ws-status-dot");
         const statusText = document.getElementById("ws-status-text");
@@ -2056,6 +2336,10 @@
                 } else if (data.type === "notification_count") {
                     unreadCount = data.unread_count;
                     updateNotificationBadge();
+                } else if (data.type === "file_transfer_progress") {
+                    handleTransferProgress(data);
+                } else if (data.type === "file_transfer_history") {
+                    handleTransferHistory(data);
                 }
             };
 
@@ -3198,6 +3482,196 @@
                 if (el.parentNode) el.parentNode.removeChild(el);
             });
         }
+
+        // ---------------------------------------------------------------
+        // File Transfers
+        // ---------------------------------------------------------------
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + " B";
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+            return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        function renderFtAgentSelects() {
+            ["ft-send-agent", "ft-request-agent"].forEach(id => {
+                const select = document.getElementById(id);
+                const prev = select.value;
+                select.innerHTML = '<option value="">-- Select agent --</option>';
+                agents.filter(a => a.status === "online" || a.status === "busy").forEach(a => {
+                    const opt = document.createElement("option");
+                    opt.value = a.agent_id;
+                    opt.textContent = a.name + (a.status === "busy" ? " (busy)" : "");
+                    select.appendChild(opt);
+                });
+                if (prev && select.querySelector(`option[value="${prev}"]`)) {
+                    select.value = prev;
+                }
+            });
+        }
+
+        function handleTransferProgress(data) {
+            const idx = fileTransfers.findIndex(t => t.transfer_id === data.transfer_id);
+            if (idx >= 0) {
+                fileTransfers[idx] = data;
+            } else {
+                fileTransfers.unshift(data);
+            }
+            renderTransfers();
+        }
+
+        function handleTransferHistory(data) {
+            fileTransfers = data.transfers || [];
+            renderTransfers();
+        }
+
+        function renderTransfers() {
+            const activeContainer = document.getElementById("ft-active-transfers");
+            const historyContainer = document.getElementById("ft-history");
+
+            const active = fileTransfers.filter(t => t.status === "active" || t.status === "pending");
+            const done = fileTransfers.filter(t => t.status !== "active" && t.status !== "pending");
+
+            if (active.length === 0 && done.length === 0) {
+                activeContainer.innerHTML = "";
+                historyContainer.innerHTML = '<div class="ft-empty">No file transfers yet.</div>';
+                return;
+            }
+
+            activeContainer.innerHTML = active.map(t => renderTransferCard(t, true)).join("");
+            historyContainer.innerHTML = done.length > 0
+                ? done.map(t => renderTransferCard(t, false)).join("")
+                : "";
+        }
+
+        function renderTransferCard(t, isActive) {
+            const dirArrow = t.direction === "to_agent" ? "\u2191" : "\u2193";
+            const dirClass = t.direction === "to_agent" ? "upload" : "download";
+            const dirLabel = t.direction === "to_agent" ? "Send" : "Receive";
+            const pct = Math.round((t.progress || 0) * 100);
+            const fillClass = t.status === "completed" ? "completed" : (t.status === "failed" ? "failed" : "");
+            const cancelBtn = isActive
+                ? `<button class="ft-cancel-btn" onclick="cancelTransfer('${t.transfer_id}')">Cancel</button>`
+                : "";
+            const errorHtml = t.error ? `<div class="ft-error">${escapeHtml(t.error)}</div>` : "";
+            const sizeStr = t.file_size > 0 ? formatFileSize(t.file_size) : "";
+            const chunkStr = t.chunk_count > 0 ? `${t.chunks_done}/${t.chunk_count} chunks` : "";
+            const metaParts = [t.agent_name, dirLabel, sizeStr, chunkStr].filter(Boolean);
+
+            return `
+                <div class="ft-transfer-card">
+                    <div class="ft-transfer-header">
+                        <div class="ft-transfer-left">
+                            <span class="ft-direction ${dirClass}">${dirArrow}</span>
+                            <span class="ft-filename">${escapeHtml(t.filename || "unknown")}</span>
+                            <span class="ft-meta">${escapeHtml(metaParts.join(" \u00b7 "))}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <span class="ft-status-badge ${t.status}">${t.status}</span>
+                            ${cancelBtn}
+                        </div>
+                    </div>
+                    <div class="ft-progress-bar">
+                        <div class="ft-progress-fill ${fillClass}" style="width:${pct}%"></div>
+                    </div>
+                    ${errorHtml}
+                </div>
+            `;
+        }
+
+        function sendFile() {
+            const agentId = document.getElementById("ft-send-agent").value;
+            const fileInput = document.getElementById("ft-send-file");
+            const destPath = document.getElementById("ft-send-dest").value.trim();
+
+            if (!agentId) { alert("Select an agent first."); return; }
+            if (!fileInput.files || fileInput.files.length === 0) { alert("Select a file first."); return; }
+
+            const file = fileInput.files[0];
+
+            if (file.size > 50 * 1024 * 1024) {
+                alert("File too large (max 50 MB).");
+                return;
+            }
+
+            // For files < 1MB, send via WebSocket; for larger files, use HTTP upload
+            if (file.size < 1024 * 1024) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const arrayBuf = reader.result;
+                    const bytes = new Uint8Array(arrayBuf);
+                    let binary = "";
+                    for (let i = 0; i < bytes.length; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    const b64 = btoa(binary);
+
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: "file_send",
+                            agent_id: agentId,
+                            filename: file.name,
+                            dest_path: destPath,
+                            data: b64,
+                        }));
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                // Use HTTP multipart upload
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("agent_id", agentId);
+                formData.append("dest_path", destPath);
+
+                fetch("/api/file/upload", { method: "POST", body: formData })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.ok) {
+                            alert("Upload failed: " + (data.error || "Unknown error"));
+                        }
+                    })
+                    .catch(err => {
+                        alert("Upload error: " + err.message);
+                    });
+            }
+
+            // Clear file input
+            fileInput.value = "";
+        }
+
+        function requestFile() {
+            const agentId = document.getElementById("ft-request-agent").value;
+            const filePath = document.getElementById("ft-request-path").value.trim();
+
+            if (!agentId) { alert("Select an agent first."); return; }
+            if (!filePath) { alert("Enter a remote file path."); return; }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "file_request_from_agent",
+                    agent_id: agentId,
+                    file_path: filePath,
+                }));
+            }
+            document.getElementById("ft-request-path").value = "";
+        }
+
+        function cancelTransfer(transferId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "file_transfer_cancel",
+                    transfer_id: transferId,
+                }));
+            }
+        }
+
+        // Hook into renderAgents to update file transfer agent selects
+        const _origRenderAgents2 = renderAgents;
+        renderAgents = function() {
+            _origRenderAgents2();
+            renderFtAgentSelects();
+        };
 
         // ---------------------------------------------------------------
         // Start

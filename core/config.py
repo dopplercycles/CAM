@@ -94,6 +94,14 @@ _DEFAULTS: dict[str, Any] = {
         "cost_threshold": True,
         "cost_threshold_usd": 1.00,
     },
+    "file_transfer": {
+        "chunk_size": 65536,
+        "max_file_size": 52428800,
+        "receive_dir": "data/transfers",
+        "agent_receive_dir": "~/receive",
+        "max_active_transfers": 5,
+        "history_size": 100,
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

@@ -68,3 +68,11 @@ error_rate_threshold = 50.0         # error rate % that triggers an alert
 error_rate_window = 20              # number of recent tasks to evaluate
 cost_threshold = true               # alert when cumulative model cost exceeds limit
 cost_threshold_usd = 1.00           # USD threshold for cost alert
+
+[file_transfer]
+chunk_size = 65536                  # bytes per chunk before base64 encoding
+max_file_size = 52428800            # 50 MB max file size
+receive_dir = "data/transfers"      # server-side directory for received files
+agent_receive_dir = "~/receive"     # default agent-side receive directory
+max_active_transfers = 5            # max concurrent transfers
+history_size = 100                  # completed transfer history ring buffer

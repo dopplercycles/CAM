@@ -24,7 +24,9 @@ Deployment to Raspberry Pi:
 
 import argparse
 import asyncio
+import base64
 import glob
+import hashlib
 import json
 import logging
 import os
@@ -95,6 +97,10 @@ _CONNECTOR_START = time.monotonic()
 _SYSTEMCTL_TIMEOUT: int = 30
 _DASHBOARD_HOST: str = "192.168.12.232"
 _DASHBOARD_PORT: int = 8080
+_RECEIVE_DIR: str = os.path.expanduser("~/receive")
+
+# In-progress incoming file transfers: transfer_id → {metadata, chunks: {index: bytes}}
+_pending_receives: dict = {}
 
 
 def parse_command(text: str) -> tuple[str, dict[str, str]]:
@@ -456,6 +462,192 @@ async def listen_for_commands(ws):
             ping_id = msg.get("ping_id")
             await ws.send(json.dumps({"type": "pong", "ping_id": ping_id}))
 
+        elif msg_type == "file_transfer_start":
+            # Server wants to send us a file — set up receive buffer
+            transfer_id = msg.get("transfer_id", "")
+            filename = msg.get("filename", "")
+            file_size = msg.get("file_size", 0)
+            chunk_count = msg.get("chunk_count", 0)
+            dest_path = msg.get("dest_path", "")
+            checksum = msg.get("checksum", "")
+
+            # Resolve destination path
+            if dest_path:
+                dest = os.path.expanduser(dest_path)
+            else:
+                dest = os.path.join(_RECEIVE_DIR, filename)
+
+            # Ensure parent directory exists
+            dest_dir = os.path.dirname(dest)
+            if dest_dir:
+                os.makedirs(dest_dir, exist_ok=True)
+
+            _pending_receives[transfer_id] = {
+                "filename": filename,
+                "file_size": file_size,
+                "chunk_count": chunk_count,
+                "checksum": checksum,
+                "dest_path": dest,
+                "chunks": {},
+            }
+            logger.info(
+                "File transfer %s started: %s (%d bytes, %d chunks) → %s",
+                transfer_id, filename, file_size, chunk_count, dest,
+            )
+
+        elif msg_type == "file_chunk":
+            # Receive a chunk of file data
+            transfer_id = msg.get("transfer_id", "")
+            chunk_index = msg.get("chunk_index", 0)
+            chunk_count = msg.get("chunk_count", 0)
+            b64_data = msg.get("data", "")
+
+            recv = _pending_receives.get(transfer_id)
+            if not recv:
+                await ws.send(json.dumps({
+                    "type": "file_chunk_ack",
+                    "transfer_id": transfer_id,
+                    "chunk_index": chunk_index,
+                    "ok": False,
+                    "error": "Unknown transfer_id",
+                }))
+                continue
+
+            try:
+                raw = base64.b64decode(b64_data)
+                recv["chunks"][chunk_index] = raw
+
+                await ws.send(json.dumps({
+                    "type": "file_chunk_ack",
+                    "transfer_id": transfer_id,
+                    "chunk_index": chunk_index,
+                    "ok": True,
+                }))
+
+                # Check if all chunks received
+                if len(recv["chunks"]) >= recv["chunk_count"]:
+                    # Assemble file
+                    parts = []
+                    for i in range(recv["chunk_count"]):
+                        parts.append(recv["chunks"][i])
+                    file_data = b"".join(parts)
+
+                    # Verify checksum
+                    expected = recv["checksum"]
+                    actual = "sha256:" + hashlib.sha256(file_data).hexdigest()
+                    if expected and actual != expected:
+                        logger.error(
+                            "Checksum mismatch for %s: expected %s, got %s",
+                            transfer_id, expected, actual,
+                        )
+                        await ws.send(json.dumps({
+                            "type": "file_transfer_complete",
+                            "transfer_id": transfer_id,
+                            "ok": False,
+                            "error": f"Checksum mismatch: expected {expected}, got {actual}",
+                        }))
+                        _pending_receives.pop(transfer_id, None)
+                        continue
+
+                    # Write file to disk
+                    with open(recv["dest_path"], "wb") as f:
+                        f.write(file_data)
+
+                    logger.info(
+                        "File transfer %s complete: %s written (%d bytes)",
+                        transfer_id, recv["dest_path"], len(file_data),
+                    )
+                    await ws.send(json.dumps({
+                        "type": "file_transfer_complete",
+                        "transfer_id": transfer_id,
+                        "ok": True,
+                        "checksum": actual,
+                        "final_path": recv["dest_path"],
+                    }))
+                    _pending_receives.pop(transfer_id, None)
+
+            except Exception as e:
+                logger.exception("Error processing chunk %d of %s", chunk_index, transfer_id)
+                await ws.send(json.dumps({
+                    "type": "file_chunk_ack",
+                    "transfer_id": transfer_id,
+                    "chunk_index": chunk_index,
+                    "ok": False,
+                    "error": str(e),
+                }))
+
+        elif msg_type == "file_transfer_cancel":
+            transfer_id = msg.get("transfer_id", "")
+            _pending_receives.pop(transfer_id, None)
+            logger.info("File transfer %s cancelled by server", transfer_id)
+
+        elif msg_type == "file_request":
+            # Server is asking us to send a file back
+            transfer_id = msg.get("transfer_id", "")
+            file_path = msg.get("file_path", "")
+
+            try:
+                full_path = os.path.expanduser(file_path)
+                if not os.path.isfile(full_path):
+                    await ws.send(json.dumps({
+                        "type": "file_send_start",
+                        "transfer_id": transfer_id,
+                        "ok": False,
+                        "error": f"File not found: {full_path}",
+                    }))
+                    continue
+
+                with open(full_path, "rb") as f:
+                    file_data = f.read()
+
+                filename = os.path.basename(full_path)
+                file_size = len(file_data)
+                checksum = "sha256:" + hashlib.sha256(file_data).hexdigest()
+
+                # Chunk the data at 64KB
+                chunk_size = 65536
+                chunks = []
+                for offset in range(0, len(file_data), chunk_size):
+                    raw_chunk = file_data[offset:offset + chunk_size]
+                    chunks.append(base64.b64encode(raw_chunk).decode("ascii"))
+
+                chunk_count = len(chunks)
+
+                await ws.send(json.dumps({
+                    "type": "file_send_start",
+                    "transfer_id": transfer_id,
+                    "ok": True,
+                    "filename": filename,
+                    "file_size": file_size,
+                    "chunk_count": chunk_count,
+                    "checksum": checksum,
+                }))
+
+                # Send chunks
+                for i, b64_chunk in enumerate(chunks):
+                    await ws.send(json.dumps({
+                        "type": "file_send_chunk",
+                        "transfer_id": transfer_id,
+                        "chunk_index": i,
+                        "chunk_count": chunk_count,
+                        "data": b64_chunk,
+                    }))
+                    await asyncio.sleep(0)  # yield to event loop
+
+                logger.info(
+                    "File %s sent: %s (%d bytes, %d chunks)",
+                    transfer_id, filename, file_size, chunk_count,
+                )
+
+            except Exception as e:
+                logger.exception("Error sending file for %s", transfer_id)
+                await ws.send(json.dumps({
+                    "type": "file_send_start",
+                    "transfer_id": transfer_id,
+                    "ok": False,
+                    "error": str(e),
+                }))
+
         elif msg_type == "command":
             command_text = msg.get("command", "")
             task_id = msg.get("task_id")
@@ -608,6 +800,11 @@ def parse_args():
         default=None,
         help="Timeout for systemctl restart commands in seconds (default: 30)",
     )
+    parser.add_argument(
+        "--receive-dir",
+        default=None,
+        help="Directory for received files (default: ~/receive)",
+    )
     return parser.parse_args()
 
 
@@ -683,7 +880,7 @@ DEPLOY_INSTRUCTIONS = """
 # ---------------------------------------------------------------------------
 
 def main():
-    global _SYSTEMCTL_TIMEOUT, _DASHBOARD_HOST, _DASHBOARD_PORT
+    global _SYSTEMCTL_TIMEOUT, _DASHBOARD_HOST, _DASHBOARD_PORT, _RECEIVE_DIR
 
     args = parse_args()
 
@@ -718,6 +915,12 @@ def main():
     )
     _DASHBOARD_HOST = connector_cfg.get("dashboard_host", "192.168.12.232")
     _DASHBOARD_PORT = connector_cfg.get("dashboard_port", 8080)
+    _RECEIVE_DIR = os.path.expanduser(
+        args.receive_dir
+        if args.receive_dir is not None
+        else connector_cfg.get("agent_receive_dir", "~/receive")
+    )
+    os.makedirs(_RECEIVE_DIR, exist_ok=True)
 
     logger.info("Agent ID:      %s", agent_id)
     logger.info("Agent Name:    %s", agent_name)
@@ -725,6 +928,7 @@ def main():
     logger.info("Interval:      %ds", interval)
     logger.info("Reconnect:     %ds", reconnect_delay)
     logger.info("Systemctl TO:  %ds", _SYSTEMCTL_TIMEOUT)
+    logger.info("Receive dir:   %s", _RECEIVE_DIR)
     if capabilities:
         logger.info("Capabilities:  %s", capabilities)
 
