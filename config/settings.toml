@@ -36,7 +36,7 @@ complex = "claude"
 nuanced = "claude"
 # Tier-based routing (auto-classifier → task_classifier.py)
 # Tier 1 = small/fast, Tier 2 = medium, Tier 3 = large/reasoning
-tier1 = "glm-4.7-flash"          # placeholder until small models installed
+tier1 = "phi4-mini:3.8b"          # small/fast local model for simple tasks
 tier2 = "gpt-oss:20b"
 tier3 = "glm-4.7-flash"
 
