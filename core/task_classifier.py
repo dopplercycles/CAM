@@ -62,8 +62,8 @@ class ClassificationResult:
 TASK_TYPES: dict[str, tuple[int, list[str]]] = {
     # --- Tier 1: Small model (fast, simple, predictable I/O) ---
     "status_report": (1, [
-        "status report", "system state", "uptime", "queue status",
-        "morning report", "daily status", "health check",
+        "status report", "status_report", "system state", "uptime",
+        "queue status", "morning report", "daily status", "health check",
     ]),
     "acknowledgments": (1, [
         "confirm", "acknowledge", "task received", "completed successfully",

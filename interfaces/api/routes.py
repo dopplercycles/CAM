@@ -58,7 +58,7 @@ router = APIRouter(
 
 class TaskSubmit(BaseModel):
     description: str
-    complexity: str = "low"
+    complexity: str = "auto"
     assigned_agent: Optional[str] = None
     required_capabilities: list[str] = []
 
@@ -153,7 +153,7 @@ async def submit_task(body: TaskSubmit, request: Request):
     try:
         complexity = TaskComplexity(body.complexity.lower())
     except ValueError:
-        complexity = TaskComplexity.LOW
+        complexity = TaskComplexity.AUTO
 
     caps = [c.strip() for c in body.required_capabilities if c.strip()]
 

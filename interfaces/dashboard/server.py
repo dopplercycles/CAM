@@ -1342,11 +1342,11 @@ async def dashboard_websocket(websocket: WebSocket):
                     desc = (step_def.get("description") or "").strip()
                     if not desc:
                         continue
-                    complexity_str = (step_def.get("complexity") or "low").lower()
+                    complexity_str = (step_def.get("complexity") or "auto").lower()
                     try:
                         complexity = TaskComplexity(complexity_str)
                     except ValueError:
-                        complexity = TaskComplexity.LOW
+                        complexity = TaskComplexity.AUTO
                     raw_caps = step_def.get("required_capabilities") or []
                     caps = [c.strip() for c in raw_caps if isinstance(c, str) and c.strip()]
 
@@ -1523,7 +1523,7 @@ async def dashboard_websocket(websocket: WebSocket):
                 sched_name = (msg.get("name") or "").strip()
                 sched_desc = (msg.get("description") or "").strip()
                 sched_type_str = (msg.get("schedule_type") or "interval").lower()
-                complexity_str = (msg.get("complexity") or "low").lower()
+                complexity_str = (msg.get("complexity") or "auto").lower()
                 interval_seconds = msg.get("interval_seconds", 300)
                 run_at_time = msg.get("run_at_time", "09:00")
                 raw_caps = msg.get("required_capabilities") or []
@@ -1540,7 +1540,7 @@ async def dashboard_websocket(websocket: WebSocket):
                 try:
                     complexity = TaskComplexity(complexity_str)
                 except ValueError:
-                    complexity = TaskComplexity.LOW
+                    complexity = TaskComplexity.AUTO
 
                 try:
                     sched_type = ScheduleType(sched_type_str)
