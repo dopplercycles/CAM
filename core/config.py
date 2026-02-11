@@ -62,6 +62,9 @@ _DEFAULTS: dict[str, Any] = {
             "agentic": "kimi-k2.5",
             "complex": "claude",
             "nuanced": "claude",
+            "tier1": "glm-4.7-flash",
+            "tier2": "gpt-oss:20b",
+            "tier3": "glm-4.7-flash",
         },
         "costs": {
             "claude": {"input": 3.00, "output": 15.00},

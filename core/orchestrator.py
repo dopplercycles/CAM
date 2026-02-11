@@ -24,6 +24,7 @@ from core.task import Task, TaskQueue, TaskStatus, TaskComplexity, TaskChain, Ch
 from core.model_router import ModelRouter, ModelResponse
 from core.memory.short_term import ShortTermMemory
 from core.memory.working import WorkingMemory
+from core.task_classifier import classify as classify_task
 
 
 # ---------------------------------------------------------------------------
@@ -57,11 +58,19 @@ class Orchestrator:
     storage (JSON/SQLite) comes with core/memory/working.py.
     """
 
-    # Map TaskComplexity → model router complexity tier
+    # Map TaskComplexity → model router complexity string.
+    # AUTO is handled separately via the task classifier (see think()).
     COMPLEXITY_MAP = {
         TaskComplexity.LOW: "simple",       # → glm-4.7-flash (local, free)
         TaskComplexity.MEDIUM: "routine",   # → gpt-oss:20b (local, free)
         TaskComplexity.HIGH: "complex",     # → Claude API (quality matters)
+    }
+
+    # Map classifier tier number → router complexity string
+    TIER_MAP = {
+        1: "tier1",     # → small/fast local model
+        2: "tier2",     # → medium local model
+        3: "tier3",     # → large local model
     }
 
     def __init__(
@@ -213,6 +222,20 @@ class Orchestrator:
         Returns:
             A plan dictionary with the model's response and metadata.
         """
+        # --- Auto-classify if complexity is AUTO ---
+        if task.complexity == TaskComplexity.AUTO:
+            classification = classify_task(task.description)
+            router_complexity = self.TIER_MAP.get(classification.tier, "tier2")
+            logger.info(
+                "[THINK] Auto-classified task %s: type=%s, tier=%d → %s (%s)",
+                task.short_id, classification.task_type, classification.tier,
+                router_complexity, classification.reason,
+            )
+        else:
+            # Explicit override — use the old mapping
+            classification = None
+            router_complexity = self.COMPLEXITY_MAP.get(task.complexity, "simple")
+
         # Save task state to working memory — survives restarts
         self.working.save_task(task.task_id, {
             "description": task.description,
@@ -223,12 +246,16 @@ class Orchestrator:
         })
 
         # Record in short-term memory for session context
-        self.short_term.add("system", f"Processing task: {task.description}", {
+        classify_detail = ""
+        if classification is not None:
+            classify_detail = (
+                f" [auto: {classification.task_type}, tier {classification.tier}]"
+            )
+        self.short_term.add("system", f"Processing task: {task.description}{classify_detail}", {
             "task_id": task.task_id,
             "phase": "THINK",
         })
 
-        router_complexity = self.COMPLEXITY_MAP.get(task.complexity, "simple")
         await self._notify_phase(task, "THINK", f"Routing to {router_complexity} model")
 
         logger.info(
@@ -436,6 +463,19 @@ class Orchestrator:
                             chain.status = ChainStatus.RUNNING
                         next_task = chain.advance()
                         if next_task is not None:
+                            # Override Rule 4: chain inherits highest tier.
+                            # If any step in the chain was classified at a
+                            # higher tier, subsequent AUTO steps inherit it.
+                            if next_task.complexity == TaskComplexity.AUTO:
+                                highest = self._chain_highest_tier(chain)
+                                if highest is not None:
+                                    next_task.complexity = highest
+                                    logger.info(
+                                        "Chain %s: next step %s inherits %s "
+                                        "(Rule 4: chain highest tier)",
+                                        chain.short_id, next_task.short_id,
+                                        highest.value,
+                                    )
                             # Queue the next step for the orchestrator to pick up
                             self.queue._tasks.append(next_task)
                             await self._notify_task_update()
@@ -487,6 +527,33 @@ class Orchestrator:
         """
         logger.info("Orchestrator stop requested")
         self._running = False
+
+    # -------------------------------------------------------------------
+    # Chain tier inheritance (Override Rule 4)
+    # -------------------------------------------------------------------
+
+    # Complexity ranking for chain inheritance — higher index = higher tier
+    _COMPLEXITY_RANK = {
+        TaskComplexity.AUTO: 0,
+        TaskComplexity.LOW: 1,
+        TaskComplexity.MEDIUM: 2,
+        TaskComplexity.HIGH: 3,
+    }
+
+    def _chain_highest_tier(self, chain: TaskChain) -> TaskComplexity | None:
+        """Find the highest complexity assigned to any completed step in a chain.
+
+        Returns the highest non-AUTO complexity, or None if all steps are AUTO.
+        Used by Override Rule 4: chained tasks inherit the highest tier.
+        """
+        highest = None
+        highest_rank = 0
+        for step in chain.steps[:chain.current_step]:
+            rank = self._COMPLEXITY_RANK.get(step.complexity, 0)
+            if rank > highest_rank:
+                highest_rank = rank
+                highest = step.complexity
+        return highest
 
     # -------------------------------------------------------------------
     # Working memory resume

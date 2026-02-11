@@ -34,6 +34,11 @@ routine = "gpt-oss:20b"
 agentic = "kimi-k2.5"
 complex = "claude"
 nuanced = "claude"
+# Tier-based routing (auto-classifier → task_classifier.py)
+# Tier 1 = small/fast, Tier 2 = medium, Tier 3 = large/reasoning
+tier1 = "glm-4.7-flash"          # placeholder until small models installed
+tier2 = "gpt-oss:20b"
+tier3 = "glm-4.7-flash"
 
 [models.costs.claude]
 input = 3.00                        # USD per million input tokens

@@ -92,6 +92,10 @@ _DEFAULT_MODELS = {
     "agentic": "kimi-k2.5",
     "complex": "claude",
     "nuanced": "claude",
+    # Tier-based routing (from task classifier)
+    "tier1": "glm-4.7-flash",    # Small/fast — placeholder until tiny models installed
+    "tier2": "gpt-oss:20b",      # Medium — language understanding, multi-sentence
+    "tier3": "glm-4.7-flash",    # Large — reasoning, judgment, creativity
 }
 
 _API_COSTS = {
@@ -197,6 +201,18 @@ class ModelRouter:
             response.total_tokens, response.latency_ms, response.cost_usd,
             response.text, "..." if len(response.text) > 80 else "",
         )
+
+        # --- Override Rule 3: Auto-retry on Tier 1 error ---
+        # If a tier1 call fails (response contains [error]), retry at tier2.
+        if task_complexity == "tier1" and "[error]" in response.text:
+            logger.warning(
+                "Tier 1 model returned error — retrying at tier2 (Rule 3: auto-retry)"
+            )
+            return await self.route(
+                prompt=prompt,
+                task_complexity="tier2",
+                system_prompt=system_prompt,
+            )
 
         return response
 

@@ -1156,7 +1156,7 @@ async def dashboard_websocket(websocket: WebSocket):
             elif msg.get("type") == "task_submit":
                 # Submit a new task to the queue
                 description = (msg.get("description") or "").strip()
-                complexity_str = (msg.get("complexity") or "low").lower()
+                complexity_str = (msg.get("complexity") or "auto").lower()
                 raw_caps = msg.get("required_capabilities") or []
                 required_capabilities = [c.strip() for c in raw_caps if isinstance(c, str) and c.strip()]
 
@@ -1171,7 +1171,7 @@ async def dashboard_websocket(websocket: WebSocket):
                 try:
                     complexity = TaskComplexity(complexity_str)
                 except ValueError:
-                    complexity = TaskComplexity.LOW
+                    complexity = TaskComplexity.AUTO
 
                 task = task_queue.add_task(
                     description=description,

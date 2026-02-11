@@ -78,11 +78,15 @@ class ChainStatus(Enum):
 class TaskComplexity(Enum):
     """How complex a task is — determines which model handles it.
 
-    Maps directly to the model router's routing table:
+    AUTO lets the task classifier pick the tier automatically based on
+    keywords in the description (see core/task_classifier.py).
+
+    Manual overrides still work:
         LOW    → Local Ollama (glm-4.7-flash) — fast, free
         MEDIUM → Local Ollama (gpt-oss:20b) or Kimi K2.5 — balanced
         HIGH   → Claude API — multi-step reasoning, quality matters
     """
+    AUTO = "auto"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -107,7 +111,8 @@ class Task:
     Attributes:
         task_id:        Unique identifier (UUID string)
         description:    What needs to be done, in plain English
-        complexity:     How complex the task is (routes to different models)
+        complexity:     How complex the task is (routes to different models).
+                        Defaults to AUTO — the classifier picks the tier.
         source:         Where the task came from ("cli", "dashboard", "schedule", etc.)
         assigned_agent: Which agent is handling this (None = unassigned)
         status:         Current lifecycle state
@@ -117,7 +122,7 @@ class Task:
     """
     task_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     description: str = ""
-    complexity: TaskComplexity = TaskComplexity.LOW
+    complexity: TaskComplexity = TaskComplexity.AUTO
     source: str = "internal"
     assigned_agent: str | None = None
     required_capabilities: list[str] = field(default_factory=list)
@@ -294,7 +299,7 @@ class TaskQueue:
         self,
         description: str,
         source: str = "internal",
-        complexity: TaskComplexity = TaskComplexity.LOW,
+        complexity: TaskComplexity = TaskComplexity.AUTO,
         assigned_agent: str | None = None,
         required_capabilities: list[str] | None = None,
     ) -> Task:
