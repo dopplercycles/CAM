@@ -1480,6 +1480,282 @@
             font-family: monospace;
         }
 
+        /* --- Notification Bell --- */
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-bell svg {
+            width: 22px;
+            height: 22px;
+            fill: #8ab4d6;
+            transition: fill 0.15s;
+        }
+
+        .notification-bell:hover svg {
+            fill: #b0d0ee;
+        }
+
+        .notification-bell .badge {
+            position: absolute;
+            top: 0;
+            right: -2px;
+            background: #e74c3c;
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            min-width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            line-height: 1;
+        }
+
+        .notification-bell .badge.hidden {
+            display: none;
+        }
+
+        /* --- Notification Dropdown --- */
+        .notification-wrapper {
+            position: relative;
+        }
+
+        .notification-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 360px;
+            max-height: 420px;
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            z-index: 1000;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .notification-dropdown.open {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notification-dropdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #2a3a4a;
+            flex-shrink: 0;
+        }
+
+        .notification-dropdown-header h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e0e0e0;
+        }
+
+        .notification-mark-all {
+            background: none;
+            border: none;
+            color: #5b9bd5;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .notification-mark-all:hover {
+            background: rgba(91, 155, 213, 0.15);
+        }
+
+        .notification-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .notification-item {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #1f2d3d;
+            cursor: pointer;
+            transition: background 0.1s;
+            border-left: 3px solid transparent;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .notification-item.unread {
+            border-left-color: #5b9bd5;
+            background: rgba(91, 155, 213, 0.05);
+        }
+
+        .notification-item.read {
+            opacity: 0.6;
+        }
+
+        .notification-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.2rem;
+        }
+
+        .notification-item-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .notification-severity-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.05rem 0.35rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .notification-severity-badge.info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .notification-severity-badge.warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .notification-severity-badge.error {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .notification-severity-badge.critical {
+            background: rgba(220, 38, 38, 0.25);
+            color: #f87171;
+        }
+
+        .notification-item-time {
+            font-size: 0.7rem;
+            color: #4a5a6a;
+        }
+
+        .notification-item-message {
+            font-size: 0.78rem;
+            color: #a0b0c0;
+            line-height: 1.3;
+        }
+
+        .notification-empty {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
+        /* --- Toast Container --- */
+        .toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+            max-width: 380px;
+        }
+
+        .toast {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            pointer-events: auto;
+            cursor: pointer;
+            animation: toast-in 0.3s ease-out;
+            border-left: 4px solid #5b9bd5;
+        }
+
+        .toast.toast-out {
+            animation: toast-out 0.3s ease-in forwards;
+        }
+
+        .toast.severity-info { border-left-color: #60a5fa; }
+        .toast.severity-warn { border-left-color: #f59e0b; }
+        .toast.severity-error { border-left-color: #e74c3c; }
+        .toast.severity-critical {
+            border-left-color: #dc2626;
+            animation: toast-in 0.3s ease-out, critical-pulse 2s ease-in-out infinite;
+        }
+        .toast.severity-critical.toast-out {
+            animation: toast-out 0.3s ease-in forwards;
+        }
+
+        .toast-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 0.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .toast-message {
+            font-size: 0.78rem;
+            color: #a0b0c0;
+            line-height: 1.3;
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes toast-out {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+        }
+
+        @keyframes critical-pulse {
+            0%, 100% { box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+            50% { box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4), 0 0 8px rgba(220, 38, 38, 0.2); }
+        }
+
         /* --- Responsive --- */
         @media (max-width: 640px) {
             header {
@@ -1503,9 +1779,26 @@
 <body>
     <header>
         <div class="logo"><span>CAM</span> Dashboard</div>
-        <div class="connection-status">
-            <div class="status-dot" id="ws-status-dot"></div>
-            <span id="ws-status-text">Connecting...</span>
+        <div style="display:flex;align-items:center;gap:1rem;">
+            <div class="notification-wrapper">
+                <button class="notification-bell" id="notification-bell" onclick="toggleNotificationDropdown()" title="Notifications">
+                    <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                    <span class="badge hidden" id="notification-badge">0</span>
+                </button>
+                <div class="notification-dropdown" id="notification-dropdown">
+                    <div class="notification-dropdown-header">
+                        <h3>Notifications</h3>
+                        <button class="notification-mark-all" onclick="dismissAllNotifications()">Mark all read</button>
+                    </div>
+                    <div class="notification-list" id="notification-list">
+                        <div class="notification-empty">No notifications yet.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="connection-status">
+                <div class="status-dot" id="ws-status-dot"></div>
+                <span id="ws-status-text">Connecting...</span>
+            </div>
         </div>
     </header>
 
@@ -1667,6 +1960,8 @@
         </div>
     </main>
 
+    <div class="toast-container" id="toast-container"></div>
+
     <script>
         // ---------------------------------------------------------------
         // State
@@ -1677,6 +1972,10 @@
 
         // Per-agent chat logs: { agent_id: [{type, text}, ...] }
         const chatLogs = {};
+
+        // Notification state
+        let notifications = [];
+        let unreadCount = 0;
 
         // Per-agent health metrics: { agent_id: {...metrics} }
         let agentHealth = {};
@@ -1750,6 +2049,13 @@
                     handleChainStatus(data);
                 } else if (data.type === "chain_submitted") {
                     if (!data.ok) console.warn("Chain submit failed:", data.error);
+                } else if (data.type === "notification") {
+                    handleNewNotification(data.notification, data.unread_count);
+                } else if (data.type === "notification_history") {
+                    handleNotificationHistory(data.notifications, data.unread_count);
+                } else if (data.type === "notification_count") {
+                    unreadCount = data.unread_count;
+                    updateNotificationBadge();
                 }
             };
 
@@ -2768,6 +3074,129 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "config_reload" }));
             }
+        }
+
+        // ---------------------------------------------------------------
+        // Notifications
+        // ---------------------------------------------------------------
+        function handleNewNotification(notif, count) {
+            notifications.unshift(notif);
+            // Cap local list
+            if (notifications.length > 200) notifications = notifications.slice(0, 200);
+            unreadCount = count;
+            updateNotificationBadge();
+            renderNotificationList();
+            showToast(notif);
+        }
+
+        function handleNotificationHistory(notifs, count) {
+            notifications = notifs || [];
+            unreadCount = count;
+            updateNotificationBadge();
+            renderNotificationList();
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById("notification-badge");
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+                badge.classList.remove("hidden");
+            } else {
+                badge.classList.add("hidden");
+            }
+        }
+
+        function toggleNotificationDropdown() {
+            const dd = document.getElementById("notification-dropdown");
+            dd.classList.toggle("open");
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener("click", (e) => {
+            const wrapper = document.querySelector(".notification-wrapper");
+            const dd = document.getElementById("notification-dropdown");
+            if (dd.classList.contains("open") && !wrapper.contains(e.target)) {
+                dd.classList.remove("open");
+            }
+        });
+
+        function renderNotificationList() {
+            const container = document.getElementById("notification-list");
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="notification-empty">No notifications yet.</div>';
+                return;
+            }
+
+            container.innerHTML = notifications.map(n => {
+                const readClass = n.read ? "read" : "unread";
+                const time = formatEventTime(n.timestamp);
+                return `
+                    <div class="notification-item ${readClass}" onclick="dismissNotification('${n.id}')">
+                        <div class="notification-item-header">
+                            <span class="notification-item-title">
+                                <span class="notification-severity-badge ${n.severity}">${n.severity}</span>
+                                ${escapeHtml(n.title)}
+                            </span>
+                            <span class="notification-item-time">${time}</span>
+                        </div>
+                        <div class="notification-item-message">${escapeHtml(n.message)}</div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function dismissNotification(id) {
+            // Optimistic local update
+            const notif = notifications.find(n => n.id === id);
+            if (notif && !notif.read) {
+                notif.read = true;
+                unreadCount = Math.max(0, unreadCount - 1);
+                updateNotificationBadge();
+                renderNotificationList();
+            }
+            // Tell server
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "notification_dismiss", id: id }));
+            }
+        }
+
+        function dismissAllNotifications() {
+            // Optimistic local update
+            notifications.forEach(n => n.read = true);
+            unreadCount = 0;
+            updateNotificationBadge();
+            renderNotificationList();
+            // Tell server
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "notification_dismiss_all" }));
+            }
+        }
+
+        function showToast(notif) {
+            const container = document.getElementById("toast-container");
+            const el = document.createElement("div");
+            el.className = `toast severity-${notif.severity}`;
+            el.innerHTML = `
+                <div class="toast-title">
+                    <span class="notification-severity-badge ${notif.severity}">${notif.severity}</span>
+                    ${escapeHtml(notif.title)}
+                </div>
+                <div class="toast-message">${escapeHtml(notif.message)}</div>
+            `;
+            el.onclick = () => removeToast(el);
+            container.appendChild(el);
+
+            // Auto-dismiss: 15s for critical, 8s for everything else
+            const timeout = notif.severity === "critical" ? 15000 : 8000;
+            setTimeout(() => removeToast(el), timeout);
+        }
+
+        function removeToast(el) {
+            if (!el || !el.parentNode) return;
+            el.classList.add("toast-out");
+            el.addEventListener("animationend", () => {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            });
         }
 
         // ---------------------------------------------------------------

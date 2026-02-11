@@ -82,6 +82,18 @@ _DEFAULTS: dict[str, Any] = {
         "dashboard_port": 8080,
         "systemctl_timeout": 30,
     },
+    "notifications": {
+        "enabled": True,
+        "max_history": 200,
+        "agent_disconnect": True,
+        "task_failure": True,
+        "kill_switch": True,
+        "high_error_rate": True,
+        "error_rate_threshold": 50.0,
+        "error_rate_window": 20,
+        "cost_threshold": True,
+        "cost_threshold_usd": 1.00,
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

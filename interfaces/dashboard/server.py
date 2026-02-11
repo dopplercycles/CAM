@@ -25,6 +25,7 @@ from core.agent_registry import AgentRegistry
 from core.config import get_config
 from core.event_logger import EventLogger
 from core.health_monitor import HealthMonitor
+from core.notifications import NotificationManager
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
 from core.analytics import Analytics
@@ -77,6 +78,9 @@ analytics = Analytics(db_path=config.analytics.db_path)
 
 # Command library — predefined commands for the dashboard command palette
 command_library = CommandLibrary()
+
+# Notification manager — evaluates events against configurable rules
+notification_manager = NotificationManager(max_history=config.notifications.max_history)
 
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
@@ -153,8 +157,26 @@ async def broadcast_event(event_dict: dict):
     })
 
 
-# Wire the event logger's broadcast callback
-event_logger.set_broadcast_callback(broadcast_event)
+async def broadcast_notification(notification_dict: dict):
+    """Push a new notification to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "notification",
+        "notification": notification_dict,
+        "unread_count": notification_manager.get_unread_count(),
+    })
+
+
+# Wire notification manager's broadcast callback
+notification_manager.set_broadcast_callback(broadcast_notification)
+
+
+# Wire the event logger's broadcast callback — also evaluates notification rules
+async def broadcast_event_and_evaluate(event_dict: dict):
+    """Push event to dashboards and evaluate notification rules."""
+    await broadcast_event(event_dict)
+    notification_manager.evaluate_event(event_dict)
+
+event_logger.set_broadcast_callback(broadcast_event_and_evaluate)
 
 
 async def broadcast_analytics():
@@ -720,6 +742,13 @@ async def dashboard_websocket(websocket: WebSocket):
         "chains": task_queue.chains_to_broadcast_list(),
     })
 
+    # Send notification history so the bell icon shows correct state
+    await websocket.send_json({
+        "type": "notification_history",
+        "notifications": notification_manager.get_recent(50),
+        "unread_count": notification_manager.get_unread_count(),
+    })
+
     try:
         # Listen for dashboard commands (kill switch, task submit, agent controls)
         while True:
@@ -1008,6 +1037,21 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 await broadcast_chain_status()
                 await broadcast_task_status()
+
+            elif msg.get("type") == "notification_dismiss":
+                notif_id = msg.get("id", "")
+                notification_manager.dismiss(notif_id)
+                await broadcast_to_dashboards({
+                    "type": "notification_count",
+                    "unread_count": notification_manager.get_unread_count(),
+                })
+
+            elif msg.get("type") == "notification_dismiss_all":
+                notification_manager.dismiss_all()
+                await broadcast_to_dashboards({
+                    "type": "notification_count",
+                    "unread_count": notification_manager.get_unread_count(),
+                })
 
     except WebSocketDisconnect:
         if websocket in dashboard_clients:

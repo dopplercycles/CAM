@@ -56,3 +56,15 @@ reconnect_delay = 3
 dashboard_host = "192.168.12.232"
 dashboard_port = 8080
 systemctl_timeout = 30
+
+[notifications]
+enabled = true                      # master toggle for the notification system
+max_history = 200                   # max notifications kept in memory
+agent_disconnect = true             # alert when an agent goes offline
+task_failure = true                 # alert when a task fails
+kill_switch = true                  # alert when the kill switch is activated
+high_error_rate = true              # alert when task error rate exceeds threshold
+error_rate_threshold = 50.0         # error rate % that triggers an alert
+error_rate_window = 20              # number of recent tasks to evaluate
+cost_threshold = true               # alert when cumulative model cost exceeds limit
+cost_threshold_usd = 1.00           # USD threshold for cost alert
