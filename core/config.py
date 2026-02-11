@@ -106,6 +106,9 @@ _DEFAULTS: dict[str, Any] = {
         "check_interval": 30,
         "persist_file": "data/schedules.json",
     },
+    "api": {
+        "api_key": "",
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value
@@ -122,6 +125,7 @@ _ENV_OVERRIDES: list[tuple[str, str, type]] = [
     ("CAM_EVENTS_MAX_EVENTS",            "events.max_events",            int),
     ("CAM_ANALYTICS_DB_PATH",            "analytics.db_path",            str),
     ("CAM_OLLAMA_URL",                   "models.ollama_url",            str),
+    ("CAM_API_KEY",                      "api.api_key",                  str),
 ]
 
 

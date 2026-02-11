@@ -80,3 +80,6 @@ history_size = 100                  # completed transfer history ring buffer
 [scheduler]
 check_interval = 30                 # seconds between schedule checks
 persist_file = "data/schedules.json"  # schedule persistence file
+
+[api]
+api_key = ""                        # Set a key to require X-API-Key header. Empty = open access.

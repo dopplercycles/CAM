@@ -499,6 +499,7 @@ async def activate_kill_switch():
     """
     global kill_switch_active
     kill_switch_active = True
+    app.state.kill_switch["active"] = True
     logger.critical("KILL SWITCH ACTIVATED — shutting down all agents")
     event_logger.error("system", "KILL SWITCH ACTIVATED — all agents halting")
 
@@ -588,6 +589,23 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="CAM Dashboard", lifespan=lifespan)
+
+# Expose shared state on app.state so the REST API router (and future
+# routers) can access everything without circular imports.
+app.state.registry = registry
+app.state.health_monitor = health_monitor
+app.state.event_logger = event_logger
+app.state.analytics = analytics
+app.state.task_queue = task_queue
+app.state.scheduler = scheduler
+app.state.agent_websockets = agent_websockets
+app.state.config = config
+app.state.kill_switch = {"active": False}       # mutable container
+app.state.activate_kill_switch = activate_kill_switch
+
+# Mount versioned REST API
+from interfaces.api.routes import router as api_router
+app.include_router(api_router)
 
 # Mount static files (CSS, JS, images if any)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
