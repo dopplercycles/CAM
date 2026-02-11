@@ -122,6 +122,12 @@ _DEFAULTS: dict[str, Any] = {
     "api": {
         "api_key": "",
     },
+    "telegram": {
+        "bot_token": "",
+        "allowed_chat_ids": [],
+        "poll_interval": 0.5,
+        "task_timeout": 120.0,
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value
@@ -139,6 +145,7 @@ _ENV_OVERRIDES: list[tuple[str, str, type]] = [
     ("CAM_ANALYTICS_DB_PATH",            "analytics.db_path",            str),
     ("CAM_OLLAMA_URL",                   "models.ollama_url",            str),
     ("CAM_API_KEY",                      "api.api_key",                  str),
+    ("CAM_TELEGRAM_BOT_TOKEN",           "telegram.bot_token",           str),
 ]
 
 

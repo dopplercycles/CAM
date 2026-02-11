@@ -58,6 +58,10 @@
             background: #00d672;
         }
 
+        .telegram-status { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:#888; margin-right:0.5rem; }
+        .telegram-status .tg-dot { width:8px; height:8px; border-radius:50%; background:#e74c3c; }
+        .telegram-status .tg-dot.connected { background:#00d672; }
+
         /* --- Kill Switch — Constitution: "Prominent, always visible" --- */
         .kill-switch-bar {
             background: #1a2332;
@@ -2682,6 +2686,10 @@
                     </div>
                 </div>
             </div>
+            <div class="telegram-status" id="telegram-status" title="Telegram Bot">
+                <div class="tg-dot" id="tg-status-dot"></div>
+                <span>Telegram</span>
+            </div>
             <div class="connection-status">
                 <div class="status-dot" id="ws-status-dot"></div>
                 <span id="ws-status-text">Connecting...</span>
@@ -3138,6 +3146,11 @@
                     handleEpisodicSearchResults(data);
                 } else if (data.type === "persona") {
                     handlePersona(data);
+                } else if (data.type === "telegram_status") {
+                    const dot = document.getElementById("tg-status-dot");
+                    if (dot) {
+                        data.connected ? dot.classList.add("connected") : dot.classList.remove("connected");
+                    }
                 }
             };
 

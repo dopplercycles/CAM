@@ -31,6 +31,7 @@ from core.health_monitor import HealthMonitor
 from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory, EpisodicMemory
 from core.notifications import NotificationManager
 from core.persona import Persona
+from interfaces.telegram.bot import TelegramBot
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
 from core.analytics import Analytics
@@ -100,6 +101,9 @@ working_memory = WorkingMemory(
 
 # Persona — Cam's identity, voice, and behavioral traits (YAML-driven)
 persona = Persona()
+
+# Telegram bot — initialized in lifespan() after activate_kill_switch is defined
+telegram_bot: TelegramBot | None = None
 
 # Episodic memory — SQLite-backed conversation history
 episodic_memory = EpisodicMemory(
@@ -625,7 +629,7 @@ async def check_heartbeats():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start background tasks on startup, clean up on shutdown."""
-    global orchestrator_task
+    global orchestrator_task, telegram_bot
     logger.info("CAM Dashboard starting up")
     event_logger.info("system", "CAM Dashboard starting up")
     heartbeat_task = asyncio.create_task(check_heartbeats())
@@ -633,7 +637,29 @@ async def lifespan(app: FastAPI):
     scheduler_task = asyncio.create_task(scheduler.run())
     logger.info("Orchestrator loop started as background task")
     logger.info("Scheduler loop started as background task")
+
+    # Telegram bot — instantiated here so activate_kill_switch is in scope
+    telegram_bot = TelegramBot(
+        token=getattr(getattr(config, 'telegram', None), 'bot_token', ''),
+        allowed_chat_ids=getattr(getattr(config, 'telegram', None), 'allowed_chat_ids', []),
+        task_queue=task_queue,
+        registry=registry,
+        health_monitor=health_monitor,
+        episodic_memory=episodic_memory,
+        event_logger=event_logger,
+        activate_kill_switch=activate_kill_switch,
+        on_status_change=broadcast_to_dashboards,
+        poll_interval=getattr(getattr(config, 'telegram', None), 'poll_interval', 0.5),
+        task_timeout=getattr(getattr(config, 'telegram', None), 'task_timeout', 120.0),
+    )
+    await telegram_bot.start()
+    app.state.telegram_bot = telegram_bot
+
     yield
+
+    # Shutdown — stop Telegram before orchestrator so in-flight polls end cleanly
+    if telegram_bot:
+        await telegram_bot.stop()
     orchestrator.stop()
     scheduler.stop()
     orchestrator_task.cancel()
@@ -1140,6 +1166,13 @@ async def dashboard_websocket(websocket: WebSocket):
 
     # Send persona data for the persona preview panel
     await websocket.send_json({"type": "persona", "persona": persona.to_dict()})
+
+    # Send Telegram bot connection status
+    if telegram_bot:
+        await websocket.send_json({
+            "type": "telegram_status",
+            "connected": telegram_bot.is_connected,
+        })
 
     try:
         # Listen for dashboard commands (kill switch, task submit, agent controls)
