@@ -1951,6 +1951,211 @@
             max-width: 100px;
         }
 
+        /* --- Content Calendar --- */
+        .content-section {
+            margin-bottom: 2rem;
+        }
+
+        .content-builder {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-builder-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .content-builder-row input[type="text"],
+        .content-builder-row input[type="date"] {
+            flex: 1;
+            min-width: 120px;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+        }
+
+        .content-builder-row input:focus {
+            border-color: #5b9bd5;
+        }
+
+        .content-builder-row input::placeholder {
+            color: #4a5a6a;
+        }
+
+        .content-builder-row select {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .content-builder-row select:focus {
+            border-color: #5b9bd5;
+        }
+
+        .content-builder-row label {
+            font-size: 0.8rem;
+            color: #7a8a9a;
+            white-space: nowrap;
+        }
+
+        .content-builder-row .content-builder-btn {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .content-builder-row .content-builder-btn:hover {
+            background: #3b82f6;
+        }
+
+        .content-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .content-card-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .content-card-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e0e0e0;
+        }
+
+        .content-card-id {
+            font-size: 0.75rem;
+            color: #4a5a6a;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .content-status-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .content-status-badge.idea        { background: rgba(74, 90, 106, 0.25); color: #7a8a9a; }
+        .content-status-badge.planned      { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+        .content-status-badge.in_progress  { background: rgba(217, 119, 6, 0.2); color: #fbbf24; }
+        .content-status-badge.review       { background: rgba(234, 88, 12, 0.2); color: #fb923c; }
+        .content-status-badge.published    { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
+        .content-status-badge.archived     { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+
+        .content-type-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .content-card-meta {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            margin-bottom: 0.4rem;
+        }
+
+        .content-card-meta span {
+            margin-right: 1rem;
+        }
+
+        .content-card-actions {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+
+        .content-card-actions select {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.4rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .content-card-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 6px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.3rem 0.7rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .content-card-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .content-card-btn.danger {
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .content-card-btn.danger:hover {
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        .content-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
         /* --- Persona Panel --- */
         .persona-section {
             margin-bottom: 2rem;
@@ -2809,6 +3014,34 @@
             </div>
         </section>
 
+        <section class="content-section">
+            <h2>Content Calendar</h2>
+
+            <div class="content-builder">
+                <div class="content-builder-row">
+                    <input type="text" id="content-title" placeholder="Content title..." autocomplete="off">
+                    <input type="text" id="content-desc" placeholder="Description (optional)..." autocomplete="off">
+                </div>
+                <div class="content-builder-row">
+                    <label>Type:</label>
+                    <select id="content-type">
+                        <option value="general">General</option>
+                        <option value="script_outline">Script Outline</option>
+                        <option value="video">Video</option>
+                        <option value="episode_description">Episode Description</option>
+                        <option value="research">Research</option>
+                    </select>
+                    <label>Date:</label>
+                    <input type="date" id="content-date">
+                    <button class="content-builder-btn" onclick="createContentEntry()">Add</button>
+                </div>
+            </div>
+
+            <div id="content-list">
+                <div class="content-empty">No content entries yet.</div>
+            </div>
+        </section>
+
         <section class="command-palette-section">
             <h2>Command Palette</h2>
 
@@ -3126,6 +3359,14 @@
                 } else if (data.type === "notification_count") {
                     unreadCount = data.unread_count;
                     updateNotificationBadge();
+                } else if (data.type === "content_calendar_status") {
+                    handleContentCalendarStatus(data);
+                } else if (data.type === "content_entry_created") {
+                    if (!data.ok) console.warn("Content entry create failed:", data.error);
+                } else if (data.type === "content_entry_deleted") {
+                    if (!data.ok) console.warn("Content entry delete failed:", data.error);
+                } else if (data.type === "content_entry_updated") {
+                    if (!data.ok) console.warn("Content entry update failed:", data.error);
                 } else if (data.type === "schedule_status") {
                     handleScheduleStatus(data);
                 } else if (data.type === "schedule_created") {
@@ -4351,6 +4592,120 @@
                             <span>Runs: ${s.run_count}</span>
                             <span>Next: ${formatScheduleTime(s.next_run_at)}</span>
                             <span>Last: ${formatScheduleTime(s.last_run_at)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Content Calendar
+        // ---------------------------------------------------------------
+        let contentEntries = [];
+
+        const CONTENT_STATUS_ORDER = {
+            idea: 0, planned: 1, in_progress: 2, review: 3, published: 4, archived: 5,
+        };
+
+        function handleContentCalendarStatus(data) {
+            contentEntries = data.entries || [];
+            renderContentCalendar();
+        }
+
+        function createContentEntry() {
+            const titleInput = document.getElementById("content-title");
+            const descInput = document.getElementById("content-desc");
+            const title = titleInput.value.trim();
+            const description = descInput.value.trim();
+            if (!title) { titleInput.focus(); return; }
+
+            const content_type = document.getElementById("content-type").value;
+            const scheduled_date = document.getElementById("content-date").value || null;
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "content_entry_create",
+                    title, description, content_type, scheduled_date,
+                }));
+            }
+
+            // Clear form
+            titleInput.value = "";
+            descInput.value = "";
+            document.getElementById("content-date").value = "";
+        }
+
+        function updateContentStatus(entryId, newStatus) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "content_entry_update",
+                    entry_id: entryId,
+                    status: newStatus,
+                }));
+            }
+        }
+
+        function deleteContentEntry(entryId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "content_entry_delete",
+                    entry_id: entryId,
+                }));
+            }
+        }
+
+        function renderContentCalendar() {
+            const container = document.getElementById("content-list");
+            if (contentEntries.length === 0) {
+                container.innerHTML = '<div class="content-empty">No content entries yet.</div>';
+                return;
+            }
+
+            // Sort by status priority (active first), then by updated_at
+            const sorted = [...contentEntries].sort((a, b) => {
+                const sa = CONTENT_STATUS_ORDER[a.status] ?? 9;
+                const sb = CONTENT_STATUS_ORDER[b.status] ?? 9;
+                if (sa !== sb) return sa - sb;
+                return (b.updated_at || "").localeCompare(a.updated_at || "");
+            });
+
+            const statuses = ["idea", "planned", "in_progress", "review", "published", "archived"];
+
+            container.innerHTML = sorted.map(e => {
+                const typeLabel = (e.content_type || "general").replace(/_/g, " ").toUpperCase();
+                const statusClass = e.status || "idea";
+                const statusLabel = (e.status || "idea").replace(/_/g, " ");
+
+                let dateInfo = "";
+                if (e.scheduled_date) {
+                    dateInfo = `<span>Target: ${escapeHtml(e.scheduled_date)}</span>`;
+                }
+
+                const statusOptions = statuses.map(s => {
+                    const sel = s === e.status ? " selected" : "";
+                    const label = s.replace(/_/g, " ");
+                    return `<option value="${s}"${sel}>${label}</option>`;
+                }).join("");
+
+                return `
+                    <div class="content-card">
+                        <div class="content-card-header">
+                            <div class="content-card-left">
+                                <span class="content-card-title">${escapeHtml(e.title)}</span>
+                                <span class="content-card-id">${escapeHtml(e.short_id)}</span>
+                                <span class="content-status-badge ${statusClass}">${statusLabel}</span>
+                                <span class="content-type-badge">${typeLabel}</span>
+                            </div>
+                            <div class="content-card-actions">
+                                <select onchange="updateContentStatus('${e.entry_id}', this.value)">
+                                    ${statusOptions}
+                                </select>
+                                <button class="content-card-btn danger" onclick="deleteContentEntry('${e.entry_id}')">Delete</button>
+                            </div>
+                        </div>
+                        <div class="content-card-meta">
+                            ${e.description ? `<span>${escapeHtml(e.description.substring(0, 100))}</span>` : ""}
+                            ${dateInfo}
                         </div>
                     </div>
                 `;

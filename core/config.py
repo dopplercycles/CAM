@@ -128,6 +128,9 @@ _DEFAULTS: dict[str, Any] = {
         "poll_interval": 0.5,
         "task_timeout": 120.0,
     },
+    "content_calendar": {
+        "db_path": "data/content_calendar.db",
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

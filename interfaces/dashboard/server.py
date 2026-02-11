@@ -37,6 +37,8 @@ from core.orchestrator import Orchestrator
 from core.analytics import Analytics
 from core.commands import CommandLibrary
 from core.scheduler import Scheduler, ScheduleType
+from core.content_calendar import ContentCalendar, ContentType, ContentStatus
+from agents.content_agent import ContentAgent
 
 
 # ---------------------------------------------------------------------------
@@ -278,6 +280,22 @@ async def broadcast_schedule_status():
     })
 
 
+async def broadcast_content_calendar_status():
+    """Push current content calendar state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "content_calendar_status",
+        "entries": content_calendar.to_broadcast_list(),
+    })
+
+
+# Content calendar — SQLite-backed content pipeline tracker
+content_calendar = ContentCalendar(
+    db_path=getattr(getattr(config, 'content_calendar', None),
+                    'db_path', 'data/content_calendar.db'),
+    on_change=broadcast_content_calendar_status,
+)
+
+
 # Task scheduler — persists schedules to JSON, submits due tasks to the queue
 scheduler = Scheduler(
     task_queue=task_queue,
@@ -397,6 +415,17 @@ async def dispatch_to_agent(task, plan):
     Returns:
         The agent's response string, or None if no agent was available.
     """
+    # --- Local agents first — content agent handles content tasks without network overhead ---
+    try:
+        content_result = await content_agent.try_handle(task, plan)
+        if content_result is not None:
+            task.assigned_agent = "content_agent"
+            event_logger.info("task", f"Content agent handled {task.short_id}",
+                              task_id=task.short_id, agent="content_agent")
+            return content_result
+    except Exception as e:
+        logger.warning("Content agent failed for task %s: %s", task.short_id, e)
+
     # --- Routing: find the target agent ---
     agent_id = None
     required_caps = getattr(task, "required_capabilities", []) or []
@@ -543,6 +572,16 @@ orchestrator = Orchestrator(
     on_chain_update=on_chain_update,
 )
 
+# Content agent — local in-process agent for content tasks
+content_agent = ContentAgent(
+    router=orchestrator.router,
+    persona=persona,
+    long_term_memory=long_term_memory,
+    calendar=content_calendar,
+    event_logger=event_logger,
+    on_model_call=on_model_call,
+)
+
 
 # ---------------------------------------------------------------------------
 # Kill switch — CAM Constitution: "Prominent, always visible. One click
@@ -666,6 +705,7 @@ async def lifespan(app: FastAPI):
     heartbeat_task.cancel()
     scheduler_task.cancel()
     episodic_memory.close()
+    content_calendar.close()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
 
@@ -690,6 +730,8 @@ app.state.short_term_memory = short_term_memory
 app.state.working_memory = working_memory
 app.state.long_term_memory = long_term_memory
 app.state.episodic_memory = episodic_memory
+app.state.content_calendar = content_calendar
+app.state.content_agent = content_agent
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -763,6 +805,12 @@ async def get_memory():
 async def get_schedules():
     """Return current scheduled tasks as JSON."""
     return {"schedules": scheduler.to_broadcast_list()}
+
+
+@app.get("/api/content-calendar")
+async def get_content_calendar():
+    """Return current content calendar entries as JSON."""
+    return {"entries": content_calendar.to_broadcast_list()}
 
 
 @app.get("/api/config")
@@ -1153,6 +1201,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "schedule_status",
         "schedules": scheduler.to_broadcast_list(),
+    })
+
+    # Send current content calendar state
+    await websocket.send_json({
+        "type": "content_calendar_status",
+        "entries": content_calendar.to_broadcast_list(),
     })
 
     # Send current memory system status
@@ -1714,6 +1768,81 @@ async def dashboard_websocket(websocket: WebSocket):
                         "type": "schedule_toggled",
                         "ok": False,
                         "error": "Schedule not found",
+                    })
+
+            elif msg.get("type") == "content_entry_create":
+                title = (msg.get("title") or "").strip()
+                description = (msg.get("description") or "").strip()
+                content_type = (msg.get("content_type") or "general").lower()
+                scheduled_date = msg.get("scheduled_date") or None
+
+                if not title:
+                    await websocket.send_json({
+                        "type": "content_entry_created",
+                        "ok": False,
+                        "error": "Title is required",
+                    })
+                    continue
+
+                entry = content_calendar.add_entry(
+                    title=title,
+                    content_type=content_type,
+                    description=description,
+                    scheduled_date=scheduled_date,
+                )
+                event_logger.info(
+                    "content",
+                    f"Content entry '{title}' ({entry.short_id}) created",
+                    entry_id=entry.short_id, content_type=content_type,
+                )
+                await websocket.send_json({
+                    "type": "content_entry_created",
+                    "ok": True,
+                    "entry_id": entry.entry_id,
+                    "short_id": entry.short_id,
+                })
+                await broadcast_content_calendar_status()
+
+            elif msg.get("type") == "content_entry_update":
+                entry_id = msg.get("entry_id", "")
+                update_fields = {}
+                for key in ("title", "description", "content_type", "status",
+                            "scheduled_date", "body"):
+                    if key in msg:
+                        update_fields[key] = msg[key]
+
+                result = content_calendar.update_entry(entry_id, **update_fields)
+                if result:
+                    event_logger.info(
+                        "content",
+                        f"Content entry '{result.title}' ({result.short_id}) updated",
+                        entry_id=result.short_id,
+                    )
+                    await websocket.send_json({"type": "content_entry_updated", "ok": True})
+                    await broadcast_content_calendar_status()
+                else:
+                    await websocket.send_json({
+                        "type": "content_entry_updated",
+                        "ok": False,
+                        "error": "Entry not found",
+                    })
+
+            elif msg.get("type") == "content_entry_delete":
+                entry_id = msg.get("entry_id", "")
+                removed = content_calendar.remove_entry(entry_id)
+                if removed:
+                    event_logger.info(
+                        "content",
+                        f"Content entry {entry_id[:8]} deleted",
+                        entry_id=entry_id[:8],
+                    )
+                    await websocket.send_json({"type": "content_entry_deleted", "ok": True})
+                    await broadcast_content_calendar_status()
+                else:
+                    await websocket.send_json({
+                        "type": "content_entry_deleted",
+                        "ok": False,
+                        "error": "Entry not found",
                     })
 
             elif msg.get("type") == "notification_dismiss":
