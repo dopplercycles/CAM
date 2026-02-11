@@ -28,6 +28,7 @@ from core.config import get_config
 from core.event_logger import EventLogger
 from core.file_transfer import FileTransferManager, chunk_file_data, compute_checksum
 from core.health_monitor import HealthMonitor
+from core.memory import ShortTermMemory, WorkingMemory
 from core.notifications import NotificationManager
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
@@ -86,6 +87,16 @@ command_library = CommandLibrary()
 # Notification manager — evaluates events against configurable rules
 notification_manager = NotificationManager(max_history=config.notifications.max_history)
 
+# Memory systems — session context and persistent task state
+short_term_memory = ShortTermMemory(
+    max_messages=getattr(getattr(config, 'memory', None), 'short_term_max_messages', 200),
+    summary_ratio=getattr(getattr(config, 'memory', None), 'short_term_summary_ratio', 0.5),
+)
+working_memory = WorkingMemory(
+    persist_path=getattr(getattr(config, 'memory', None), 'working_memory_path',
+                         'data/tasks/working_memory.json'),
+)
+
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
 
@@ -94,6 +105,9 @@ dashboard_clients: list[WebSocket] = []
 
 # Task queue — shared between dashboard and orchestrator
 task_queue = TaskQueue()
+
+# Round-robin counter for fair agent dispatch
+_dispatch_counter: int = 0
 
 # Pending task dispatch responses — task_id → asyncio.Future
 # Used by dispatch_to_agent() to wait for agent command_responses
@@ -218,6 +232,15 @@ ft_manager = FileTransferManager(
 Path(config.file_transfer.receive_dir).mkdir(parents=True, exist_ok=True)
 
 
+async def broadcast_memory_status():
+    """Push current memory system state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "memory_status",
+        "short_term": short_term_memory.get_status(),
+        "working": working_memory.get_status(),
+    })
+
+
 async def broadcast_schedule_status():
     """Push current schedule state to all connected dashboard browsers."""
     await broadcast_to_dashboards({
@@ -298,6 +321,9 @@ async def on_task_phase_change(task, phase, detail):
         analytics.record_task(task)
         await broadcast_analytics()
 
+    # Push updated memory status to dashboards (memory changes during OATI)
+    await broadcast_memory_status()
+
 
 async def on_task_update():
     """Called by the orchestrator when any task's status changes."""
@@ -359,12 +385,15 @@ async def dispatch_to_agent(task, plan):
                 )
 
     if agent_id is None:
-        # Pick the first capable agent with an active WebSocket
+        # Pick a capable agent using round-robin so tasks are
+        # distributed fairly across all available agents.
+        global _dispatch_counter
         capable = registry.get_capable(required_caps)
-        for agent_info in capable:
-            if agent_info.agent_id in agent_websockets:
-                agent_id = agent_info.agent_id
-                break
+        connected = [a for a in capable if a.agent_id in agent_websockets]
+        if connected:
+            idx = _dispatch_counter % len(connected)
+            agent_id = connected[idx].agent_id
+            _dispatch_counter += 1
 
     if agent_id is None:
         caps_msg = f" (required: {required_caps})" if required_caps else ""
@@ -473,6 +502,8 @@ def on_model_call(model, backend, tokens, latency_ms, cost_usd, task_short_id):
 
 orchestrator = Orchestrator(
     queue=task_queue,
+    short_term_memory=short_term_memory,
+    working_memory=working_memory,
     on_phase_change=on_task_phase_change,
     on_task_update=on_task_update,
     on_dispatch_to_agent=dispatch_to_agent,
@@ -600,6 +631,8 @@ app.state.task_queue = task_queue
 app.state.scheduler = scheduler
 app.state.agent_websockets = agent_websockets
 app.state.config = config
+app.state.short_term_memory = short_term_memory
+app.state.working_memory = working_memory
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -656,6 +689,15 @@ async def get_analytics():
 async def get_events(count: int = 200):
     """Return recent events from the event log."""
     return event_logger.get_recent(count)
+
+
+@app.get("/api/memory")
+async def get_memory():
+    """Return current memory system status as JSON."""
+    return {
+        "short_term": short_term_memory.get_status(),
+        "working": working_memory.get_status(),
+    }
 
 
 @app.get("/api/schedules")
@@ -1052,6 +1094,13 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "schedule_status",
         "schedules": scheduler.to_broadcast_list(),
+    })
+
+    # Send current memory system status
+    await websocket.send_json({
+        "type": "memory_status",
+        "short_term": short_term_memory.get_status(),
+        "working": working_memory.get_status(),
     })
 
     try:

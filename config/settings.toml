@@ -81,5 +81,10 @@ history_size = 100                  # completed transfer history ring buffer
 check_interval = 30                 # seconds between schedule checks
 persist_file = "data/schedules.json"  # schedule persistence file
 
+[memory]
+short_term_max_messages = 200       # max messages before summarization kicks in
+short_term_summary_ratio = 0.5      # keep newest 50% of messages when summarizing
+working_memory_path = "data/tasks/working_memory.json"  # persistent task state file
+
 [api]
 api_key = ""                        # Set a key to require X-API-Key header. Empty = open access.

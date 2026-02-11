@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 
 from core.task import Task, TaskQueue, TaskStatus, TaskComplexity, TaskChain, ChainStatus
 from core.model_router import ModelRouter, ModelResponse
+from core.memory.short_term import ShortTermMemory
+from core.memory.working import WorkingMemory
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +68,8 @@ class Orchestrator:
         self,
         queue: TaskQueue | None = None,
         router: ModelRouter | None = None,
+        short_term_memory: ShortTermMemory | None = None,
+        working_memory: WorkingMemory | None = None,
         on_phase_change=None,
         on_task_update=None,
         on_dispatch_to_agent=None,
@@ -78,6 +82,16 @@ class Orchestrator:
 
         # Model router — sends prompts to the right model by complexity
         self.router = router if router is not None else ModelRouter()
+
+        # Memory systems — session context and persistent task state
+        self.short_term = (
+            short_term_memory if short_term_memory is not None
+            else ShortTermMemory()
+        )
+        self.working = (
+            working_memory if working_memory is not None
+            else WorkingMemory()
+        )
 
         # Optional callbacks for real-time dashboard updates.
         # on_phase_change(task, phase, detail) — called at each OATI boundary
@@ -109,7 +123,12 @@ class Orchestrator:
         except Exception:
             self._poll_interval: float = 1.0
 
-        logger.info("Orchestrator initialized (router=%s)", type(self.router).__name__)
+        logger.info(
+            "Orchestrator initialized (router=%s, stm=%d/%d, working=%d active)",
+            type(self.router).__name__,
+            self.short_term.message_count, self.short_term._max_messages,
+            len(self.working),
+        )
 
     # -------------------------------------------------------------------
     # Callback helpers — errors here must never break the OATI loop
@@ -185,11 +204,8 @@ class Orchestrator:
 
         Sends the task description to the appropriate model (determined
         by task complexity) and returns the model's analysis as the plan.
-
-        Future enhancements:
-        - Retrieve relevant memory before prompting
-        - Ask the model to break complex tasks into sub-steps
-        - Identify which tools or sub-agents are needed
+        Records the task in working memory so it can be resumed after a
+        restart. Adds the task to short-term memory for session context.
 
         Args:
             task: The task to analyze.
@@ -197,6 +213,21 @@ class Orchestrator:
         Returns:
             A plan dictionary with the model's response and metadata.
         """
+        # Save task state to working memory — survives restarts
+        self.working.save_task(task.task_id, {
+            "description": task.description,
+            "phase": "THINK",
+            "complexity": task.complexity.value,
+            "source": task.source,
+            "assigned_agent": task.assigned_agent,
+        })
+
+        # Record in short-term memory for session context
+        self.short_term.add("system", f"Processing task: {task.description}", {
+            "task_id": task.task_id,
+            "phase": "THINK",
+        })
+
         router_complexity = self.COMPLEXITY_MAP.get(task.complexity, "simple")
         await self._notify_phase(task, "THINK", f"Routing to {router_complexity} model")
 
@@ -271,6 +302,9 @@ class Orchestrator:
         Returns:
             A result string describing what was done.
         """
+        # Update working memory phase
+        self.working.update_phase(task.task_id, "ACT")
+
         # Try agent dispatch first
         if self._on_dispatch_to_agent is not None:
             await self._notify_phase(task, "ACT", "Checking for available agents")
@@ -339,8 +373,17 @@ class Orchestrator:
             task.short_id, result,
         )
 
+        # Clear from working memory — task is done, no need to resume
+        self.working.remove_task(task.task_id)
+
+        # Record completion in short-term memory
+        result_preview = result[:200] + "..." if len(result) > 200 else result
+        self.short_term.add("assistant", f"Task completed: {result_preview}", {
+            "task_id": task.task_id,
+            "phase": "COMPLETED",
+        })
+
         # Future: save to episodic memory
-        # Future: update working memory state
         # Future: check for follow-up tasks and add them to the queue
 
     # -------------------------------------------------------------------
@@ -358,6 +401,13 @@ class Orchestrator:
         """
         self._running = True
         logger.info("Orchestrator loop started")
+
+        # --- Resume tasks from working memory ---
+        # On startup, check if any tasks were in progress when we last
+        # shut down. Re-queue them so they get processed again.
+        resumed = self._resume_from_working_memory()
+        if resumed:
+            logger.info("Resumed %d task(s) from working memory", resumed)
 
         try:
             while self._running:
@@ -407,6 +457,15 @@ class Orchestrator:
                         "Task %s failed: %s", task.short_id, e, exc_info=True,
                     )
 
+                    # Clear from working memory — failed tasks don't resume
+                    self.working.remove_task(task.task_id)
+
+                    # Record failure in short-term memory
+                    self.short_term.add("system", f"Task failed: {e}", {
+                        "task_id": task.task_id,
+                        "phase": "FAILED",
+                    })
+
                     # --- Chain failure cascade ---
                     chain = self.queue.get_chain_for_task(task.task_id)
                     if chain is not None:
@@ -430,6 +489,64 @@ class Orchestrator:
         self._running = False
 
     # -------------------------------------------------------------------
+    # Working memory resume
+    # -------------------------------------------------------------------
+
+    def _resume_from_working_memory(self) -> int:
+        """Check working memory for in-progress tasks and re-queue them.
+
+        Called once at the start of run(). Any tasks that were saved in
+        working memory (because they were in progress when we shut down)
+        get re-added to the task queue as new PENDING tasks.
+
+        Returns:
+            Number of tasks resumed.
+        """
+        active = self.working.get_all_active()
+        if not active:
+            return 0
+
+        resumed = 0
+        for task_id, state in active.items():
+            description = state.get("description", "")
+            if not description:
+                # No description = can't resume meaningfully
+                self.working.remove_task(task_id)
+                continue
+
+            complexity_str = state.get("complexity", "low")
+            try:
+                complexity = TaskComplexity(complexity_str)
+            except ValueError:
+                complexity = TaskComplexity.LOW
+
+            # Re-queue with the original description intact — agents
+            # parse the description as a command, so prefixes break them.
+            task = self.queue.add_task(
+                description=description,
+                source=state.get("source", "working_memory"),
+                complexity=complexity,
+            )
+
+            # Record in short-term memory
+            self.short_term.add("system", f"Resumed task from working memory: {description}", {
+                "original_task_id": task_id,
+                "new_task_id": task.task_id,
+                "phase": state.get("phase", "unknown"),
+            })
+
+            # Clean the old entry — the new task gets its own working memory entry
+            self.working.remove_task(task_id)
+
+            logger.info(
+                "Resumed task from working memory: %s (was in phase %s) → new task %s",
+                task_id[:8], state.get("phase", "?"), task.short_id,
+            )
+            resumed += 1
+
+        return resumed
+
+    # -------------------------------------------------------------------
     # Status
     # -------------------------------------------------------------------
 
@@ -441,8 +558,8 @@ class Orchestrator:
     def get_status(self) -> dict:
         """Return a snapshot of the orchestrator's current state.
 
-        Useful for the dashboard status panel. Includes queue status
-        and session cost tracking from the model router.
+        Useful for the dashboard status panel. Includes queue status,
+        session cost tracking, and memory system status.
         """
         queue_status = self.queue.get_status()
         cost_status = self.router.get_session_costs()
@@ -450,6 +567,10 @@ class Orchestrator:
             "running": self._running,
             **queue_status,
             "session_costs": cost_status,
+            "memory": {
+                "short_term": self.short_term.get_status(),
+                "working": self.working.get_status(),
+            },
         }
 
 

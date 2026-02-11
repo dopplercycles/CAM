@@ -973,6 +973,119 @@
             font-size: 0.85rem;
         }
 
+        /* --- Memory Status Section --- */
+        .memory-section {
+            margin-bottom: 2rem;
+        }
+
+        .memory-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .memory-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .memory-card .card-label {
+            font-size: 0.75rem;
+            color: #6a7a8a;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .memory-card .card-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #e0e0e0;
+        }
+
+        .memory-card .card-value.memory-accent {
+            color: #a78bfa;
+        }
+
+        .memory-card .card-value.memory-working {
+            color: #34d399;
+        }
+
+        .memory-usage-bar {
+            height: 6px;
+            background: #2a3a4a;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .memory-usage-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: #a78bfa;
+            transition: width 0.3s ease;
+        }
+
+        .memory-usage-fill.warning {
+            background: #f59e0b;
+        }
+
+        .memory-usage-fill.critical {
+            background: #e74c3c;
+        }
+
+        .memory-working-list {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+        }
+
+        .memory-working-list h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8ab4d6;
+            margin-bottom: 0.75rem;
+        }
+
+        .memory-working-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #1f2d3d;
+            font-size: 0.8rem;
+        }
+
+        .memory-working-entry:last-child {
+            border-bottom: none;
+        }
+
+        .memory-working-entry .entry-desc {
+            color: #c0c8d0;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 0.75rem;
+        }
+
+        .memory-working-entry .entry-phase {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(167, 139, 250, 0.15);
+            color: #a78bfa;
+        }
+
         /* --- Command Palette --- */
         .command-palette-section {
             margin-bottom: 2rem;
@@ -2416,6 +2529,37 @@
             <div class="ft-history" id="ft-history"></div>
         </section>
 
+        <section class="memory-section">
+            <h2>Memory Status</h2>
+            <div class="memory-cards">
+                <div class="memory-card">
+                    <span class="card-label">Short-Term Messages</span>
+                    <span class="card-value memory-accent" id="mem-stm-count">0</span>
+                    <div class="memory-usage-bar">
+                        <div class="memory-usage-fill" id="mem-stm-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">STM Capacity</span>
+                    <span class="card-value" id="mem-stm-max">0</span>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">Summaries</span>
+                    <span class="card-value" id="mem-stm-summaries">0</span>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">Working Memory Tasks</span>
+                    <span class="card-value memory-working" id="mem-wm-count">0</span>
+                </div>
+            </div>
+            <div class="memory-working-list" id="mem-working-list">
+                <h3>Active Working Memory Entries</h3>
+                <div id="mem-working-entries">
+                    <div class="analytics-empty">No active tasks in working memory.</div>
+                </div>
+            </div>
+        </section>
+
         <section class="analytics-section">
             <h2>Analytics</h2>
             <div class="analytics-stats" id="analytics-stats">
@@ -2597,6 +2741,8 @@
                     handleTransferProgress(data);
                 } else if (data.type === "file_transfer_history") {
                     handleTransferHistory(data);
+                } else if (data.type === "memory_status") {
+                    handleMemoryStatus(data);
                 }
             };
 
@@ -3187,6 +3333,49 @@
         }, 5000);
 
         // ---------------------------------------------------------------
+        // Memory Status
+        // ---------------------------------------------------------------
+
+        function handleMemoryStatus(data) {
+            const stm = data.short_term || {};
+            const wm = data.working || {};
+
+            // Short-term memory cards
+            const stmCount = stm.message_count || 0;
+            const stmMax = stm.max_messages || 0;
+            const stmPct = stm.usage_pct || 0;
+            const summaries = stm.summary_count || 0;
+
+            document.getElementById("mem-stm-count").textContent = stmCount;
+            document.getElementById("mem-stm-max").textContent = stmMax;
+            document.getElementById("mem-stm-summaries").textContent = summaries;
+
+            // Usage bar with color thresholds
+            const bar = document.getElementById("mem-stm-bar");
+            bar.style.width = stmPct + "%";
+            bar.className = "memory-usage-fill";
+            if (stmPct > 90) bar.classList.add("critical");
+            else if (stmPct > 70) bar.classList.add("warning");
+
+            // Working memory
+            const wmCount = wm.active_count || 0;
+            const wmEntries = wm.entries || [];
+            document.getElementById("mem-wm-count").textContent = wmCount;
+
+            // Render working memory entries
+            const container = document.getElementById("mem-working-entries");
+            if (wmEntries.length === 0) {
+                container.innerHTML = '<div class="analytics-empty">No active tasks in working memory.</div>';
+            } else {
+                container.innerHTML = wmEntries.map(e => `
+                    <div class="memory-working-entry">
+                        <span class="entry-desc" title="${e.description || ''}">${e.short_id} — ${e.description || 'Unknown'}</span>
+                        <span class="entry-phase">${e.phase || '?'}</span>
+                    </div>
+                `).join("");
+            }
+        }
+
         // Analytics
         // ---------------------------------------------------------------
         let analyticsData = null;
