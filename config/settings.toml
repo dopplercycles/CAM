@@ -58,7 +58,7 @@ capture_sensor_data = 45
 [connector]
 heartbeat_interval = 30
 reconnect_delay = 3
-dashboard_host = "192.168.12.232"
+dashboard_host = "192.168.88.4"
 dashboard_port = 8080
 systemctl_timeout = 30
 
