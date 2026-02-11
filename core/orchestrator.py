@@ -26,6 +26,7 @@ from core.memory.short_term import ShortTermMemory
 from core.memory.working import WorkingMemory
 from core.memory.long_term import LongTermMemory
 from core.memory.episodic import EpisodicMemory
+from core.persona import Persona
 from core.task_classifier import classify as classify_task
 
 
@@ -83,6 +84,7 @@ class Orchestrator:
         working_memory: WorkingMemory | None = None,
         long_term_memory: LongTermMemory | None = None,
         episodic_memory: EpisodicMemory | None = None,
+        persona: Persona | None = None,
         on_phase_change=None,
         on_task_update=None,
         on_dispatch_to_agent=None,
@@ -113,6 +115,7 @@ class Orchestrator:
             episodic_memory if episodic_memory is not None
             else EpisodicMemory()
         )
+        self.persona = persona if persona is not None else Persona()
 
         # Optional callbacks for real-time dashboard updates.
         # on_phase_change(task, phase, detail) — called at each OATI boundary
@@ -303,12 +306,8 @@ class Orchestrator:
         except Exception:
             logger.debug("LTM retrieval failed (non-fatal)", exc_info=True)
 
-        # Build the prompt — ask the model to analyze and plan
-        system_prompt = (
-            "You are CAM, an AI assistant for Doppler Cycles, a motorcycle "
-            "diagnostics and content creation business. Analyze the task and "
-            "provide a concise, actionable response. Be specific and practical."
-        )
+        # Build the prompt — persona system prompt from YAML config
+        system_prompt = self.persona.build_system_prompt()
 
         prompt = task.description + ltm_context
 
@@ -739,6 +738,7 @@ class Orchestrator:
             "running": self._running,
             **queue_status,
             "session_costs": cost_status,
+            "persona": self.persona.get_status(),
             "memory": {
                 "short_term": self.short_term.get_status(),
                 "working": self.working.get_status(),

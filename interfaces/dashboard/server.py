@@ -30,6 +30,7 @@ from core.file_transfer import FileTransferManager, chunk_file_data, compute_che
 from core.health_monitor import HealthMonitor
 from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory, EpisodicMemory
 from core.notifications import NotificationManager
+from core.persona import Persona
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
 from core.analytics import Analytics
@@ -96,6 +97,9 @@ working_memory = WorkingMemory(
     persist_path=getattr(getattr(config, 'memory', None), 'working_memory_path',
                          'data/tasks/working_memory.json'),
 )
+
+# Persona — Cam's identity, voice, and behavioral traits (YAML-driven)
+persona = Persona()
 
 # Episodic memory — SQLite-backed conversation history
 episodic_memory = EpisodicMemory(
@@ -527,6 +531,7 @@ orchestrator = Orchestrator(
     working_memory=working_memory,
     long_term_memory=long_term_memory,
     episodic_memory=episodic_memory,
+    persona=persona,
     on_phase_change=on_task_phase_change,
     on_task_update=on_task_update,
     on_dispatch_to_agent=dispatch_to_agent,
@@ -1133,6 +1138,9 @@ async def dashboard_websocket(websocket: WebSocket):
         "episodic": episodic_memory.get_status(),
     })
 
+    # Send persona data for the persona preview panel
+    await websocket.send_json({"type": "persona", "persona": persona.to_dict()})
+
     try:
         # Listen for dashboard commands (kill switch, task submit, agent controls)
         while True:
@@ -1352,6 +1360,12 @@ async def dashboard_websocket(websocket: WebSocket):
                     "config": config.to_dict(),
                     "last_loaded": config.last_loaded,
                 })
+
+            elif msg.get("type") == "persona_reload":
+                # Reload persona config from disk and broadcast to all dashboards
+                persona.reload()
+                event_logger.info("system", "Persona configuration reloaded")
+                await broadcast_to_dashboards({"type": "persona", "persona": persona.to_dict()})
 
             elif msg.get("type") == "chain_submit":
                 # Submit a multi-step task chain

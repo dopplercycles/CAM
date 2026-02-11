@@ -1947,6 +1947,107 @@
             max-width: 100px;
         }
 
+        /* --- Persona Panel --- */
+        .persona-section {
+            margin-bottom: 2rem;
+        }
+
+        .persona-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .persona-header h2 {
+            margin: 0;
+        }
+
+        .persona-reload-btn {
+            background: transparent;
+            border: 1px solid #a78bfa;
+            color: #a78bfa;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .persona-reload-btn:hover {
+            background: rgba(167, 139, 250, 0.15);
+        }
+
+        .persona-card {
+            background: #1a2332;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .persona-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #a78bfa;
+            margin-bottom: 0.15rem;
+        }
+
+        .persona-tagline {
+            font-style: italic;
+            color: #8892a4;
+            margin-bottom: 0.75rem;
+        }
+
+        .persona-role {
+            color: #c9d1d9;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .persona-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .persona-tag {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .persona-tag.tone {
+            border: 1px solid #a78bfa;
+            color: #a78bfa;
+        }
+
+        .persona-tag.domain {
+            border: 1px solid #34d399;
+            color: #34d399;
+        }
+
+        .persona-prompt-preview {
+            background: #0d1520;
+            border-radius: 6px;
+            padding: 0.85rem 1rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            color: #8892a4;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .persona-token-estimate {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            color: #586e75;
+            margin-top: 0.4rem;
+            text-align: right;
+        }
+
         /* --- Settings Panel --- */
         .settings-section {
             margin-bottom: 2rem;
@@ -2884,6 +2985,21 @@
             </div>
         </section>
 
+        <section class="persona-section" id="persona-section">
+            <div class="persona-header">
+                <h2>Persona</h2>
+                <button class="persona-reload-btn" onclick="reloadPersona()">Reload persona.yaml</button>
+            </div>
+            <div id="persona-identity" class="persona-card">
+                <div class="analytics-empty">Waiting for persona data...</div>
+            </div>
+            <div id="persona-prompt-card" class="persona-card" style="display:none;">
+                <h3 style="margin:0 0 0.5rem;font-size:0.95rem;color:#c9d1d9;">System Prompt Preview</h3>
+                <div class="persona-prompt-preview" id="persona-prompt-text"></div>
+                <div class="persona-token-estimate" id="persona-token-estimate"></div>
+            </div>
+        </section>
+
         <section class="settings-section">
             <div class="settings-header">
                 <h2>Settings</h2>
@@ -3020,6 +3136,8 @@
                     handleMemoryStatus(data);
                 } else if (data.type === "episodic_search_results") {
                     handleEpisodicSearchResults(data);
+                } else if (data.type === "persona") {
+                    handlePersona(data);
                 }
             };
 
@@ -4286,6 +4404,55 @@
         function reloadConfig() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "config_reload" }));
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Persona
+        // ---------------------------------------------------------------
+        let personaData = null;
+
+        function handlePersona(data) {
+            personaData = data.persona;
+            renderPersona();
+        }
+
+        function renderPersona() {
+            if (!personaData) return;
+            const p = personaData;
+
+            // Identity card
+            const identityEl = document.getElementById("persona-identity");
+            const toneTags = (p.tone || []).map(t =>
+                `<span class="persona-tag tone">${t}</span>`
+            ).join("");
+            const domainTags = (p.knowledge_domains || []).map(d =>
+                `<span class="persona-tag domain">${d}</span>`
+            ).join("");
+
+            identityEl.innerHTML = `
+                <div class="persona-name">${p.name || "Cam"}</div>
+                <div class="persona-tagline">${p.tagline || ""}</div>
+                <div class="persona-role">${p.role || ""}</div>
+                ${toneTags ? `<div class="persona-tags">${toneTags}</div>` : ""}
+                ${domainTags ? `<div class="persona-tags">${domainTags}</div>` : ""}
+            `;
+
+            // Prompt preview card
+            const promptCard = document.getElementById("persona-prompt-card");
+            const promptText = document.getElementById("persona-prompt-text");
+            const tokenEst = document.getElementById("persona-token-estimate");
+
+            if (p.system_prompt) {
+                promptCard.style.display = "block";
+                promptText.textContent = p.system_prompt;
+                tokenEst.textContent = `~${p.prompt_token_estimate || 0} tokens`;
+            }
+        }
+
+        function reloadPersona() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "persona_reload" }));
             }
         }
 
