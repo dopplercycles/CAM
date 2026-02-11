@@ -131,6 +131,12 @@ _DEFAULTS: dict[str, Any] = {
     "content_calendar": {
         "db_path": "data/content_calendar.db",
     },
+    "research": {
+        "db_path": "data/research.db",
+        "max_pages_per_query": 5,
+        "request_timeout": 10,
+        "rate_limit_delay": 0.5,
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

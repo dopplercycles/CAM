@@ -2156,6 +2156,145 @@
             font-size: 0.85rem;
         }
 
+        /* --- Research Results --- */
+        .research-section {
+            margin-bottom: 2rem;
+        }
+
+        .research-search-bar {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .research-search-bar input {
+            flex: 1;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+        }
+
+        .research-search-bar input:focus {
+            border-color: #5b9bd5;
+        }
+
+        .research-search-bar input::placeholder {
+            color: #4a5a6a;
+        }
+
+        .research-search-bar button {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .research-search-bar button:hover {
+            background: #3b82f6;
+        }
+
+        .research-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .research-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .research-card-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .research-card-query {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e0e0e0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 500px;
+        }
+
+        .research-card-id {
+            font-size: 0.75rem;
+            color: #4a5a6a;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .research-status-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .research-status-badge.in_progress { background: rgba(217, 119, 6, 0.2); color: #fbbf24; }
+        .research-status-badge.completed    { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
+        .research-status-badge.failed       { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .research-status-badge.stale        { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+
+        .research-card-meta {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            margin-bottom: 0.4rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .research-card-summary {
+            font-size: 0.85rem;
+            color: #8a9aaa;
+            line-height: 1.4;
+            max-height: 4.2em;
+            overflow: hidden;
+            margin-bottom: 0.3rem;
+        }
+
+        .research-card-actions {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+
+        .research-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
         /* --- Persona Panel --- */
         .persona-section {
             margin-bottom: 2rem;
@@ -3042,6 +3181,20 @@
             </div>
         </section>
 
+        <section class="research-section">
+            <h2>Research Results</h2>
+
+            <div class="research-search-bar">
+                <input type="text" id="research-search-input" placeholder="Search past research..." autocomplete="off"
+                       onkeydown="if(event.key==='Enter') searchResearch()">
+                <button onclick="searchResearch()">Search</button>
+            </div>
+
+            <div id="research-list">
+                <div class="research-empty">No research results yet.</div>
+            </div>
+        </section>
+
         <section class="command-palette-section">
             <h2>Command Palette</h2>
 
@@ -3367,6 +3520,12 @@
                     if (!data.ok) console.warn("Content entry delete failed:", data.error);
                 } else if (data.type === "content_entry_updated") {
                     if (!data.ok) console.warn("Content entry update failed:", data.error);
+                } else if (data.type === "research_status") {
+                    handleResearchStatus(data);
+                } else if (data.type === "research_result_deleted") {
+                    if (!data.ok) console.warn("Research entry delete failed:", data.error);
+                } else if (data.type === "research_search_results") {
+                    handleResearchSearchResults(data);
                 } else if (data.type === "schedule_status") {
                     handleScheduleStatus(data);
                 } else if (data.type === "schedule_created") {
@@ -4707,6 +4866,82 @@
                             ${e.description ? `<span>${escapeHtml(e.description.substring(0, 100))}</span>` : ""}
                             ${dateInfo}
                         </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Research Results
+        // ---------------------------------------------------------------
+        let researchEntries = [];
+
+        function handleResearchStatus(data) {
+            researchEntries = data.entries || [];
+            renderResearchResults();
+        }
+
+        function handleResearchSearchResults(data) {
+            researchEntries = data.entries || [];
+            renderResearchResults();
+        }
+
+        function deleteResearchEntry(entryId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "research_result_delete",
+                    entry_id: entryId,
+                }));
+            }
+        }
+
+        function searchResearch() {
+            const input = document.getElementById("research-search-input");
+            const keyword = input.value.trim();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "research_search",
+                    keyword: keyword,
+                }));
+            }
+        }
+
+        function renderResearchResults() {
+            const container = document.getElementById("research-list");
+            if (researchEntries.length === 0) {
+                container.innerHTML = '<div class="research-empty">No research results yet.</div>';
+                return;
+            }
+
+            container.innerHTML = researchEntries.map(e => {
+                const statusClass = e.status || "in_progress";
+                const statusLabel = (e.status || "in_progress").replace(/_/g, " ");
+                const summaryPreview = e.summary
+                    ? escapeHtml(e.summary.substring(0, 200)) + (e.summary.length > 200 ? "..." : "")
+                    : "<em>No summary yet</em>";
+                const costStr = e.cost_usd > 0 ? `$${e.cost_usd.toFixed(4)}` : "—";
+                const modelStr = e.model_used || "—";
+
+                return `
+                    <div class="research-card">
+                        <div class="research-card-header">
+                            <div class="research-card-left">
+                                <span class="research-card-query">${escapeHtml(e.query.substring(0, 120))}</span>
+                                <span class="research-card-id">${escapeHtml(e.short_id)}</span>
+                                <span class="research-status-badge ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="research-card-actions">
+                                <button class="content-card-btn danger" onclick="deleteResearchEntry('${e.entry_id}')">Delete</button>
+                            </div>
+                        </div>
+                        <div class="research-card-meta">
+                            <span>Sources: ${e.source_count || 0}</span>
+                            <span>Pages: ${e.pages_fetched || 0}</span>
+                            <span>Model: ${escapeHtml(modelStr)}</span>
+                            <span>Tokens: ${e.tokens_used || 0}</span>
+                            <span>Cost: ${costStr}</span>
+                        </div>
+                        <div class="research-card-summary">${summaryPreview}</div>
                     </div>
                 `;
             }).join("");

@@ -38,7 +38,9 @@ from core.analytics import Analytics
 from core.commands import CommandLibrary
 from core.scheduler import Scheduler, ScheduleType
 from core.content_calendar import ContentCalendar, ContentType, ContentStatus
+from core.research_store import ResearchStore, ResearchStatus
 from agents.content_agent import ContentAgent
+from agents.research_agent import ResearchAgent
 
 
 # ---------------------------------------------------------------------------
@@ -288,11 +290,26 @@ async def broadcast_content_calendar_status():
     })
 
 
+async def broadcast_research_status():
+    """Push current research results to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "research_status",
+        "entries": research_store.to_broadcast_list(),
+    })
+
+
 # Content calendar — SQLite-backed content pipeline tracker
 content_calendar = ContentCalendar(
     db_path=getattr(getattr(config, 'content_calendar', None),
                     'db_path', 'data/content_calendar.db'),
     on_change=broadcast_content_calendar_status,
+)
+
+# Research store — SQLite-backed research result storage
+research_store = ResearchStore(
+    db_path=getattr(getattr(config, 'research', None),
+                    'db_path', 'data/research.db'),
+    on_change=broadcast_research_status,
 )
 
 
@@ -425,6 +442,17 @@ async def dispatch_to_agent(task, plan):
             return content_result
     except Exception as e:
         logger.warning("Content agent failed for task %s: %s", task.short_id, e)
+
+    # --- Local agents: research agent handles research tasks ---
+    try:
+        research_result = await research_agent.try_handle(task, plan)
+        if research_result is not None:
+            task.assigned_agent = "research_agent"
+            event_logger.info("task", f"Research agent handled {task.short_id}",
+                              task_id=task.short_id, agent="research_agent")
+            return research_result
+    except Exception as e:
+        logger.warning("Research agent failed for task %s: %s", task.short_id, e)
 
     # --- Routing: find the target agent ---
     agent_id = None
@@ -582,6 +610,16 @@ content_agent = ContentAgent(
     on_model_call=on_model_call,
 )
 
+# Research agent — local in-process agent for research tasks
+research_agent = ResearchAgent(
+    router=orchestrator.router,
+    persona=persona,
+    long_term_memory=long_term_memory,
+    research_store=research_store,
+    event_logger=event_logger,
+    on_model_call=on_model_call,
+)
+
 
 # ---------------------------------------------------------------------------
 # Kill switch — CAM Constitution: "Prominent, always visible. One click
@@ -706,6 +744,7 @@ async def lifespan(app: FastAPI):
     scheduler_task.cancel()
     episodic_memory.close()
     content_calendar.close()
+    research_store.close()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
 
@@ -732,6 +771,8 @@ app.state.long_term_memory = long_term_memory
 app.state.episodic_memory = episodic_memory
 app.state.content_calendar = content_calendar
 app.state.content_agent = content_agent
+app.state.research_store = research_store
+app.state.research_agent = research_agent
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -811,6 +852,12 @@ async def get_schedules():
 async def get_content_calendar():
     """Return current content calendar entries as JSON."""
     return {"entries": content_calendar.to_broadcast_list()}
+
+
+@app.get("/api/research")
+async def get_research():
+    """Return current research results as JSON."""
+    return {"entries": research_store.to_broadcast_list()}
 
 
 @app.get("/api/config")
@@ -1207,6 +1254,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "content_calendar_status",
         "entries": content_calendar.to_broadcast_list(),
+    })
+
+    # Send current research results
+    await websocket.send_json({
+        "type": "research_status",
+        "entries": research_store.to_broadcast_list(),
     })
 
     # Send current memory system status
@@ -1844,6 +1897,36 @@ async def dashboard_websocket(websocket: WebSocket):
                         "ok": False,
                         "error": "Entry not found",
                     })
+
+            elif msg.get("type") == "research_result_delete":
+                entry_id = msg.get("entry_id", "")
+                removed = research_store.remove_entry(entry_id)
+                if removed:
+                    event_logger.info(
+                        "research",
+                        f"Research entry {entry_id[:8]} deleted",
+                        entry_id=entry_id[:8],
+                    )
+                    await websocket.send_json({"type": "research_result_deleted", "ok": True})
+                    await broadcast_research_status()
+                else:
+                    await websocket.send_json({
+                        "type": "research_result_deleted",
+                        "ok": False,
+                        "error": "Entry not found",
+                    })
+
+            elif msg.get("type") == "research_search":
+                keyword = (msg.get("keyword") or "").strip()
+                if keyword:
+                    results = research_store.search_by_query(keyword, limit=20)
+                else:
+                    results = research_store.list_all(limit=50)
+                await websocket.send_json({
+                    "type": "research_search_results",
+                    "entries": [e.to_dict() for e in results],
+                    "keyword": keyword,
+                })
 
             elif msg.get("type") == "notification_dismiss":
                 notif_id = msg.get("id", "")
