@@ -28,7 +28,7 @@ from core.config import get_config
 from core.event_logger import EventLogger
 from core.file_transfer import FileTransferManager, chunk_file_data, compute_checksum
 from core.health_monitor import HealthMonitor
-from core.memory import ShortTermMemory, WorkingMemory
+from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory
 from core.notifications import NotificationManager
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
@@ -96,6 +96,17 @@ working_memory = WorkingMemory(
     persist_path=getattr(getattr(config, 'memory', None), 'working_memory_path',
                          'data/tasks/working_memory.json'),
 )
+
+# Long-term memory — ChromaDB vector store for persistent knowledge
+long_term_memory = LongTermMemory(
+    persist_directory=getattr(getattr(config, 'memory', None),
+                              'long_term_persist_dir', 'data/memory/chromadb'),
+    collection_name=getattr(getattr(config, 'memory', None),
+                            'long_term_collection', 'cam_long_term'),
+)
+_seed_file = getattr(getattr(config, 'memory', None),
+                     'long_term_seed_file', 'CAM_BRAIN.md')
+long_term_memory.seed_from_file(_seed_file)
 
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
@@ -238,6 +249,7 @@ async def broadcast_memory_status():
         "type": "memory_status",
         "short_term": short_term_memory.get_status(),
         "working": working_memory.get_status(),
+        "long_term": long_term_memory.get_status(),
     })
 
 
@@ -504,6 +516,7 @@ orchestrator = Orchestrator(
     queue=task_queue,
     short_term_memory=short_term_memory,
     working_memory=working_memory,
+    long_term_memory=long_term_memory,
     on_phase_change=on_task_phase_change,
     on_task_update=on_task_update,
     on_dispatch_to_agent=dispatch_to_agent,
@@ -633,6 +646,7 @@ app.state.agent_websockets = agent_websockets
 app.state.config = config
 app.state.short_term_memory = short_term_memory
 app.state.working_memory = working_memory
+app.state.long_term_memory = long_term_memory
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -697,6 +711,7 @@ async def get_memory():
     return {
         "short_term": short_term_memory.get_status(),
         "working": working_memory.get_status(),
+        "long_term": long_term_memory.get_status(),
     }
 
 
@@ -1101,6 +1116,7 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "memory_status",
         "short_term": short_term_memory.get_status(),
         "working": working_memory.get_status(),
+        "long_term": long_term_memory.get_status(),
     })
 
     try:

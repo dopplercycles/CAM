@@ -105,6 +105,14 @@ _DEFAULTS: dict[str, Any] = {
         "max_active_transfers": 5,
         "history_size": 100,
     },
+    "memory": {
+        "short_term_max_messages": 200,
+        "short_term_summary_ratio": 0.5,
+        "working_memory_path": "data/tasks/working_memory.json",
+        "long_term_persist_dir": "data/memory/chromadb",
+        "long_term_collection": "cam_long_term",
+        "long_term_seed_file": "CAM_BRAIN.md",
+    },
     "scheduler": {
         "check_interval": 30,
         "persist_file": "data/schedules.json",

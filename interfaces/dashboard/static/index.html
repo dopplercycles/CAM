@@ -1086,6 +1086,73 @@
             color: #a78bfa;
         }
 
+        /* --- Long-Term Memory --- */
+        .memory-ltm-section {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .memory-ltm-section h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #8ab4d6;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ltm-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+        }
+
+        .ltm-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .ltm-card {
+            background: #141e2a;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            padding: 0.6rem 0.8rem;
+            text-align: center;
+        }
+
+        .ltm-card .ltm-card-label {
+            font-size: 0.7rem;
+            color: #6b7b8d;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .ltm-card .ltm-card-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+
+        .ltm-status {
+            font-size: 0.7rem;
+            color: #6b7b8d;
+            margin-top: 0.4rem;
+        }
+
+        .ltm-status.error {
+            color: #f87171;
+        }
+
         /* --- Command Palette --- */
         .command-palette-section {
             margin-bottom: 2rem;
@@ -2558,6 +2625,28 @@
                     <div class="analytics-empty">No active tasks in working memory.</div>
                 </div>
             </div>
+            <div class="memory-ltm-section" id="mem-ltm-section">
+                <h3>Long-Term Memory <span class="ltm-badge" id="mem-ltm-total">0</span></h3>
+                <div class="ltm-cards">
+                    <div class="ltm-card">
+                        <div class="ltm-card-label">Knowledge</div>
+                        <div class="ltm-card-value" id="mem-ltm-knowledge">0</div>
+                    </div>
+                    <div class="ltm-card">
+                        <div class="ltm-card-label">Task Results</div>
+                        <div class="ltm-card-value" id="mem-ltm-task-result">0</div>
+                    </div>
+                    <div class="ltm-card">
+                        <div class="ltm-card-label">Preferences</div>
+                        <div class="ltm-card-value" id="mem-ltm-preference">0</div>
+                    </div>
+                    <div class="ltm-card">
+                        <div class="ltm-card-label">Learnings</div>
+                        <div class="ltm-card-value" id="mem-ltm-learning">0</div>
+                    </div>
+                </div>
+                <div class="ltm-status" id="mem-ltm-status"></div>
+            </div>
         </section>
 
         <section class="analytics-section">
@@ -3339,6 +3428,7 @@
         function handleMemoryStatus(data) {
             const stm = data.short_term || {};
             const wm = data.working || {};
+            const ltm = data.long_term || {};
 
             // Short-term memory cards
             const stmCount = stm.message_count || 0;
@@ -3373,6 +3463,30 @@
                         <span class="entry-phase">${e.phase || '?'}</span>
                     </div>
                 `).join("");
+            }
+
+            // Long-term memory
+            const ltmTotal = ltm.total_count || 0;
+            const ltmCounts = ltm.counts_by_category || {};
+            const ltmInitialized = ltm.initialized || false;
+            const ltmError = ltm.error || null;
+
+            document.getElementById("mem-ltm-total").textContent = ltmTotal;
+            document.getElementById("mem-ltm-knowledge").textContent = ltmCounts.knowledge || 0;
+            document.getElementById("mem-ltm-task-result").textContent = ltmCounts.task_result || 0;
+            document.getElementById("mem-ltm-preference").textContent = ltmCounts.user_preference || 0;
+            document.getElementById("mem-ltm-learning").textContent = ltmCounts.system_learning || 0;
+
+            const statusEl = document.getElementById("mem-ltm-status");
+            if (ltmError) {
+                statusEl.textContent = "Error: " + ltmError;
+                statusEl.className = "ltm-status error";
+            } else if (ltmInitialized) {
+                statusEl.textContent = "Collection: " + (ltm.collection_name || "cam_long_term");
+                statusEl.className = "ltm-status";
+            } else {
+                statusEl.textContent = "Not initialized";
+                statusEl.className = "ltm-status";
             }
         }
 

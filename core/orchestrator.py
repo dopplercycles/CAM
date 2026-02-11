@@ -24,6 +24,7 @@ from core.task import Task, TaskQueue, TaskStatus, TaskComplexity, TaskChain, Ch
 from core.model_router import ModelRouter, ModelResponse
 from core.memory.short_term import ShortTermMemory
 from core.memory.working import WorkingMemory
+from core.memory.long_term import LongTermMemory
 from core.task_classifier import classify as classify_task
 
 
@@ -79,6 +80,7 @@ class Orchestrator:
         router: ModelRouter | None = None,
         short_term_memory: ShortTermMemory | None = None,
         working_memory: WorkingMemory | None = None,
+        long_term_memory: LongTermMemory | None = None,
         on_phase_change=None,
         on_task_update=None,
         on_dispatch_to_agent=None,
@@ -92,7 +94,7 @@ class Orchestrator:
         # Model router — sends prompts to the right model by complexity
         self.router = router if router is not None else ModelRouter()
 
-        # Memory systems — session context and persistent task state
+        # Memory systems — session context, persistent task state, long-term knowledge
         self.short_term = (
             short_term_memory if short_term_memory is not None
             else ShortTermMemory()
@@ -100,6 +102,10 @@ class Orchestrator:
         self.working = (
             working_memory if working_memory is not None
             else WorkingMemory()
+        )
+        self.long_term = (
+            long_term_memory if long_term_memory is not None
+            else LongTermMemory()
         )
 
         # Optional callbacks for real-time dashboard updates.
@@ -264,6 +270,25 @@ class Orchestrator:
             task.description,
         )
 
+        # --- Retrieve relevant long-term memories ---
+        ltm_context = ""
+        try:
+            ltm_results = self.long_term.query(task.description, top_k=3)
+            # Only include reasonably relevant results (score > 0.3)
+            relevant = [r for r in ltm_results if r.score > 0.3]
+            if relevant:
+                ltm_lines = [f"- [{r.category}] {r.content}" for r in relevant]
+                ltm_context = (
+                    "\n\nRelevant knowledge from memory:\n"
+                    + "\n".join(ltm_lines)
+                )
+                logger.info(
+                    "[THINK] Retrieved %d relevant memories for task %s",
+                    len(relevant), task.short_id,
+                )
+        except Exception:
+            logger.debug("LTM retrieval failed (non-fatal)", exc_info=True)
+
         # Build the prompt — ask the model to analyze and plan
         system_prompt = (
             "You are CAM, an AI assistant for Doppler Cycles, a motorcycle "
@@ -271,8 +296,10 @@ class Orchestrator:
             "provide a concise, actionable response. Be specific and practical."
         )
 
+        prompt = task.description + ltm_context
+
         response: ModelResponse = await self.router.route(
-            prompt=task.description,
+            prompt=prompt,
             task_complexity=router_complexity,
             system_prompt=system_prompt,
         )
@@ -409,6 +436,26 @@ class Orchestrator:
             "task_id": task.task_id,
             "phase": "COMPLETED",
         })
+
+        # --- Store substantial results in long-term memory ---
+        if len(result) > 50:
+            try:
+                category = self._classify_ltm_category(task.description)
+                ltm_content = f"Task: {task.description}\nResult: {result[:500]}"
+                self.long_term.store(
+                    content=ltm_content,
+                    category=category,
+                    metadata={
+                        "task_id": task.task_id,
+                        "source": "iterate",
+                    },
+                )
+                logger.info(
+                    "[ITERATE] Stored result in LTM (category=%s) for task %s",
+                    category, task.short_id,
+                )
+            except Exception:
+                logger.debug("LTM store failed (non-fatal)", exc_info=True)
 
         # Future: save to episodic memory
         # Future: check for follow-up tasks and add them to the queue
@@ -614,6 +661,35 @@ class Orchestrator:
         return resumed
 
     # -------------------------------------------------------------------
+    # LTM category classification
+    # -------------------------------------------------------------------
+
+    # Keyword → category mappings for auto-classifying task results
+    _LTM_CATEGORY_KEYWORDS = {
+        "user_preference": ["prefer", "setting", "always", "never"],
+        "system_learning": ["learn", "pattern", "discovered"],
+        "knowledge": ["research", "fact", "history", "spec"],
+    }
+
+    def _classify_ltm_category(self, description: str) -> str:
+        """Determine the LTM category for a task result based on keywords.
+
+        Scans the task description for keyword patterns and returns
+        the best matching category. Falls back to "task_result".
+
+        Args:
+            description: The task description to classify.
+
+        Returns:
+            One of: "user_preference", "system_learning", "knowledge", "task_result"
+        """
+        desc_lower = description.lower()
+        for category, keywords in self._LTM_CATEGORY_KEYWORDS.items():
+            if any(kw in desc_lower for kw in keywords):
+                return category
+        return "task_result"
+
+    # -------------------------------------------------------------------
     # Status
     # -------------------------------------------------------------------
 
@@ -637,6 +713,7 @@ class Orchestrator:
             "memory": {
                 "short_term": self.short_term.get_status(),
                 "working": self.working.get_status(),
+                "long_term": self.long_term.get_status(),
             },
         }
 
