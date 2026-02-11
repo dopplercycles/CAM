@@ -112,6 +112,8 @@ _DEFAULTS: dict[str, Any] = {
         "long_term_persist_dir": "data/memory/chromadb",
         "long_term_collection": "cam_long_term",
         "long_term_seed_file": "CAM_BRAIN.md",
+        "episodic_db_path": "data/memory/episodic.db",
+        "episodic_retention_days": 365,
     },
     "scheduler": {
         "check_interval": 30,

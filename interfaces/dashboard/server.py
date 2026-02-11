@@ -28,7 +28,7 @@ from core.config import get_config
 from core.event_logger import EventLogger
 from core.file_transfer import FileTransferManager, chunk_file_data, compute_checksum
 from core.health_monitor import HealthMonitor
-from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory
+from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory, EpisodicMemory
 from core.notifications import NotificationManager
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
@@ -95,6 +95,14 @@ short_term_memory = ShortTermMemory(
 working_memory = WorkingMemory(
     persist_path=getattr(getattr(config, 'memory', None), 'working_memory_path',
                          'data/tasks/working_memory.json'),
+)
+
+# Episodic memory — SQLite-backed conversation history
+episodic_memory = EpisodicMemory(
+    db_path=getattr(getattr(config, 'memory', None),
+                    'episodic_db_path', 'data/memory/episodic.db'),
+    retention_days=getattr(getattr(config, 'memory', None),
+                           'episodic_retention_days', 365),
 )
 
 # Long-term memory — ChromaDB vector store for persistent knowledge
@@ -250,6 +258,7 @@ async def broadcast_memory_status():
         "short_term": short_term_memory.get_status(),
         "working": working_memory.get_status(),
         "long_term": long_term_memory.get_status(),
+        "episodic": episodic_memory.get_status(),
     })
 
 
@@ -517,6 +526,7 @@ orchestrator = Orchestrator(
     short_term_memory=short_term_memory,
     working_memory=working_memory,
     long_term_memory=long_term_memory,
+    episodic_memory=episodic_memory,
     on_phase_change=on_task_phase_change,
     on_task_update=on_task_update,
     on_dispatch_to_agent=dispatch_to_agent,
@@ -624,6 +634,7 @@ async def lifespan(app: FastAPI):
     orchestrator_task.cancel()
     heartbeat_task.cancel()
     scheduler_task.cancel()
+    episodic_memory.close()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
 
@@ -647,6 +658,7 @@ app.state.config = config
 app.state.short_term_memory = short_term_memory
 app.state.working_memory = working_memory
 app.state.long_term_memory = long_term_memory
+app.state.episodic_memory = episodic_memory
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -712,6 +724,7 @@ async def get_memory():
         "short_term": short_term_memory.get_status(),
         "working": working_memory.get_status(),
         "long_term": long_term_memory.get_status(),
+        "episodic": episodic_memory.get_status(),
     }
 
 
@@ -1117,6 +1130,7 @@ async def dashboard_websocket(websocket: WebSocket):
         "short_term": short_term_memory.get_status(),
         "working": working_memory.get_status(),
         "long_term": long_term_memory.get_status(),
+        "episodic": episodic_memory.get_status(),
     })
 
     try:
@@ -1668,6 +1682,32 @@ async def dashboard_websocket(websocket: WebSocket):
                 await broadcast_to_dashboards({
                     "type": "notification_count",
                     "unread_count": notification_manager.get_unread_count(),
+                })
+
+            elif msg.get("type") == "episodic_search":
+                # Search episodic memory with optional filters
+                keyword = msg.get("keyword", "")
+                start_time = msg.get("start_time")
+                end_time = msg.get("end_time")
+                participant = msg.get("participant")
+                task_id = msg.get("task_id")
+                limit = min(int(msg.get("limit", 50)), 200)
+                offset = int(msg.get("offset", 0))
+
+                results = episodic_memory.search(
+                    keyword=keyword or None,
+                    start_time=start_time,
+                    end_time=end_time,
+                    participant=participant,
+                    task_id=task_id,
+                    limit=limit,
+                    offset=offset,
+                )
+                await websocket.send_json({
+                    "type": "episodic_search_results",
+                    "episodes": [ep.to_dict() for ep in results],
+                    "keyword": keyword,
+                    "count": len(results),
                 })
 
     except WebSocketDisconnect:

@@ -229,3 +229,38 @@ async def list_schedules(request: Request):
     """Return all scheduled tasks."""
     scheduler = request.app.state.scheduler
     return {"schedules": scheduler.to_broadcast_list()}
+
+
+# -- Episodic Memory ---------------------------------------------------------
+
+@router.get("/memory/episodes")
+async def list_episodes(
+    request: Request,
+    keyword: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    participant: Optional[str] = None,
+    task_id: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Search episodic memory with optional filters.
+
+    All query params are optional. When multiple are provided, they are
+    combined with AND. Results are returned newest-first.
+    """
+    episodic = request.app.state.episodic_memory
+    limit = min(limit, 200)  # cap at 200
+    results = episodic.search(
+        keyword=keyword,
+        start_time=start_time,
+        end_time=end_time,
+        participant=participant,
+        task_id=task_id,
+        limit=limit,
+        offset=offset,
+    )
+    return {
+        "episodes": [ep.to_dict() for ep in results],
+        "count": len(results),
+    }

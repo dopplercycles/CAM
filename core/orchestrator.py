@@ -25,6 +25,7 @@ from core.model_router import ModelRouter, ModelResponse
 from core.memory.short_term import ShortTermMemory
 from core.memory.working import WorkingMemory
 from core.memory.long_term import LongTermMemory
+from core.memory.episodic import EpisodicMemory
 from core.task_classifier import classify as classify_task
 
 
@@ -81,6 +82,7 @@ class Orchestrator:
         short_term_memory: ShortTermMemory | None = None,
         working_memory: WorkingMemory | None = None,
         long_term_memory: LongTermMemory | None = None,
+        episodic_memory: EpisodicMemory | None = None,
         on_phase_change=None,
         on_task_update=None,
         on_dispatch_to_agent=None,
@@ -106,6 +108,10 @@ class Orchestrator:
         self.long_term = (
             long_term_memory if long_term_memory is not None
             else LongTermMemory()
+        )
+        self.episodic = (
+            episodic_memory if episodic_memory is not None
+            else EpisodicMemory()
         )
 
         # Optional callbacks for real-time dashboard updates.
@@ -261,6 +267,14 @@ class Orchestrator:
             "task_id": task.task_id,
             "phase": "THINK",
         })
+
+        # Record in episodic memory — permanent conversation history
+        self.episodic.record(
+            "system",
+            f"Processing task: {task.description}{classify_detail}",
+            context_tags=["think", "task_start"],
+            task_id=task.task_id,
+        )
 
         await self._notify_phase(task, "THINK", f"Routing to {router_complexity} model")
 
@@ -457,7 +471,14 @@ class Orchestrator:
             except Exception:
                 logger.debug("LTM store failed (non-fatal)", exc_info=True)
 
-        # Future: save to episodic memory
+        # Record completion in episodic memory — permanent history
+        self.episodic.record(
+            "assistant",
+            f"Task completed: {task.description}\nResult: {result_preview}",
+            context_tags=["iterate", "task_complete"],
+            task_id=task.task_id,
+        )
+
         # Future: check for follow-up tasks and add them to the queue
 
     # -------------------------------------------------------------------
@@ -552,6 +573,14 @@ class Orchestrator:
                         "task_id": task.task_id,
                         "phase": "FAILED",
                     })
+
+                    # Record failure in episodic memory — permanent history
+                    self.episodic.record(
+                        "system",
+                        f"Task failed: {task.description}\nError: {e}",
+                        context_tags=["iterate", "task_failed"],
+                        task_id=task.task_id,
+                    )
 
                     # --- Chain failure cascade ---
                     chain = self.queue.get_chain_for_task(task.task_id)
@@ -714,6 +743,7 @@ class Orchestrator:
                 "short_term": self.short_term.get_status(),
                 "working": self.working.get_status(),
                 "long_term": self.long_term.get_status(),
+                "episodic": self.episodic.get_status(),
             },
         }
 

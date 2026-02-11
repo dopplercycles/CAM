@@ -1153,6 +1153,169 @@
             color: #f87171;
         }
 
+        /* --- Episodic Memory --- */
+        .memory-episodic-section {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .memory-episodic-section h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #d4a054;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .episodic-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .episodic-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .episodic-card {
+            background: #141e2a;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            padding: 0.6rem 0.8rem;
+            text-align: center;
+        }
+
+        .episodic-card .episodic-card-label {
+            font-size: 0.7rem;
+            color: #6b7b8d;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .episodic-card .episodic-card-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f59e0b;
+        }
+
+        .episodic-search {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .episodic-search input {
+            flex: 1;
+            background: #141e2a;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.8rem;
+        }
+
+        .episodic-search input:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+
+        .episodic-search button {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .episodic-search button:hover {
+            background: rgba(245, 158, 11, 0.25);
+        }
+
+        .episodic-results {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .episodic-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #1e2d3d;
+        }
+
+        .episodic-entry:last-child {
+            border-bottom: none;
+        }
+
+        .episodic-participant {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            min-width: 55px;
+            text-align: center;
+        }
+
+        .episodic-participant.user {
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+        }
+
+        .episodic-participant.assistant {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+        }
+
+        .episodic-participant.system {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .episodic-content {
+            flex: 1;
+            font-size: 0.75rem;
+            color: #c0c8d0;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .episodic-time {
+            font-size: 0.65rem;
+            color: #6b7b8d;
+            white-space: nowrap;
+        }
+
+        .episodic-status {
+            font-size: 0.7rem;
+            color: #6b7b8d;
+            margin-top: 0.4rem;
+        }
+
         /* --- Command Palette --- */
         .command-palette-section {
             margin-bottom: 2rem;
@@ -2647,6 +2810,29 @@
                 </div>
                 <div class="ltm-status" id="mem-ltm-status"></div>
             </div>
+            <div class="memory-episodic-section" id="mem-episodic-section">
+                <h3>Episodic Memory <span class="episodic-badge" id="mem-episodic-total">0</span></h3>
+                <div class="episodic-cards">
+                    <div class="episodic-card">
+                        <div class="episodic-card-label">Today</div>
+                        <div class="episodic-card-value" id="mem-episodic-today">0</div>
+                    </div>
+                    <div class="episodic-card">
+                        <div class="episodic-card-label">Oldest</div>
+                        <div class="episodic-card-value" id="mem-episodic-oldest">--</div>
+                    </div>
+                    <div class="episodic-card">
+                        <div class="episodic-card-label">Newest</div>
+                        <div class="episodic-card-value" id="mem-episodic-newest">--</div>
+                    </div>
+                </div>
+                <div class="episodic-search">
+                    <input type="text" id="episodic-search-input" placeholder="Search conversation history..." />
+                    <button onclick="searchEpisodes()">Search</button>
+                </div>
+                <div class="episodic-results" id="episodic-results"></div>
+                <div class="episodic-status" id="mem-episodic-status"></div>
+            </div>
         </section>
 
         <section class="analytics-section">
@@ -2832,6 +3018,8 @@
                     handleTransferHistory(data);
                 } else if (data.type === "memory_status") {
                     handleMemoryStatus(data);
+                } else if (data.type === "episodic_search_results") {
+                    handleEpisodicSearchResults(data);
                 }
             };
 
@@ -3488,7 +3676,67 @@
                 statusEl.textContent = "Not initialized";
                 statusEl.className = "ltm-status";
             }
+
+            // Episodic memory
+            const ep = data.episodic || {};
+            document.getElementById("mem-episodic-total").textContent = ep.total_count || 0;
+            document.getElementById("mem-episodic-today").textContent = ep.count_today || 0;
+
+            // Format oldest/newest as short dates
+            const oldest = ep.oldest_timestamp;
+            const newest = ep.newest_timestamp;
+            document.getElementById("mem-episodic-oldest").textContent =
+                oldest ? new Date(oldest).toLocaleDateString() : "--";
+            document.getElementById("mem-episodic-newest").textContent =
+                newest ? new Date(newest).toLocaleDateString() : "--";
+
+            const epStatus = document.getElementById("mem-episodic-status");
+            epStatus.textContent = "Retention: " + (ep.retention_days || 365) + " days";
         }
+
+        function searchEpisodes() {
+            const input = document.getElementById("episodic-search-input");
+            const keyword = (input.value || "").trim();
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: "episodic_search",
+                keyword: keyword,
+                limit: 50,
+            }));
+        }
+
+        function handleEpisodicSearchResults(data) {
+            const container = document.getElementById("episodic-results");
+            const episodes = data.episodes || [];
+
+            if (episodes.length === 0) {
+                container.innerHTML = '<div class="analytics-empty">No episodes found.</div>';
+                return;
+            }
+
+            container.innerHTML = episodes.map(ep => {
+                const time = new Date(ep.timestamp);
+                const timeStr = time.toLocaleString(undefined, {
+                    month: "short", day: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                });
+                const participant = ep.participant || "system";
+                const content = (ep.content || "").substring(0, 200);
+                return `
+                    <div class="episodic-entry">
+                        <span class="episodic-participant ${participant}">${participant}</span>
+                        <span class="episodic-content" title="${ep.content || ''}">${content}</span>
+                        <span class="episodic-time">${timeStr}</span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // Enter key triggers episodic search
+        document.getElementById("episodic-search-input")
+            .addEventListener("keydown", function(e) {
+                if (e.key === "Enter") searchEpisodes();
+            });
 
         // Analytics
         // ---------------------------------------------------------------

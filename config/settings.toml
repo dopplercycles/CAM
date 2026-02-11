@@ -93,6 +93,8 @@ working_memory_path = "data/tasks/working_memory.json"  # persistent task state 
 long_term_persist_dir = "data/memory/chromadb"           # ChromaDB vector store location
 long_term_collection = "cam_long_term"                   # ChromaDB collection name
 long_term_seed_file = "CAM_BRAIN.md"                     # seed knowledge file for first startup
+episodic_db_path = "data/memory/episodic.db"              # SQLite database for conversation history
+episodic_retention_days = 365                              # how long to keep episodic records
 
 [api]
 api_key = ""                        # Set a key to require X-API-Key header. Empty = open access.
