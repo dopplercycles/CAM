@@ -19,9 +19,9 @@ from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Request, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from core.agent_registry import AgentRegistry
 from core.config import get_config
@@ -40,6 +40,7 @@ from core.scheduler import Scheduler, ScheduleType
 from core.content_calendar import ContentCalendar, ContentType, ContentStatus
 from core.research_store import ResearchStore, ResearchStatus
 from security.audit import SecurityAuditLog
+from security.auth import SessionManager
 from agents.content_agent import ContentAgent
 from agents.research_agent import ResearchAgent
 
@@ -328,6 +329,16 @@ security_audit_log = SecurityAuditLog(
     db_path=getattr(getattr(config, 'security', None),
                     'audit_db_path', 'data/security_audit.db'),
     on_change=broadcast_security_audit_status,
+)
+
+# Session manager — dashboard browser authentication
+# When password_hash is empty, auth is disabled (open access, backward compatible)
+session_manager = SessionManager(
+    username=getattr(getattr(config, 'auth', None), 'username', 'george'),
+    password_hash=getattr(getattr(config, 'auth', None), 'password_hash', ''),
+    session_timeout=getattr(getattr(config, 'auth', None), 'session_timeout', 3600),
+    max_login_attempts=getattr(getattr(config, 'auth', None), 'max_login_attempts', 5),
+    lockout_duration=getattr(getattr(config, 'auth', None), 'lockout_duration', 300),
 )
 
 
@@ -721,6 +732,17 @@ async def activate_kill_switch():
 
 
 # ---------------------------------------------------------------------------
+# Background session cleanup
+# ---------------------------------------------------------------------------
+
+async def cleanup_sessions():
+    """Background task: purge expired sessions every 60 seconds."""
+    while True:
+        await asyncio.sleep(60)
+        session_manager.cleanup_expired()
+
+
+# ---------------------------------------------------------------------------
 # Background heartbeat checker
 # ---------------------------------------------------------------------------
 
@@ -754,10 +776,15 @@ async def lifespan(app: FastAPI):
     logger.info("CAM Dashboard starting up")
     event_logger.info("system", "CAM Dashboard starting up")
     heartbeat_task = asyncio.create_task(check_heartbeats())
+    session_cleanup_task = asyncio.create_task(cleanup_sessions())
     orchestrator_task = asyncio.create_task(orchestrator.run())
     scheduler_task = asyncio.create_task(scheduler.run())
     logger.info("Orchestrator loop started as background task")
     logger.info("Scheduler loop started as background task")
+    if session_manager.auth_enabled:
+        logger.info("Dashboard authentication ENABLED (user: %s)", session_manager.username)
+    else:
+        logger.info("Dashboard authentication DISABLED (no password_hash configured)")
 
     # Telegram bot — instantiated here so activate_kill_switch is in scope
     telegram_bot = TelegramBot(
@@ -785,6 +812,7 @@ async def lifespan(app: FastAPI):
     scheduler.stop()
     orchestrator_task.cancel()
     heartbeat_task.cancel()
+    session_cleanup_task.cancel()
     scheduler_task.cancel()
     episodic_memory.close()
     content_calendar.close()
@@ -819,6 +847,7 @@ app.state.content_agent = content_agent
 app.state.research_store = research_store
 app.state.research_agent = research_agent
 app.state.security_audit_log = security_audit_log
+app.state.session_manager = session_manager
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -831,12 +860,156 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # ---------------------------------------------------------------------------
+# Authentication middleware
+#
+# When auth is enabled, all routes except the exempted prefixes require a
+# valid cam_session cookie. Unauthenticated browser requests to non-API
+# paths get the login page; AJAX/fetch requests get a 401 JSON response.
+# ---------------------------------------------------------------------------
+
+# Paths that bypass dashboard cookie auth
+_AUTH_EXEMPT_PREFIXES = ("/auth/", "/api/v1/", "/ws/", "/static/")
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    """Check cam_session cookie on dashboard routes when auth is enabled."""
+    if not session_manager.auth_enabled:
+        return await call_next(request)
+
+    path = request.url.path
+
+    # Exempt paths: auth endpoints, versioned API, agent WS, static files
+    for prefix in _AUTH_EXEMPT_PREFIXES:
+        if path.startswith(prefix):
+            return await call_next(request)
+
+    # The root path and /api/* (non-versioned dashboard endpoints) need auth
+    token = request.cookies.get("cam_session")
+    if session_manager.validate_session(token):
+        return await call_next(request)
+
+    # Not authenticated — for the root path, fall through to serve login.html
+    # For API endpoints, return 401 JSON
+    if path.startswith("/api/"):
+        return JSONResponse(status_code=401, content={"error": "Not authenticated"})
+
+    # For all other paths (including /), serve the login page
+    return FileResponse(STATIC_DIR / "login.html")
+
+
+# ---------------------------------------------------------------------------
+# Auth routes — login, lock, status
+# ---------------------------------------------------------------------------
+
+@app.post("/auth/login")
+async def auth_login(request: Request):
+    """Authenticate and set a session cookie."""
+    client_ip = request.client.host if request.client else "unknown"
+
+    # Check lockout first
+    remaining = session_manager.get_lockout_remaining(client_ip)
+    if remaining > 0:
+        event_logger.warn("auth", f"Login attempt from locked-out IP {client_ip}",
+                          client_ip=client_ip, lockout_remaining=remaining)
+        security_audit_log.log_action(
+            action_type="login_attempt",
+            actor=client_ip,
+            target="dashboard",
+            result="locked_out",
+            risk_level="medium",
+            tier=0,
+        )
+        return JSONResponse(
+            status_code=429,
+            content={"ok": False, "error": f"Too many attempts. Try again in {remaining}s."},
+        )
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid request"})
+
+    username = body.get("username", "")
+    password = body.get("password", "")
+
+    token = session_manager.login(username, password, client_ip=client_ip)
+
+    if token is None:
+        event_logger.warn("auth", f"Failed login from {client_ip} (user: {username})",
+                          client_ip=client_ip, username=username)
+        security_audit_log.log_action(
+            action_type="login_attempt",
+            actor=client_ip,
+            target="dashboard",
+            result="failed",
+            risk_level="medium",
+            tier=0,
+        )
+        return JSONResponse(
+            status_code=401,
+            content={"ok": False, "error": "Invalid credentials."},
+        )
+
+    # Success
+    event_logger.info("auth", f"Login successful from {client_ip} (user: {username})",
+                      client_ip=client_ip, username=username)
+    security_audit_log.log_action(
+        action_type="login",
+        actor=username,
+        target="dashboard",
+        result="success",
+        risk_level="low",
+        tier=0,
+    )
+
+    response = JSONResponse(content={"ok": True})
+    response.set_cookie(
+        key="cam_session",
+        value=token,
+        httponly=True,
+        samesite="strict",
+        path="/",
+    )
+    return response
+
+
+@app.post("/auth/lock")
+async def auth_lock(request: Request):
+    """Destroy the current session (lock screen)."""
+    token = request.cookies.get("cam_session")
+    session_manager.destroy_session(token)
+
+    client_ip = request.client.host if request.client else "unknown"
+    event_logger.info("auth", f"Session locked from {client_ip}", client_ip=client_ip)
+
+    response = JSONResponse(content={"ok": True})
+    response.delete_cookie("cam_session", path="/")
+    return response
+
+
+@app.get("/auth/status")
+async def auth_status(request: Request):
+    """Check if the current session is still valid."""
+    if not session_manager.auth_enabled:
+        return {"authenticated": True, "auth_enabled": False}
+
+    token = request.cookies.get("cam_session")
+    valid = session_manager.validate_session(token)
+    return {"authenticated": valid, "auth_enabled": True}
+
+
+# ---------------------------------------------------------------------------
 # HTTP routes
 # ---------------------------------------------------------------------------
 
 @app.get("/")
-async def root():
-    """Serve the main dashboard page."""
+async def root(request: Request):
+    """Serve the main dashboard page (or login page if auth is enabled and not authenticated)."""
+    if session_manager.auth_enabled:
+        token = request.cookies.get("cam_session")
+        if not session_manager.validate_session(token):
+            return FileResponse(STATIC_DIR / "login.html")
     return FileResponse(STATIC_DIR / "index.html")
 
 
@@ -1228,7 +1401,17 @@ async def dashboard_websocket(websocket: WebSocket):
     Browsers connect here to receive real-time agent status updates.
     On connect, they immediately get the current state of all agents.
     After that, updates are pushed whenever agent status changes.
+
+    When auth is enabled, the cam_session cookie must be valid or the
+    connection is rejected with close code 4401.
     """
+    # Validate session cookie before accepting the WebSocket
+    if session_manager.auth_enabled:
+        token = websocket.cookies.get("cam_session")
+        if not session_manager.validate_session(token):
+            await websocket.close(code=4401, reason="Not authenticated")
+            return
+
     await websocket.accept()
     dashboard_clients.append(websocket)
     logger.info(

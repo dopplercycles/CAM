@@ -114,6 +114,13 @@ max_pages_per_query = 5                 # max pages to fetch per research task
 request_timeout = 10                    # HTTP request timeout in seconds
 rate_limit_delay = 0.5                  # seconds between web requests
 
+[auth]
+username = "george"
+password_hash = ""                         # empty = auth disabled (open access). Run: python -m security.set_password
+session_timeout = 3600                     # 1 hour inactivity timeout
+max_login_attempts = 5
+lockout_duration = 300                     # 5 min lockout after max failures
+
 [security]
 audit_db_path = "data/security_audit.db"  # SQLite database for security audit trail
 approval_timeout = 30                      # seconds before auto-reject (silence ≠ consent)

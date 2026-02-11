@@ -58,6 +58,19 @@
             background: #00d672;
         }
 
+        .lock-btn {
+            background: none;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #888;
+            cursor: pointer;
+            padding: 0.35rem 0.5rem;
+            display: flex;
+            align-items: center;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .lock-btn:hover { color: #5b9bd5; border-color: #5b9bd5; }
+
         .telegram-status { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:#888; margin-right:0.5rem; }
         .telegram-status .tg-dot { width:8px; height:8px; border-radius:50%; background:#e74c3c; }
         .telegram-status .tg-dot.connected { background:#00d672; }
@@ -3237,6 +3250,9 @@
                     </div>
                 </div>
             </div>
+            <button class="lock-btn" id="lock-btn" onclick="lockSession()" title="Lock Dashboard">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            </button>
             <div class="telegram-status" id="telegram-status" title="Telegram Bot">
                 <div class="tg-dot" id="tg-status-dot"></div>
                 <span>Telegram</span>
@@ -3676,6 +3692,29 @@
         const statusText = document.getElementById("ws-status-text");
 
         // ---------------------------------------------------------------
+        // Auth: lock session + session expiry check
+        // ---------------------------------------------------------------
+        async function lockSession() {
+            try {
+                await fetch('/auth/lock', { method: 'POST' });
+            } catch (e) {
+                // ignore — reload will redirect anyway
+            }
+            window.location.reload();
+        }
+
+        async function checkAuthStatus() {
+            // Returns true if still authenticated (or auth is disabled)
+            try {
+                const resp = await fetch('/auth/status');
+                const data = await resp.json();
+                return data.authenticated;
+            } catch (e) {
+                return true; // network error — don't force logout
+            }
+        }
+
+        // ---------------------------------------------------------------
         // WebSocket connection
         // ---------------------------------------------------------------
         function connect() {
@@ -3790,9 +3829,23 @@
                 }
             };
 
-            ws.onclose = () => {
+            ws.onclose = async (event) => {
                 statusDot.classList.remove("connected");
                 statusText.textContent = "Disconnected — retrying...";
+
+                // If server rejected with 4401 (not authenticated), redirect to login
+                if (event.code === 4401) {
+                    window.location.reload();
+                    return;
+                }
+
+                // Check if session expired before attempting reconnect
+                const authed = await checkAuthStatus();
+                if (!authed) {
+                    window.location.reload();
+                    return;
+                }
+
                 // Auto-reconnect after 3 seconds
                 reconnectTimer = setTimeout(connect, 3000);
             };

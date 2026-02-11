@@ -137,6 +137,13 @@ _DEFAULTS: dict[str, Any] = {
         "request_timeout": 10,
         "rate_limit_delay": 0.5,
     },
+    "auth": {
+        "username": "george",
+        "password_hash": "",
+        "session_timeout": 3600,
+        "max_login_attempts": 5,
+        "lockout_duration": 300,
+    },
     "security": {
         "audit_db_path": "data/security_audit.db",
         "approval_timeout": 30,
