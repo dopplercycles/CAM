@@ -28,6 +28,7 @@ from core.memory.long_term import LongTermMemory
 from core.memory.episodic import EpisodicMemory
 from core.persona import Persona
 from core.task_classifier import classify as classify_task
+from security.permissions import classify as classify_permission
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +91,8 @@ class Orchestrator:
         on_dispatch_to_agent=None,
         on_model_call=None,
         on_chain_update=None,
+        on_approval_request=None,
+        audit_log=None,
     ):
         # Task queue — shared with other components (dashboard, CLI, etc.)
         # Note: can't use `queue or TaskQueue()` because an empty queue is falsy
@@ -135,6 +138,27 @@ class Orchestrator:
         # Optional callback for chain status changes.
         # Signature: async (chain: TaskChain) -> None
         self._on_chain_update = on_chain_update
+
+        # Optional callback for Tier 2 approval requests.
+        # Signature: async (task: Task, perm_result: PermissionResult) -> None
+        # Called when a task needs George's approval before execution.
+        self._on_approval_request = on_approval_request
+
+        # Security audit log — persistent SQLite log of all permission checks.
+        # If None, permission checks still run but nothing gets persisted.
+        self._audit_log = audit_log
+
+        # Pending Tier 2 approvals — task_id → asyncio.Future[bool]
+        # Resolved by resolve_approval() when dashboard sends approve/reject.
+        self._pending_approvals: dict[str, asyncio.Future] = {}
+
+        # Approval timeout — read from config, default 30s.
+        # Constitution: silence ≠ consent.
+        try:
+            from core.config import get_config
+            self._approval_timeout: float = get_config().security.approval_timeout
+        except Exception:
+            self._approval_timeout: float = 30.0
 
         # Flag to stop the loop gracefully (kill switch, shutdown, etc.)
         self._running: bool = False
@@ -357,7 +381,14 @@ class Orchestrator:
     async def act(self, task: Task, plan: dict) -> str:
         """ACT — Execute the plan.
 
-        Tries to dispatch the task to a remote agent first. If an agent
+        Before any dispatch, runs the permission classifier to enforce
+        the Constitution's three-tier autonomy system:
+
+            Tier 1 → Log and proceed (autonomous)
+            Tier 2 → Request approval, wait for response (gated)
+            Tier 3 → Block immediately (prohibited)
+
+        Then tries to dispatch the task to a remote agent. If an agent
         handles it, its response becomes the result. If no agents are
         available (or no dispatch callback is set), falls back to the
         model response from the THINK phase.
@@ -368,9 +399,145 @@ class Orchestrator:
 
         Returns:
             A result string describing what was done.
+
+        Raises:
+            PermissionError: If the task is Tier 3 (blocked) or Tier 2
+                and approval is rejected/times out.
         """
         # Update working memory phase
         self.working.update_phase(task.task_id, "ACT")
+
+        # --- Permission gate (Constitution enforcement) ---
+        perm = classify_permission(task.description)
+        audit_entry_id = None
+
+        if perm.tier == 3:
+            # BLOCKED — Constitution prohibits this action
+            logger.warning(
+                "[ACT] Task %s BLOCKED (Tier 3): %s — %s",
+                task.short_id, perm.action_type, perm.reason,
+            )
+            if self._audit_log:
+                self._audit_log.log_action(
+                    action_type=perm.action_type,
+                    actor="orchestrator",
+                    target=task.description,
+                    result="blocked",
+                    risk_level=perm.risk_level,
+                    tier=3,
+                    task_id=task.task_id,
+                )
+            await self._notify_phase(task, "BLOCKED", f"Tier 3: {perm.action_type}")
+            raise PermissionError(
+                f"Tier 3 — action blocked by Constitution: {perm.action_type} ({perm.reason})"
+            )
+
+        if perm.tier == 2:
+            # APPROVAL REQUIRED — wait for George's decision
+            logger.info(
+                "[ACT] Task %s requires approval (Tier 2): %s — %s",
+                task.short_id, perm.action_type, perm.reason,
+            )
+
+            # Log pending state
+            audit_entry = None
+            if self._audit_log:
+                audit_entry = self._audit_log.log_action(
+                    action_type=perm.action_type,
+                    actor="orchestrator",
+                    target=task.description,
+                    result="pending",
+                    risk_level=perm.risk_level,
+                    tier=2,
+                    task_id=task.task_id,
+                )
+                audit_entry_id = audit_entry.entry_id
+
+            await self._notify_phase(task, "AWAITING_APPROVAL",
+                                     f"Tier 2: {perm.action_type} — waiting for approval")
+
+            # Notify dashboard of the approval request
+            if self._on_approval_request is not None:
+                try:
+                    result = self._on_approval_request(task, perm)
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:
+                    logger.debug("Approval request callback error (non-fatal)", exc_info=True)
+
+            # Create a Future and wait for dashboard to resolve it
+            import time
+            request_time = time.monotonic()
+            future = asyncio.get_event_loop().create_future()
+            self._pending_approvals[task.task_id] = future
+
+            try:
+                approved = await asyncio.wait_for(future, timeout=self._approval_timeout)
+            except asyncio.TimeoutError:
+                approved = False
+                timeout_reason = "timeout"
+                logger.warning(
+                    "[ACT] Task %s approval timed out after %.0fs (silence ≠ consent)",
+                    task.short_id, self._approval_timeout,
+                )
+            finally:
+                self._pending_approvals.pop(task.task_id, None)
+
+            approval_time = time.monotonic() - request_time
+
+            if approved:
+                logger.info("[ACT] Task %s APPROVED (%.1fs)", task.short_id, approval_time)
+                if self._audit_log and audit_entry_id:
+                    self._audit_log.update_result(
+                        entry_id=audit_entry_id,
+                        result="approved",
+                        approved_by="dashboard",
+                        approval_time_s=round(approval_time, 2),
+                    )
+            else:
+                # Rejected or timed out
+                result_str = "timeout" if not future.done() or (future.done() and future.result() is False and approval_time >= self._approval_timeout - 0.5) else "rejected"
+                # Simplify: if the future was resolved (not timed out), it's rejected
+                if future.done():
+                    result_str = "rejected"
+                else:
+                    result_str = "timeout"
+                logger.info(
+                    "[ACT] Task %s %s (%.1fs)",
+                    task.short_id, result_str.upper(), approval_time,
+                )
+                if self._audit_log and audit_entry_id:
+                    self._audit_log.update_result(
+                        entry_id=audit_entry_id,
+                        result=result_str,
+                        approval_time_s=round(approval_time, 2),
+                    )
+                raise PermissionError(
+                    f"Tier 2 — action {result_str}: {perm.action_type} ({perm.reason})"
+                )
+
+        # Tier 1 — autonomous, log and proceed
+        if perm.tier == 1:
+            # Check config for whether to log Tier 1 actions
+            log_tier1 = True
+            try:
+                from core.config import get_config
+                log_tier1 = get_config().security.log_tier1_actions
+            except Exception:
+                pass
+
+            if log_tier1 and self._audit_log:
+                self._audit_log.log_action(
+                    action_type=perm.action_type,
+                    actor="orchestrator",
+                    target=task.description,
+                    result="executed",
+                    risk_level=perm.risk_level,
+                    tier=1,
+                    task_id=task.task_id,
+                )
+
+        # --- Dispatch (existing logic, unchanged) ---
 
         # Try agent dispatch first
         if self._on_dispatch_to_agent is not None:
@@ -411,6 +578,34 @@ class Orchestrator:
             result, "..." if len(result) > 200 else "",
         )
         return result
+
+    # -------------------------------------------------------------------
+    # Approval resolution — called by server.py when dashboard responds
+    # -------------------------------------------------------------------
+
+    def resolve_approval(self, task_id: str, approved: bool):
+        """Resolve a pending Tier 2 approval request.
+
+        Called by the dashboard server when George clicks Approve or Reject.
+        Resolves the corresponding Future so the act() method can proceed
+        or raise PermissionError.
+
+        Args:
+            task_id:  The task awaiting approval.
+            approved: True to approve, False to reject.
+        """
+        future = self._pending_approvals.get(task_id)
+        if future is not None and not future.done():
+            future.set_result(approved)
+            logger.info(
+                "Approval resolved for task %s: %s",
+                task_id[:8], "APPROVED" if approved else "REJECTED",
+            )
+        else:
+            logger.warning(
+                "No pending approval for task %s (may have timed out)",
+                task_id[:8],
+            )
 
     async def iterate(self, task: Task, result: str):
         """ITERATE — Wrap up and learn.

@@ -1951,6 +1951,213 @@
             max-width: 100px;
         }
 
+        /* --- Security & Audit --- */
+        .security-section {
+            margin-bottom: 2rem;
+        }
+
+        .approval-queue {
+            background: #2a2400;
+            border: 2px solid #b8860b;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .approval-queue h3 {
+            color: #f0c040;
+            font-size: 0.95rem;
+            margin: 0 0 0.5rem;
+        }
+
+        .approval-request {
+            background: #1a2332;
+            border: 1px solid #3a5a7a;
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .approval-request:last-child {
+            margin-bottom: 0;
+        }
+
+        .approval-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .approval-desc {
+            color: #c9d1d9;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .approval-meta {
+            font-size: 0.75rem;
+            color: #6a7a8a;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .approval-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .approval-btn {
+            border: none;
+            border-radius: 4px;
+            padding: 0.35rem 0.8rem;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        .approval-btn:hover {
+            opacity: 0.85;
+        }
+
+        .approval-btn.approve {
+            background: #238636;
+            color: #ffffff;
+        }
+
+        .approval-btn.reject {
+            background: #da3633;
+            color: #ffffff;
+        }
+
+        .audit-filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .audit-filter-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .audit-filter-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .audit-filter-btn.active {
+            background: #3a5a7a;
+            color: #ffffff;
+        }
+
+        .audit-filter-select {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.4rem;
+            cursor: pointer;
+        }
+
+        .audit-log-container {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+
+        .audit-entry {
+            padding: 0.3rem 0.75rem;
+            border-bottom: 1px solid #1f2d3d;
+            display: flex;
+            gap: 0.5rem;
+            align-items: baseline;
+        }
+
+        .audit-entry:last-child {
+            border-bottom: none;
+        }
+
+        .audit-time {
+            color: #4a5a6a;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+        }
+
+        .audit-risk {
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            min-width: 55px;
+        }
+
+        .audit-risk.low { color: #3fb950; }
+        .audit-risk.medium { color: #d29922; }
+        .audit-risk.high { color: #f85149; }
+        .audit-risk.critical { color: #ff0040; }
+
+        .audit-actor {
+            color: #8b949e;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+        }
+
+        .audit-action {
+            color: #c9d1d9;
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .audit-result {
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .audit-result.executed { color: #3fb950; }
+        .audit-result.approved { color: #58a6ff; }
+        .audit-result.rejected { color: #f85149; }
+        .audit-result.blocked { color: #ff0040; }
+        .audit-result.timeout { color: #d29922; }
+        .audit-result.pending { color: #8b949e; }
+
+        .audit-empty {
+            padding: 1.5rem;
+            text-align: center;
+            color: #4a5a6a;
+        }
+
         /* --- Content Calendar --- */
         .content-section {
             margin-bottom: 2rem;
@@ -3379,6 +3586,29 @@
             </div>
         </section>
 
+        <section class="security-section">
+            <h2>Security & Audit</h2>
+
+            <div id="approval-queue" style="display:none;">
+                <h3>Pending Approvals</h3>
+                <div id="approval-list"></div>
+            </div>
+
+            <div class="audit-filter-bar">
+                <button class="audit-filter-btn active" data-filter="all" onclick="filterAuditLog('all', this)">All</button>
+                <button class="audit-filter-btn" data-filter="low" onclick="filterAuditLog('low', this)">Low</button>
+                <button class="audit-filter-btn" data-filter="medium" onclick="filterAuditLog('medium', this)">Medium</button>
+                <button class="audit-filter-btn" data-filter="critical" onclick="filterAuditLog('critical', this)">Critical</button>
+                <select class="audit-filter-select" id="audit-actor-filter" onchange="filterAuditByActor(this.value)">
+                    <option value="">All actors</option>
+                </select>
+            </div>
+
+            <div class="audit-log-container" id="audit-log-container">
+                <div class="audit-empty">No audit entries yet. Actions will appear here as tasks are processed.</div>
+            </div>
+        </section>
+
         <section class="persona-section" id="persona-section">
             <div class="persona-header">
                 <h2>Persona</h2>
@@ -3526,6 +3756,12 @@
                     if (!data.ok) console.warn("Research entry delete failed:", data.error);
                 } else if (data.type === "research_search_results") {
                     handleResearchSearchResults(data);
+                } else if (data.type === "approval_request") {
+                    handleApprovalRequest(data);
+                } else if (data.type === "security_audit_status") {
+                    handleSecurityAuditStatus(data);
+                } else if (data.type === "security_audit_filtered") {
+                    handleSecurityAuditFiltered(data);
                 } else if (data.type === "schedule_status") {
                     handleScheduleStatus(data);
                 } else if (data.type === "schedule_created") {
@@ -4942,6 +5178,149 @@
                             <span>Cost: ${costStr}</span>
                         </div>
                         <div class="research-card-summary">${summaryPreview}</div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Security & Audit
+        // ---------------------------------------------------------------
+        let pendingApprovals = [];
+        let auditEntries = [];
+        let auditActors = [];
+        let activeAuditFilter = "all";
+
+        function handleApprovalRequest(data) {
+            // Add to pending approvals and show the queue
+            pendingApprovals.push(data);
+            renderApprovalQueue();
+        }
+
+        function respondToApproval(taskId, approved) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "approval_response",
+                    task_id: taskId,
+                    approved: approved,
+                }));
+            }
+            // Remove from pending list
+            pendingApprovals = pendingApprovals.filter(a => a.task_id !== taskId);
+            renderApprovalQueue();
+        }
+
+        function renderApprovalQueue() {
+            const queue = document.getElementById("approval-queue");
+            const list = document.getElementById("approval-list");
+
+            if (pendingApprovals.length === 0) {
+                queue.style.display = "none";
+                return;
+            }
+
+            queue.style.display = "block";
+            list.innerHTML = pendingApprovals.map(a => `
+                <div class="approval-request">
+                    <div class="approval-info">
+                        <div class="approval-desc">${escapeHtml(a.description || "")}</div>
+                        <div class="approval-meta">
+                            <span>Action: ${escapeHtml(a.action_type || "")}</span>
+                            <span>Tier: ${a.tier}</span>
+                            <span class="audit-risk ${a.risk_level}">${a.risk_level}</span>
+                            <span>${escapeHtml(a.short_id || "")}</span>
+                        </div>
+                    </div>
+                    <div class="approval-actions">
+                        <button class="approval-btn approve" onclick="respondToApproval('${a.task_id}', true)">Approve</button>
+                        <button class="approval-btn reject" onclick="respondToApproval('${a.task_id}', false)">Reject</button>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function handleSecurityAuditStatus(data) {
+            auditEntries = data.entries || [];
+            const status = data.status || {};
+            auditActors = status.actors || [];
+            populateAuditActorFilter();
+            renderAuditLog();
+        }
+
+        function handleSecurityAuditFiltered(data) {
+            auditEntries = data.entries || [];
+            renderAuditLog();
+        }
+
+        function populateAuditActorFilter() {
+            const select = document.getElementById("audit-actor-filter");
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">All actors</option>';
+            auditActors.forEach(actor => {
+                const opt = document.createElement("option");
+                opt.value = actor;
+                opt.textContent = actor;
+                select.appendChild(opt);
+            });
+            select.value = currentVal;
+        }
+
+        function filterAuditLog(filter, btn) {
+            activeAuditFilter = filter;
+
+            // Update active button state
+            document.querySelectorAll(".audit-filter-btn").forEach(b => b.classList.remove("active"));
+            if (btn) btn.classList.add("active");
+
+            // Send filter request to server
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const payload = { type: "security_audit_filter", limit: 200 };
+                if (filter !== "all") {
+                    payload.risk_level = filter;
+                }
+                const actor = document.getElementById("audit-actor-filter").value;
+                if (actor) {
+                    payload.actor = actor;
+                }
+                ws.send(JSON.stringify(payload));
+            }
+        }
+
+        function filterAuditByActor(actor) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const payload = { type: "security_audit_filter", limit: 200 };
+                if (actor) {
+                    payload.actor = actor;
+                }
+                if (activeAuditFilter !== "all") {
+                    payload.risk_level = activeAuditFilter;
+                }
+                ws.send(JSON.stringify(payload));
+            }
+        }
+
+        function renderAuditLog() {
+            const container = document.getElementById("audit-log-container");
+
+            if (auditEntries.length === 0) {
+                container.innerHTML = '<div class="audit-empty">No audit entries yet. Actions will appear here as tasks are processed.</div>';
+                return;
+            }
+
+            container.innerHTML = auditEntries.map(e => {
+                const ts = new Date(e.timestamp);
+                const timeStr = ts.toLocaleTimeString("en-US", {
+                    hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit"
+                });
+                const targetPreview = (e.target || "").substring(0, 80);
+
+                return `
+                    <div class="audit-entry">
+                        <span class="audit-time">${timeStr}</span>
+                        <span class="audit-risk ${e.risk_level}">${e.risk_level}</span>
+                        <span class="audit-actor">${escapeHtml(e.actor)}</span>
+                        <span class="audit-action" title="${escapeHtml(e.target || "")}">[${escapeHtml(e.action_type)}] ${escapeHtml(targetPreview)}</span>
+                        <span class="audit-result ${e.result}">${e.result}</span>
                     </div>
                 `;
             }).join("");

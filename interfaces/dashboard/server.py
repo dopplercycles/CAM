@@ -39,6 +39,7 @@ from core.commands import CommandLibrary
 from core.scheduler import Scheduler, ScheduleType
 from core.content_calendar import ContentCalendar, ContentType, ContentStatus
 from core.research_store import ResearchStore, ResearchStatus
+from security.audit import SecurityAuditLog
 from agents.content_agent import ContentAgent
 from agents.research_agent import ResearchAgent
 
@@ -310,6 +311,23 @@ research_store = ResearchStore(
     db_path=getattr(getattr(config, 'research', None),
                     'db_path', 'data/research.db'),
     on_change=broadcast_research_status,
+)
+
+
+async def broadcast_security_audit_status():
+    """Push current security audit state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "security_audit_status",
+        "entries": security_audit_log.to_broadcast_list(),
+        "status": security_audit_log.get_status(),
+    })
+
+
+# Security audit log — SQLite-backed persistent audit trail
+security_audit_log = SecurityAuditLog(
+    db_path=getattr(getattr(config, 'security', None),
+                    'audit_db_path', 'data/security_audit.db'),
+    on_change=broadcast_security_audit_status,
 )
 
 
@@ -586,6 +604,30 @@ def on_model_call(model, backend, tokens, latency_ms, cost_usd, task_short_id):
     )
 
 
+async def on_approval_request(task, perm_result):
+    """Called by the orchestrator when a Tier 2 task needs approval.
+
+    Broadcasts the approval request to all connected dashboard browsers
+    so George can approve or reject from the Security & Audit panel.
+    """
+    await broadcast_to_dashboards({
+        "type": "approval_request",
+        "task_id": task.task_id,
+        "short_id": task.short_id,
+        "description": task.description,
+        "action_type": perm_result.action_type,
+        "risk_level": perm_result.risk_level,
+        "reason": perm_result.reason,
+        "tier": perm_result.tier,
+    })
+    event_logger.warn(
+        "security",
+        f"Approval requested for {task.short_id}: {perm_result.action_type} — {task.description[:80]}",
+        task_id=task.short_id, action_type=perm_result.action_type,
+        risk_level=perm_result.risk_level,
+    )
+
+
 orchestrator = Orchestrator(
     queue=task_queue,
     short_term_memory=short_term_memory,
@@ -598,6 +640,8 @@ orchestrator = Orchestrator(
     on_dispatch_to_agent=dispatch_to_agent,
     on_model_call=on_model_call,
     on_chain_update=on_chain_update,
+    on_approval_request=on_approval_request,
+    audit_log=security_audit_log,
 )
 
 # Content agent — local in-process agent for content tasks
@@ -745,6 +789,7 @@ async def lifespan(app: FastAPI):
     episodic_memory.close()
     content_calendar.close()
     research_store.close()
+    security_audit_log.close()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
 
@@ -773,6 +818,7 @@ app.state.content_calendar = content_calendar
 app.state.content_agent = content_agent
 app.state.research_store = research_store
 app.state.research_agent = research_agent
+app.state.security_audit_log = security_audit_log
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -858,6 +904,15 @@ async def get_content_calendar():
 async def get_research():
     """Return current research results as JSON."""
     return {"entries": research_store.to_broadcast_list()}
+
+
+@app.get("/api/security-audit")
+async def get_security_audit():
+    """Return recent security audit entries as JSON."""
+    return {
+        "entries": security_audit_log.to_broadcast_list(),
+        "status": security_audit_log.get_status(),
+    }
 
 
 @app.get("/api/config")
@@ -1260,6 +1315,13 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "research_status",
         "entries": research_store.to_broadcast_list(),
+    })
+
+    # Send current security audit state
+    await websocket.send_json({
+        "type": "security_audit_status",
+        "entries": security_audit_log.to_broadcast_list(),
+        "status": security_audit_log.get_status(),
     })
 
     # Send current memory system status
@@ -1926,6 +1988,48 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "research_search_results",
                     "entries": [e.to_dict() for e in results],
                     "keyword": keyword,
+                })
+
+            elif msg.get("type") == "approval_response":
+                # Dashboard approving or rejecting a Tier 2 action
+                task_id = msg.get("task_id", "")
+                approved = msg.get("approved", False)
+                orchestrator.resolve_approval(task_id, approved)
+                action_str = "approved" if approved else "rejected"
+                event_logger.info(
+                    "security",
+                    f"Tier 2 action {action_str} from dashboard (task {task_id[:8]})",
+                    task_id=task_id[:8], action=action_str,
+                )
+                # Audit log update happens inside orchestrator.act()
+                # Broadcast updated audit status after a brief delay
+                await asyncio.sleep(0.2)
+                await broadcast_security_audit_status()
+
+            elif msg.get("type") == "security_audit_filter":
+                # Dashboard requesting filtered audit entries
+                risk_level = msg.get("risk_level") or None
+                actor = msg.get("actor") or None
+                result_filter = msg.get("result") or None
+                tier = msg.get("tier")
+                limit = min(int(msg.get("limit", 200)), 500)
+
+                if tier is not None:
+                    try:
+                        tier = int(tier)
+                    except (ValueError, TypeError):
+                        tier = None
+
+                entries = security_audit_log.filter_entries(
+                    risk_level=risk_level,
+                    actor=actor,
+                    result=result_filter,
+                    tier=tier,
+                    limit=limit,
+                )
+                await websocket.send_json({
+                    "type": "security_audit_filtered",
+                    "entries": [e.to_dict() for e in entries],
                 })
 
             elif msg.get("type") == "notification_dismiss":

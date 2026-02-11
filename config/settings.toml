@@ -113,3 +113,8 @@ db_path = "data/research.db"           # SQLite database for research results
 max_pages_per_query = 5                 # max pages to fetch per research task
 request_timeout = 10                    # HTTP request timeout in seconds
 rate_limit_delay = 0.5                  # seconds between web requests
+
+[security]
+audit_db_path = "data/security_audit.db"  # SQLite database for security audit trail
+approval_timeout = 30                      # seconds before auto-reject (silence ≠ consent)
+log_tier1_actions = true                   # log autonomous actions to audit trail

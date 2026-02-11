@@ -137,6 +137,11 @@ _DEFAULTS: dict[str, Any] = {
         "request_timeout": 10,
         "rate_limit_delay": 0.5,
     },
+    "security": {
+        "audit_db_path": "data/security_audit.db",
+        "approval_timeout": 30,
+        "log_tier1_actions": True,
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value
