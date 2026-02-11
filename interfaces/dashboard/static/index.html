@@ -1396,6 +1396,214 @@
             font-size: 0.85rem;
         }
 
+        /* --- Task Scheduler --- */
+        .schedule-section {
+            margin-bottom: 2rem;
+        }
+
+        .schedule-builder {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .schedule-builder-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .schedule-builder-row input[type="text"],
+        .schedule-builder-row input[type="number"] {
+            flex: 1;
+            min-width: 120px;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+        }
+
+        .schedule-builder-row input:focus {
+            border-color: #5b9bd5;
+        }
+
+        .schedule-builder-row input::placeholder {
+            color: #4a5a6a;
+        }
+
+        .schedule-builder-row select {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .schedule-builder-row select:focus {
+            border-color: #5b9bd5;
+        }
+
+        .schedule-builder-row label {
+            font-size: 0.8rem;
+            color: #7a8a9a;
+            white-space: nowrap;
+        }
+
+        .schedule-builder-row .schedule-builder-btn {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .schedule-builder-row .schedule-builder-btn:hover {
+            background: #3b82f6;
+        }
+
+        .schedule-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.5rem;
+            transition: opacity 0.3s;
+        }
+
+        .schedule-card.disabled {
+            opacity: 0.5;
+        }
+
+        .schedule-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .schedule-card-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .schedule-card-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e0e0e0;
+        }
+
+        .schedule-card-id {
+            font-size: 0.75rem;
+            color: #4a5a6a;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .schedule-enabled-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .schedule-enabled-badge.on {
+            background: rgba(0, 214, 114, 0.15);
+            color: #00d672;
+        }
+
+        .schedule-enabled-badge.off {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .schedule-type-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .schedule-card-meta {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            margin-bottom: 0.4rem;
+        }
+
+        .schedule-card-meta span {
+            margin-right: 1rem;
+        }
+
+        .schedule-card-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .schedule-card-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 6px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.3rem 0.7rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .schedule-card-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .schedule-card-btn.danger {
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .schedule-card-btn.danger:hover {
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        .schedule-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
+        .schedule-interval-input {
+            max-width: 100px;
+        }
+
+        .schedule-time-input {
+            max-width: 100px;
+        }
+
         /* --- Settings Panel --- */
         .settings-section {
             margin-bottom: 2rem;
@@ -2110,6 +2318,45 @@
             </div>
         </section>
 
+        <section class="schedule-section">
+            <h2>Task Scheduler</h2>
+
+            <div class="schedule-builder">
+                <div class="schedule-builder-row">
+                    <input type="text" id="sched-name" placeholder="Schedule name..." autocomplete="off">
+                    <input type="text" id="sched-desc" placeholder="Task description (command)..." autocomplete="off">
+                </div>
+                <div class="schedule-builder-row">
+                    <label>Type:</label>
+                    <select id="sched-type" onchange="onScheduleTypeChange()">
+                        <option value="interval">Interval</option>
+                        <option value="once">Once</option>
+                        <option value="daily">Daily</option>
+                    </select>
+                    <label>Complexity:</label>
+                    <select id="sched-complexity">
+                        <option value="low">LOW</option>
+                        <option value="medium">MEDIUM</option>
+                        <option value="high">HIGH</option>
+                    </select>
+                    <span id="sched-interval-group">
+                        <label>Every:</label>
+                        <input type="number" id="sched-interval" class="schedule-interval-input" value="300" min="10" step="10"> <label>sec</label>
+                    </span>
+                    <span id="sched-time-group" style="display:none;">
+                        <label>At (UTC):</label>
+                        <input type="text" id="sched-time" class="schedule-time-input" value="09:00" placeholder="HH:MM">
+                    </span>
+                    <input type="text" id="sched-caps" placeholder="Capabilities (comma-sep)..." style="max-width:180px" autocomplete="off">
+                    <button class="schedule-builder-btn" onclick="createSchedule()">Create</button>
+                </div>
+            </div>
+
+            <div id="schedule-list">
+                <div class="schedule-empty">No scheduled tasks yet.</div>
+            </div>
+        </section>
+
         <section class="command-palette-section">
             <h2>Command Palette</h2>
 
@@ -2336,6 +2583,16 @@
                 } else if (data.type === "notification_count") {
                     unreadCount = data.unread_count;
                     updateNotificationBadge();
+                } else if (data.type === "schedule_status") {
+                    handleScheduleStatus(data);
+                } else if (data.type === "schedule_created") {
+                    if (!data.ok) console.warn("Schedule create failed:", data.error);
+                } else if (data.type === "schedule_deleted") {
+                    if (!data.ok) console.warn("Schedule delete failed:", data.error);
+                } else if (data.type === "schedule_toggled") {
+                    if (!data.ok) console.warn("Schedule toggle failed:", data.error);
+                } else if (data.type === "schedule_updated") {
+                    if (!data.ok) console.warn("Schedule update failed:", data.error);
                 } else if (data.type === "file_transfer_progress") {
                     handleTransferProgress(data);
                 } else if (data.type === "file_transfer_history") {
@@ -3295,6 +3552,127 @@
                 },
             ];
             renderChainBuilder();
+        }
+
+        // ---------------------------------------------------------------
+        // Task Scheduler
+        // ---------------------------------------------------------------
+        let schedules = [];
+
+        function handleScheduleStatus(data) {
+            schedules = data.schedules || [];
+            renderSchedules();
+        }
+
+        function onScheduleTypeChange() {
+            const type = document.getElementById("sched-type").value;
+            document.getElementById("sched-interval-group").style.display =
+                type === "interval" ? "" : "none";
+            document.getElementById("sched-time-group").style.display =
+                type === "daily" ? "" : "none";
+        }
+
+        function createSchedule() {
+            const nameInput = document.getElementById("sched-name");
+            const descInput = document.getElementById("sched-desc");
+            const name = nameInput.value.trim();
+            const description = descInput.value.trim();
+            if (!name) { nameInput.focus(); return; }
+            if (!description) { descInput.focus(); return; }
+
+            const schedule_type = document.getElementById("sched-type").value;
+            const complexity = document.getElementById("sched-complexity").value;
+            const interval_seconds = parseInt(document.getElementById("sched-interval").value) || 300;
+            const run_at_time = document.getElementById("sched-time").value.trim() || "09:00";
+            const capsStr = document.getElementById("sched-caps").value.trim();
+            const required_capabilities = capsStr
+                ? capsStr.split(",").map(c => c.trim()).filter(c => c)
+                : [];
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "schedule_create",
+                    name, description, complexity, schedule_type,
+                    interval_seconds, run_at_time, required_capabilities,
+                }));
+            }
+
+            // Clear form
+            nameInput.value = "";
+            descInput.value = "";
+            document.getElementById("sched-caps").value = "";
+        }
+
+        function toggleSchedule(id) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "schedule_toggle", schedule_id: id }));
+            }
+        }
+
+        function deleteSchedule(id) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "schedule_delete", schedule_id: id }));
+            }
+        }
+
+        function formatScheduleTime(isoStr) {
+            if (!isoStr) return "—";
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleTimeString("en-US", {
+                    hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit"
+                }) + " " + d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            } catch (e) {
+                return isoStr;
+            }
+        }
+
+        function renderSchedules() {
+            const container = document.getElementById("schedule-list");
+            if (schedules.length === 0) {
+                container.innerHTML = '<div class="schedule-empty">No scheduled tasks yet.</div>';
+                return;
+            }
+
+            container.innerHTML = schedules.map(s => {
+                const enabledClass = s.enabled ? "on" : "off";
+                const enabledLabel = s.enabled ? "Enabled" : "Disabled";
+                const cardClass = s.enabled ? "" : " disabled";
+                const toggleLabel = s.enabled ? "Disable" : "Enable";
+                const typeLabel = s.schedule_type.toUpperCase();
+
+                let timingInfo = "";
+                if (s.schedule_type === "interval") {
+                    timingInfo = "Every " + s.interval_seconds + "s";
+                } else if (s.schedule_type === "daily") {
+                    timingInfo = "Daily at " + escapeHtml(s.run_at_time) + " UTC";
+                } else {
+                    timingInfo = "One-time";
+                }
+
+                return `
+                    <div class="schedule-card${cardClass}">
+                        <div class="schedule-card-header">
+                            <div class="schedule-card-left">
+                                <span class="schedule-card-name">${escapeHtml(s.name)}</span>
+                                <span class="schedule-card-id">${escapeHtml(s.short_id)}</span>
+                                <span class="schedule-enabled-badge ${enabledClass}">${enabledLabel}</span>
+                                <span class="schedule-type-badge">${typeLabel}</span>
+                            </div>
+                            <div class="schedule-card-actions">
+                                <button class="schedule-card-btn" onclick="toggleSchedule('${s.schedule_id}')">${toggleLabel}</button>
+                                <button class="schedule-card-btn danger" onclick="deleteSchedule('${s.schedule_id}')">Delete</button>
+                            </div>
+                        </div>
+                        <div class="schedule-card-meta">
+                            <span>${timingInfo}</span>
+                            <span>Runs: ${s.run_count}</span>
+                            <span>Next: ${formatScheduleTime(s.next_run_at)}</span>
+                            <span>Last: ${formatScheduleTime(s.last_run_at)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join("");
         }
 
         // ---------------------------------------------------------------

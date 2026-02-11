@@ -102,6 +102,10 @@ _DEFAULTS: dict[str, Any] = {
         "max_active_transfers": 5,
         "history_size": 100,
     },
+    "scheduler": {
+        "check_interval": 30,
+        "persist_file": "data/schedules.json",
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

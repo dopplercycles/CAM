@@ -33,6 +33,7 @@ from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
 from core.analytics import Analytics
 from core.commands import CommandLibrary
+from core.scheduler import Scheduler, ScheduleType
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +216,23 @@ ft_manager = FileTransferManager(
 
 # Ensure server-side receive directory exists
 Path(config.file_transfer.receive_dir).mkdir(parents=True, exist_ok=True)
+
+
+async def broadcast_schedule_status():
+    """Push current schedule state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "schedule_status",
+        "schedules": scheduler.to_broadcast_list(),
+    })
+
+
+# Task scheduler — persists schedules to JSON, submits due tasks to the queue
+scheduler = Scheduler(
+    task_queue=task_queue,
+    persist_path=config.scheduler.persist_file,
+    check_interval=config.scheduler.check_interval,
+    on_schedule_change=broadcast_schedule_status,
+)
 
 
 async def relay_file_to_agent(transfer, data: bytes, agent_ws):
@@ -552,11 +570,15 @@ async def lifespan(app: FastAPI):
     event_logger.info("system", "CAM Dashboard starting up")
     heartbeat_task = asyncio.create_task(check_heartbeats())
     orchestrator_task = asyncio.create_task(orchestrator.run())
+    scheduler_task = asyncio.create_task(scheduler.run())
     logger.info("Orchestrator loop started as background task")
+    logger.info("Scheduler loop started as background task")
     yield
     orchestrator.stop()
+    scheduler.stop()
     orchestrator_task.cancel()
     heartbeat_task.cancel()
+    scheduler_task.cancel()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
 
@@ -616,6 +638,12 @@ async def get_analytics():
 async def get_events(count: int = 200):
     """Return recent events from the event log."""
     return event_logger.get_recent(count)
+
+
+@app.get("/api/schedules")
+async def get_schedules():
+    """Return current scheduled tasks as JSON."""
+    return {"schedules": scheduler.to_broadcast_list()}
 
 
 @app.get("/api/config")
@@ -1000,6 +1028,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "file_transfer_history",
         "transfers": ft_manager.get_all_transfers(),
+    })
+
+    # Send current schedule state
+    await websocket.send_json({
+        "type": "schedule_status",
+        "schedules": scheduler.to_broadcast_list(),
     })
 
     try:
@@ -1417,6 +1451,126 @@ async def dashboard_websocket(websocket: WebSocket):
                         except Exception:
                             pass
                     await ft_manager.cancel_transfer(transfer_id)
+
+            elif msg.get("type") == "schedule_create":
+                sched_name = (msg.get("name") or "").strip()
+                sched_desc = (msg.get("description") or "").strip()
+                sched_type_str = (msg.get("schedule_type") or "interval").lower()
+                complexity_str = (msg.get("complexity") or "low").lower()
+                interval_seconds = msg.get("interval_seconds", 300)
+                run_at_time = msg.get("run_at_time", "09:00")
+                raw_caps = msg.get("required_capabilities") or []
+                caps = [c.strip() for c in raw_caps if isinstance(c, str) and c.strip()]
+
+                if not sched_name or not sched_desc:
+                    await websocket.send_json({
+                        "type": "schedule_created",
+                        "ok": False,
+                        "error": "Name and description are required",
+                    })
+                    continue
+
+                try:
+                    complexity = TaskComplexity(complexity_str)
+                except ValueError:
+                    complexity = TaskComplexity.LOW
+
+                try:
+                    sched_type = ScheduleType(sched_type_str)
+                except ValueError:
+                    sched_type = ScheduleType.INTERVAL
+
+                try:
+                    interval_seconds = int(interval_seconds)
+                except (ValueError, TypeError):
+                    interval_seconds = 300
+
+                sched = scheduler.add_schedule(
+                    name=sched_name,
+                    description=sched_desc,
+                    complexity=complexity,
+                    schedule_type=sched_type,
+                    interval_seconds=interval_seconds,
+                    run_at_time=run_at_time,
+                    required_capabilities=caps,
+                )
+                event_logger.info(
+                    "scheduler",
+                    f"Schedule '{sched_name}' ({sched.short_id}) created: {sched_type_str}",
+                    schedule_id=sched.short_id, schedule_type=sched_type_str,
+                )
+                await websocket.send_json({
+                    "type": "schedule_created",
+                    "ok": True,
+                    "schedule_id": sched.schedule_id,
+                    "short_id": sched.short_id,
+                })
+                await broadcast_schedule_status()
+
+            elif msg.get("type") == "schedule_update":
+                schedule_id = msg.get("schedule_id", "")
+                update_fields = {}
+                for key in ("name", "description", "complexity", "schedule_type",
+                            "interval_seconds", "run_at_time", "required_capabilities"):
+                    if key in msg:
+                        update_fields[key] = msg[key]
+
+                result = scheduler.update_schedule(schedule_id, **update_fields)
+                if result:
+                    event_logger.info(
+                        "scheduler",
+                        f"Schedule '{result.name}' ({result.short_id}) updated",
+                        schedule_id=result.short_id,
+                    )
+                    await websocket.send_json({"type": "schedule_updated", "ok": True})
+                    await broadcast_schedule_status()
+                else:
+                    await websocket.send_json({
+                        "type": "schedule_updated",
+                        "ok": False,
+                        "error": "Schedule not found",
+                    })
+
+            elif msg.get("type") == "schedule_delete":
+                schedule_id = msg.get("schedule_id", "")
+                removed = scheduler.remove_schedule(schedule_id)
+                if removed:
+                    event_logger.info(
+                        "scheduler",
+                        f"Schedule {schedule_id[:8]} deleted",
+                        schedule_id=schedule_id[:8],
+                    )
+                    await websocket.send_json({"type": "schedule_deleted", "ok": True})
+                    await broadcast_schedule_status()
+                else:
+                    await websocket.send_json({
+                        "type": "schedule_deleted",
+                        "ok": False,
+                        "error": "Schedule not found",
+                    })
+
+            elif msg.get("type") == "schedule_toggle":
+                schedule_id = msg.get("schedule_id", "")
+                result = scheduler.toggle_enable(schedule_id)
+                if result:
+                    event_logger.info(
+                        "scheduler",
+                        f"Schedule '{result.name}' ({result.short_id}) {'enabled' if result.enabled else 'disabled'}",
+                        schedule_id=result.short_id,
+                        enabled=result.enabled,
+                    )
+                    await websocket.send_json({
+                        "type": "schedule_toggled",
+                        "ok": True,
+                        "enabled": result.enabled,
+                    })
+                    await broadcast_schedule_status()
+                else:
+                    await websocket.send_json({
+                        "type": "schedule_toggled",
+                        "ok": False,
+                        "error": "Schedule not found",
+                    })
 
             elif msg.get("type") == "notification_dismiss":
                 notif_id = msg.get("id", "")
