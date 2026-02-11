@@ -2515,6 +2515,130 @@
             font-size: 0.85rem;
         }
 
+        /* --- Self-Test Panel --- */
+        .self-test-section {
+            margin-bottom: 2rem;
+        }
+
+        .self-test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .self-test-header h2 {
+            margin: 0;
+        }
+
+        .self-test-btn {
+            background: transparent;
+            border: 1px solid #58a6ff;
+            color: #58a6ff;
+            padding: 0.35rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .self-test-btn:hover {
+            background: rgba(88, 166, 255, 0.15);
+        }
+
+        .self-test-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .self-test-summary {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .self-test-summary.all-pass {
+            border-color: #238636;
+        }
+
+        .self-test-summary.has-fail {
+            border-color: #e74c3c;
+        }
+
+        .st-pass-count { color: #00d672; font-weight: 600; }
+        .st-fail-count { color: #e74c3c; font-weight: 600; }
+        .st-duration { color: #8b949e; }
+
+        .self-test-category {
+            margin-bottom: 0.5rem;
+        }
+
+        .self-test-category-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #8b949e;
+            margin-bottom: 0.25rem;
+            padding-left: 0.25rem;
+        }
+
+        .self-test-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.35rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .self-test-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .st-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .st-dot.st-pass { background: #00d672; }
+        .st-dot.st-fail { background: #e74c3c; }
+
+        .st-name {
+            flex: 1;
+            color: #c9d1d9;
+        }
+
+        .st-message {
+            flex: 2;
+            color: #8b949e;
+            font-size: 0.8rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .st-time {
+            color: #484f58;
+            font-size: 0.75rem;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .self-test-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
         /* --- Persona Panel --- */
         .persona-section {
             margin-bottom: 2rem;
@@ -3625,6 +3749,17 @@
             </div>
         </section>
 
+        <section class="self-test-section">
+            <div class="self-test-header">
+                <h2>System Self-Test</h2>
+                <button class="self-test-btn" id="self-test-btn" onclick="runSelfTest()">Run System Test</button>
+            </div>
+            <div class="self-test-summary" id="self-test-summary" style="display:none;"></div>
+            <div id="self-test-results">
+                <div class="self-test-empty">Click "Run System Test" to check all subsystems.</div>
+            </div>
+        </section>
+
         <section class="persona-section" id="persona-section">
             <div class="persona-header">
                 <h2>Persona</h2>
@@ -3801,6 +3936,8 @@
                     handleSecurityAuditStatus(data);
                 } else if (data.type === "security_audit_filtered") {
                     handleSecurityAuditFiltered(data);
+                } else if (data.type === "self_test_results") {
+                    renderSelfTestResults(data);
                 } else if (data.type === "schedule_status") {
                     handleScheduleStatus(data);
                 } else if (data.type === "schedule_created") {
@@ -5440,6 +5577,73 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "config_reload" }));
             }
+        }
+
+        // ---------------------------------------------------------------
+        // System Self-Test
+        // ---------------------------------------------------------------
+
+        function runSelfTest() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const btn = document.getElementById("self-test-btn");
+            btn.disabled = true;
+            btn.textContent = "Running...";
+            document.getElementById("self-test-results").innerHTML =
+                '<div class="self-test-empty">Running system tests...</div>';
+            document.getElementById("self-test-summary").style.display = "none";
+            ws.send(JSON.stringify({ type: "run_self_test" }));
+        }
+
+        function renderSelfTestResults(data) {
+            const btn = document.getElementById("self-test-btn");
+            btn.disabled = false;
+            btn.textContent = "Run System Test";
+
+            // Summary bar
+            const summaryEl = document.getElementById("self-test-summary");
+            summaryEl.style.display = "flex";
+            summaryEl.className = "self-test-summary " +
+                (data.failed === 0 ? "all-pass" : "has-fail");
+            summaryEl.innerHTML = `
+                <span class="st-pass-count">${data.passed} passed</span>
+                <span class="st-fail-count">${data.failed} failed</span>
+                <span>of ${data.total}</span>
+                <span class="st-duration">${(data.duration_ms / 1000).toFixed(1)}s</span>
+            `;
+
+            // Group results by category
+            const categories = {};
+            const categoryOrder = ["config", "database", "model", "memory", "core", "network"];
+            for (const r of (data.results || [])) {
+                const cat = r.category || "other";
+                if (!categories[cat]) categories[cat] = [];
+                categories[cat].push(r);
+            }
+
+            let html = "";
+            for (const cat of categoryOrder) {
+                const items = categories[cat];
+                if (!items) continue;
+                html += `<div class="self-test-category">`;
+                html += `<div class="self-test-category-label">${cat}</div>`;
+                for (const r of items) {
+                    const cls = r.passed ? "st-pass" : "st-fail";
+                    const dur = r.duration_ms < 1000
+                        ? `${Math.round(r.duration_ms)}ms`
+                        : `${(r.duration_ms / 1000).toFixed(1)}s`;
+                    html += `
+                        <div class="self-test-item">
+                            <div class="st-dot ${cls}"></div>
+                            <div class="st-name">${r.name}</div>
+                            <div class="st-message">${r.message}</div>
+                            <div class="st-time">${dur}</div>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            }
+
+            document.getElementById("self-test-results").innerHTML = html;
         }
 
         // ---------------------------------------------------------------

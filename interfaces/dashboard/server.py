@@ -43,6 +43,7 @@ from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
 from agents.research_agent import ResearchAgent
+from tests.self_test import SelfTest
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +149,9 @@ pending_task_responses: dict[str, asyncio.Future] = {}
 
 # Kill switch state — when True, all autonomous action is halted
 kill_switch_active: bool = False
+
+# Last self-test results cache — populated when dashboard runs self-test
+last_self_test_results: dict | None = None
 
 # Background task handle for the orchestrator loop
 orchestrator_task: asyncio.Task | None = None
@@ -2228,6 +2232,33 @@ async def dashboard_websocket(websocket: WebSocket):
                 await broadcast_to_dashboards({
                     "type": "notification_count",
                     "unread_count": notification_manager.get_unread_count(),
+                })
+
+            elif msg.get("type") == "run_self_test":
+                # Run the system self-test suite
+                global last_self_test_results
+                self_test = SelfTest(
+                    config=config,
+                    event_logger=event_logger,
+                    router=orchestrator.router,
+                    registry=registry,
+                    task_queue=task_queue,
+                    short_term_memory=short_term_memory,
+                    working_memory=working_memory,
+                    episodic_memory=episodic_memory,
+                    long_term_memory=long_term_memory,
+                    analytics=analytics,
+                    content_calendar=content_calendar,
+                    research_store=research_store,
+                    security_audit_log=security_audit_log,
+                    agent_websockets=agent_websockets,
+                    port=config.dashboard.port,
+                )
+                results = await self_test.run_all()
+                last_self_test_results = results
+                await broadcast_to_dashboards({
+                    "type": "self_test_results",
+                    **results,
                 })
 
             elif msg.get("type") == "episodic_search":
