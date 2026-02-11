@@ -20,7 +20,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from core.task import Task, TaskQueue, TaskStatus, TaskComplexity
+from core.task import Task, TaskQueue, TaskStatus, TaskComplexity, TaskChain, ChainStatus
 from core.model_router import ModelRouter, ModelResponse
 
 
@@ -70,6 +70,7 @@ class Orchestrator:
         on_task_update=None,
         on_dispatch_to_agent=None,
         on_model_call=None,
+        on_chain_update=None,
     ):
         # Task queue — shared with other components (dashboard, CLI, etc.)
         # Note: can't use `queue or TaskQueue()` because an empty queue is falsy
@@ -92,6 +93,10 @@ class Orchestrator:
         # Optional callback for logging model router calls.
         # Signature: (model, backend, tokens, latency_ms, cost_usd, task_short_id)
         self._on_model_call = on_model_call
+
+        # Optional callback for chain status changes.
+        # Signature: async (chain: TaskChain) -> None
+        self._on_chain_update = on_chain_update
 
         # Flag to stop the loop gracefully (kill switch, shutdown, etc.)
         self._running: bool = False
@@ -131,6 +136,17 @@ class Orchestrator:
                 await result
         except Exception:
             logger.debug("Task update callback error (non-fatal)", exc_info=True)
+
+    async def _notify_chain_update(self, chain: "TaskChain"):
+        """Push a chain status change to the dashboard (if callback is set)."""
+        if self._on_chain_update is None:
+            return
+        try:
+            result = self._on_chain_update(chain)
+            if asyncio.iscoroutine(result):
+                await result
+        except Exception:
+            logger.debug("Chain update callback error (non-fatal)", exc_info=True)
 
     # -------------------------------------------------------------------
     # The four phases
@@ -363,6 +379,21 @@ class Orchestrator:
                     # ITERATE — wrap up, log, learn
                     await self.iterate(task, result)
 
+                    # --- Chain advancement ---
+                    chain = self.queue.get_chain_for_task(task.task_id)
+                    if chain is not None:
+                        if chain.status == ChainStatus.PENDING:
+                            chain.status = ChainStatus.RUNNING
+                        next_task = chain.advance()
+                        if next_task is not None:
+                            # Queue the next step for the orchestrator to pick up
+                            self.queue._tasks.append(next_task)
+                            await self._notify_task_update()
+                        else:
+                            # All steps done
+                            chain.mark_completed()
+                        await self._notify_chain_update(chain)
+
                 except Exception as e:
                     # Task failed — log it, mark it, keep the loop running.
                     # Constitution failure hierarchy: stop action, secure,
@@ -375,6 +406,12 @@ class Orchestrator:
                     logger.error(
                         "Task %s failed: %s", task.short_id, e, exc_info=True,
                     )
+
+                    # --- Chain failure cascade ---
+                    chain = self.queue.get_chain_for_task(task.task_id)
+                    if chain is not None:
+                        chain.mark_failed()
+                        await self._notify_chain_update(chain)
 
         except asyncio.CancelledError:
             logger.info("Orchestrator loop cancelled")

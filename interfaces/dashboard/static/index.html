@@ -1104,6 +1104,298 @@
             color: #f59e0b;
         }
 
+        /* --- Task Chains --- */
+        .chain-section {
+            margin-bottom: 2rem;
+        }
+
+        .chain-builder {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .chain-builder-header {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .chain-builder-header input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+        }
+
+        .chain-builder-header input[type="text"]:focus {
+            border-color: #5b9bd5;
+        }
+
+        .chain-builder-header input[type="text"]::placeholder {
+            color: #4a5a6a;
+        }
+
+        .chain-builder-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 6px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .chain-builder-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .chain-builder-btn.primary {
+            background: #2563eb;
+            border-color: #3b82f6;
+            color: #fff;
+        }
+
+        .chain-builder-btn.primary:hover {
+            background: #3b82f6;
+        }
+
+        .chain-builder-btn.primary:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .chain-step-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .chain-step-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: #0f1923;
+            border: 1px solid #1a2a3a;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .chain-step-num {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #5b9bd5;
+            flex-shrink: 0;
+            width: 1.5rem;
+            text-align: center;
+        }
+
+        .chain-step-row input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.35rem 0.5rem;
+            outline: none;
+        }
+
+        .chain-step-row input[type="text"]:focus {
+            border-color: #5b9bd5;
+        }
+
+        .chain-step-row input[type="text"]::placeholder {
+            color: #4a5a6a;
+        }
+
+        .chain-step-row select {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.8rem;
+            padding: 0.35rem 0.3rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .chain-step-remove {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            transition: background 0.15s;
+            flex-shrink: 0;
+        }
+
+        .chain-step-remove:hover {
+            background: rgba(231, 76, 60, 0.15);
+        }
+
+        /* Chain cards */
+        .chain-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chain-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+        }
+
+        .chain-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .chain-card-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chain-card-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .chain-card-id {
+            font-size: 0.75rem;
+            font-family: monospace;
+            color: #6a7a8a;
+        }
+
+        .chain-status-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+        }
+
+        .chain-status-badge.pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .chain-status-badge.running {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .chain-status-badge.completed {
+            background: rgba(0, 214, 114, 0.15);
+            color: #00d672;
+        }
+
+        .chain-status-badge.failed {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .chain-progress-bar {
+            height: 6px;
+            background: #0f1923;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        .chain-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s ease, background 0.3s;
+        }
+
+        .chain-progress-fill.running {
+            background: #3b82f6;
+        }
+
+        .chain-progress-fill.completed {
+            background: #00d672;
+        }
+
+        .chain-progress-fill.failed {
+            background: #e74c3c;
+        }
+
+        .chain-steps {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .chain-step {
+            flex: 1;
+            min-width: 60px;
+            text-align: center;
+            padding: 0.35rem 0.4rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: #0f1923;
+            color: #3a4a5a;
+            border: 1px solid #1a2a3a;
+            transition: all 0.3s;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chain-step.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border-color: #3b82f6;
+            animation: oati-pulse 1.5s ease-in-out infinite;
+        }
+
+        .chain-step.done {
+            background: rgba(0, 214, 114, 0.15);
+            color: #00d672;
+            border-color: #00d672;
+            animation: none;
+        }
+
+        .chain-step.failed {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+            border-color: #e74c3c;
+            animation: none;
+        }
+
+        .chain-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
         /* --- Settings Panel --- */
         .settings-section {
             margin-bottom: 2rem;
@@ -1267,6 +1559,26 @@
 
             <div class="task-history" id="task-history">
                 <div class="task-empty-state">No tasks yet. Submit one above.</div>
+            </div>
+        </section>
+
+        <section class="chain-section">
+            <h2>Task Chains</h2>
+
+            <div class="chain-builder">
+                <div class="chain-builder-header">
+                    <input type="text" id="chain-name-input" placeholder="Chain name..." autocomplete="off">
+                    <button class="chain-builder-btn" onclick="addChainStep()">+ Add Step</button>
+                    <button class="chain-builder-btn" onclick="loadTestChain()">Load Test Chain</button>
+                    <button class="chain-builder-btn primary" id="chain-submit-btn" onclick="submitChain()">Submit Chain</button>
+                </div>
+                <div class="chain-step-rows" id="chain-step-rows">
+                    <!-- Dynamic step rows rendered here -->
+                </div>
+            </div>
+
+            <div class="chain-list" id="chain-list">
+                <div class="chain-empty">No chains yet. Build one above or click "Load Test Chain" to try it out.</div>
             </div>
         </section>
 
@@ -1434,6 +1746,10 @@
                     handleCommandExecuteResult(data);
                 } else if (data.type === "config") {
                     handleConfig(data);
+                } else if (data.type === "chain_status") {
+                    handleChainStatus(data);
+                } else if (data.type === "chain_submitted") {
+                    if (!data.ok) console.warn("Chain submit failed:", data.error);
                 }
             };
 
@@ -2239,6 +2555,157 @@
         // Also listen for param input changes to update execute button
         document.getElementById("cmd-params").addEventListener("input", updateCommandExecuteBtn);
         document.getElementById("cmd-agent-select").addEventListener("change", updateCommandExecuteBtn);
+
+        // ---------------------------------------------------------------
+        // Task Chains
+        // ---------------------------------------------------------------
+        let chains = [];
+        let chainBuilderSteps = [];
+
+        function handleChainStatus(data) {
+            chains = data.chains || [];
+            renderChains();
+        }
+
+        function renderChains() {
+            const container = document.getElementById("chain-list");
+            if (chains.length === 0) {
+                container.innerHTML = '<div class="chain-empty">No chains yet. Build one above or click "Load Test Chain" to try it out.</div>';
+                return;
+            }
+
+            container.innerHTML = chains.map(chain => {
+                const status = chain.status;
+                const current = chain.current_step;
+                const total = chain.total_steps;
+                const pct = total > 0 ? Math.round((countCompletedSteps(chain) / total) * 100) : 0;
+                const progressClass = status === "failed" ? "failed" : (status === "completed" ? "completed" : "running");
+
+                const stepsHtml = chain.steps.map((step, i) => {
+                    let stepClass = "";
+                    if (step.status === "completed") {
+                        stepClass = "done";
+                    } else if (step.status === "failed") {
+                        stepClass = "failed";
+                    } else if (step.status === "running") {
+                        stepClass = "active";
+                    }
+                    const label = "Step " + (i + 1);
+                    return `<div class="chain-step ${stepClass}" title="${escapeHtml(step.description.substring(0, 100))}">${label}</div>`;
+                }).join("");
+
+                return `
+                    <div class="chain-card">
+                        <div class="chain-card-header">
+                            <div class="chain-card-left">
+                                <span class="chain-card-name">${escapeHtml(chain.name)}</span>
+                                <span class="chain-card-id">${escapeHtml(chain.short_id)}</span>
+                            </div>
+                            <span class="chain-status-badge ${status}">${status}</span>
+                        </div>
+                        <div class="chain-progress-bar">
+                            <div class="chain-progress-fill ${progressClass}" style="width:${pct}%"></div>
+                        </div>
+                        <div class="chain-steps">${stepsHtml}</div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function countCompletedSteps(chain) {
+            return chain.steps.filter(s => s.status === "completed").length;
+        }
+
+        function addChainStep() {
+            chainBuilderSteps.push({ description: "", complexity: "low", capabilities: "" });
+            renderChainBuilder();
+        }
+
+        function removeChainStep(i) {
+            chainBuilderSteps.splice(i, 1);
+            renderChainBuilder();
+        }
+
+        function renderChainBuilder() {
+            const container = document.getElementById("chain-step-rows");
+            if (chainBuilderSteps.length === 0) {
+                container.innerHTML = "";
+                return;
+            }
+
+            container.innerHTML = chainBuilderSteps.map((step, i) => `
+                <div class="chain-step-row">
+                    <span class="chain-step-num">${i + 1}</span>
+                    <input type="text" placeholder="Step description..."
+                        value="${escapeHtml(step.description)}"
+                        oninput="chainBuilderSteps[${i}].description=this.value">
+                    <select onchange="chainBuilderSteps[${i}].complexity=this.value">
+                        <option value="low" ${step.complexity === "low" ? "selected" : ""}>LOW</option>
+                        <option value="medium" ${step.complexity === "medium" ? "selected" : ""}>MEDIUM</option>
+                        <option value="high" ${step.complexity === "high" ? "selected" : ""}>HIGH</option>
+                    </select>
+                    <input type="text" placeholder="Capabilities..."
+                        value="${escapeHtml(step.capabilities || "")}"
+                        oninput="chainBuilderSteps[${i}].capabilities=this.value"
+                        style="max-width:140px">
+                    <button class="chain-step-remove" onclick="removeChainStep(${i})" title="Remove step">&times;</button>
+                </div>
+            `).join("");
+        }
+
+        function submitChain() {
+            const nameInput = document.getElementById("chain-name-input");
+            const name = nameInput.value.trim();
+            if (!name) { nameInput.focus(); return; }
+            if (chainBuilderSteps.length === 0) return;
+
+            // Validate steps have descriptions
+            const validSteps = chainBuilderSteps.filter(s => s.description.trim());
+            if (validSteps.length === 0) return;
+
+            const steps = validSteps.map(s => ({
+                description: s.description.trim(),
+                complexity: s.complexity,
+                required_capabilities: s.capabilities
+                    ? s.capabilities.split(",").map(c => c.trim()).filter(c => c)
+                    : [],
+            }));
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "chain_submit",
+                    name: name,
+                    steps: steps,
+                }));
+            }
+
+            // Clear builder
+            nameInput.value = "";
+            chainBuilderSteps = [];
+            renderChainBuilder();
+        }
+
+        function loadTestChain() {
+            document.getElementById("chain-name-input").value = "System Info → Analyze → Summarize";
+            chainBuilderSteps = [
+                {
+                    description: "system_info",
+                    complexity: "low",
+                    capabilities: "system_info",
+                },
+                {
+                    description: "Analyze the following system information and identify any potential issues, resource bottlenecks, or notable observations.",
+                    complexity: "medium",
+                    capabilities: "",
+                },
+                {
+                    description: "Summarize the analysis into 3-5 concise bullet points suitable for a status report.",
+                    complexity: "low",
+                    capabilities: "",
+                },
+            ];
+            renderChainBuilder();
+        }
 
         // ---------------------------------------------------------------
         // Settings Panel

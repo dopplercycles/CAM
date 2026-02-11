@@ -25,7 +25,7 @@ from core.agent_registry import AgentRegistry
 from core.config import get_config
 from core.event_logger import EventLogger
 from core.health_monitor import HealthMonitor
-from core.task import TaskQueue, TaskComplexity
+from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
 from core.analytics import Analytics
 from core.commands import CommandLibrary
@@ -162,6 +162,14 @@ async def broadcast_analytics():
     await broadcast_to_dashboards({"type": "analytics", "data": analytics.get_summary()})
 
 
+async def broadcast_chain_status():
+    """Push current chain state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "chain_status",
+        "chains": task_queue.chains_to_broadcast_list(),
+    })
+
+
 # ---------------------------------------------------------------------------
 # Orchestrator callbacks — push OATI phase changes to dashboards in real time
 # ---------------------------------------------------------------------------
@@ -190,6 +198,19 @@ async def on_task_phase_change(task, phase, detail):
 async def on_task_update():
     """Called by the orchestrator when any task's status changes."""
     await broadcast_task_status()
+
+
+async def on_chain_update(chain):
+    """Called by the orchestrator when a chain's status changes."""
+    await broadcast_chain_status()
+    status_str = chain.status.value if hasattr(chain.status, 'value') else str(chain.status)
+    severity = "error" if status_str == "failed" else "info"
+    getattr(event_logger, severity)(
+        "chain",
+        f"Chain '{chain.name}' ({chain.short_id}): {status_str} "
+        f"— step {min(chain.current_step + 1, chain.total_steps)}/{chain.total_steps}",
+        chain_id=chain.short_id, status=status_str,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -352,6 +373,7 @@ orchestrator = Orchestrator(
     on_task_update=on_task_update,
     on_dispatch_to_agent=dispatch_to_agent,
     on_model_call=on_model_call,
+    on_chain_update=on_chain_update,
 )
 
 
@@ -692,6 +714,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "commands": command_library.to_broadcast_list(),
     })
 
+    # Send current chain state
+    await websocket.send_json({
+        "type": "chain_status",
+        "chains": task_queue.chains_to_broadcast_list(),
+    })
+
     try:
         # Listen for dashboard commands (kill switch, task submit, agent controls)
         while True:
@@ -911,6 +939,75 @@ async def dashboard_websocket(websocket: WebSocket):
                     "config": config.to_dict(),
                     "last_loaded": config.last_loaded,
                 })
+
+            elif msg.get("type") == "chain_submit":
+                # Submit a multi-step task chain
+                chain_name = (msg.get("name") or "").strip()
+                raw_steps = msg.get("steps") or []
+
+                if not chain_name or not raw_steps:
+                    await websocket.send_json({
+                        "type": "chain_submitted",
+                        "ok": False,
+                        "error": "Chain name and at least one step are required",
+                    })
+                    continue
+
+                # Build Task objects for each step
+                step_tasks = []
+                for step_def in raw_steps:
+                    desc = (step_def.get("description") or "").strip()
+                    if not desc:
+                        continue
+                    complexity_str = (step_def.get("complexity") or "low").lower()
+                    try:
+                        complexity = TaskComplexity(complexity_str)
+                    except ValueError:
+                        complexity = TaskComplexity.LOW
+                    raw_caps = step_def.get("required_capabilities") or []
+                    caps = [c.strip() for c in raw_caps if isinstance(c, str) and c.strip()]
+
+                    step_tasks.append(Task(
+                        description=desc,
+                        source="chain",
+                        complexity=complexity,
+                        required_capabilities=caps,
+                    ))
+
+                if not step_tasks:
+                    await websocket.send_json({
+                        "type": "chain_submitted",
+                        "ok": False,
+                        "error": "No valid steps provided",
+                    })
+                    continue
+
+                chain = TaskChain(
+                    name=chain_name,
+                    steps=step_tasks,
+                    source="dashboard",
+                )
+                task_queue.add_chain(chain)
+
+                logger.info(
+                    "Chain %s submitted from dashboard (%d steps): %s",
+                    chain.short_id, chain.total_steps, chain_name,
+                )
+                event_logger.info(
+                    "chain",
+                    f"Chain '{chain_name}' ({chain.short_id}) submitted: {chain.total_steps} steps",
+                    chain_id=chain.short_id, steps=chain.total_steps,
+                    source="dashboard",
+                )
+
+                await websocket.send_json({
+                    "type": "chain_submitted",
+                    "ok": True,
+                    "chain_id": chain.chain_id,
+                    "short_id": chain.short_id,
+                })
+                await broadcast_chain_status()
+                await broadcast_task_status()
 
     except WebSocketDisconnect:
         if websocket in dashboard_clients:

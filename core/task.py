@@ -12,7 +12,7 @@ and completed work. Right now it's in-memory; persistent storage
 (JSON/SQLite) will come with core/memory/working.py.
 
 Usage:
-    from core.task import Task, TaskQueue, TaskStatus, TaskComplexity
+    from core.task import Task, TaskQueue, TaskStatus, TaskComplexity, TaskChain, ChainStatus
 
     queue = TaskQueue()
     task = queue.add_task(
@@ -59,6 +59,20 @@ class TaskStatus(Enum):
     RUNNING = "running"        # Currently being processed by the orchestrator
     COMPLETED = "completed"    # Finished successfully
     FAILED = "failed"          # Finished with an error
+
+
+class ChainStatus(Enum):
+    """Lifecycle states for a task chain.
+
+    Chains move through these states as the orchestrator processes their steps:
+
+        PENDING → RUNNING → COMPLETED
+                          └→ FAILED
+    """
+    PENDING = "pending"        # Chain created, first step not yet picked up
+    RUNNING = "running"        # At least one step is being processed
+    COMPLETED = "completed"    # All steps finished successfully
+    FAILED = "failed"          # A step failed — remaining steps skipped
 
 
 class TaskComplexity(Enum):
@@ -135,6 +149,117 @@ class Task:
 
 
 # ---------------------------------------------------------------------------
+# TaskChain
+# ---------------------------------------------------------------------------
+
+@dataclass
+class TaskChain:
+    """An ordered sequence of tasks that execute in series.
+
+    Each step's result is automatically injected into the next step's
+    description as context, so later steps can build on earlier work.
+
+    Used for multi-step workflows like: gather info → analyze → summarize.
+    """
+    chain_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    steps: list[Task] = field(default_factory=list)
+    current_step: int = 0
+    status: ChainStatus = ChainStatus.PENDING
+    source: str = "dashboard"
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: datetime | None = None
+
+    @property
+    def short_id(self) -> str:
+        """First 8 chars of the UUID — easier to read in logs."""
+        return self.chain_id[:8]
+
+    @property
+    def total_steps(self) -> int:
+        """Total number of steps in the chain."""
+        return len(self.steps)
+
+    @property
+    def current_task(self) -> Task | None:
+        """The task for the current step, or None if chain is done."""
+        if 0 <= self.current_step < len(self.steps):
+            return self.steps[self.current_step]
+        return None
+
+    def advance(self) -> Task | None:
+        """Move to the next step, injecting the previous step's result.
+
+        Prepends the previous step's result to the next step's description
+        so the model gets full context from the chain so far.
+
+        Returns:
+            The next Task to execute, or None if the chain is done.
+        """
+        prev_task = self.steps[self.current_step]
+        self.current_step += 1
+
+        if self.current_step >= len(self.steps):
+            # No more steps — chain is done
+            return None
+
+        next_task = self.steps[self.current_step]
+
+        # Inject previous step's result as context
+        if prev_task.result:
+            context = (
+                f"[Context from previous step ({prev_task.short_id})]\n"
+                f"{prev_task.result}\n\n"
+                f"[Current task]\n"
+            )
+            next_task.description = context + next_task.description
+
+        logger.info(
+            "Chain %s advanced to step %d/%d: %s",
+            self.short_id, self.current_step + 1, self.total_steps,
+            next_task.description[:100],
+        )
+        return next_task
+
+    def mark_failed(self):
+        """Mark the chain and all remaining steps as failed."""
+        self.status = ChainStatus.FAILED
+        self.completed_at = datetime.now(timezone.utc)
+
+        for i in range(self.current_step + 1, len(self.steps)):
+            step = self.steps[i]
+            if step.status == TaskStatus.PENDING:
+                step.status = TaskStatus.FAILED
+                step.completed_at = datetime.now(timezone.utc)
+                step.result = "Skipped — earlier step in chain failed"
+
+        logger.info("Chain %s marked FAILED at step %d/%d",
+                     self.short_id, self.current_step + 1, self.total_steps)
+
+    def mark_completed(self):
+        """Mark the chain as completed."""
+        self.status = ChainStatus.COMPLETED
+        self.completed_at = datetime.now(timezone.utc)
+        logger.info("Chain %s COMPLETED (%d steps)",
+                     self.short_id, self.total_steps)
+
+    def to_dict(self) -> dict:
+        """Serialize to a plain dict for JSON/dashboard use."""
+        return {
+            "chain_id": self.chain_id,
+            "short_id": self.short_id,
+            "name": self.name,
+            "current_step": self.current_step,
+            "total_steps": self.total_steps,
+            "status": self.status.value,
+            "source": self.source,
+            "created_at": self.created_at.isoformat(),
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "steps": [s.to_dict() for s in self.steps],
+        }
+
+
+# ---------------------------------------------------------------------------
 # TaskQueue
 # ---------------------------------------------------------------------------
 
@@ -155,6 +280,9 @@ class TaskQueue:
     def __init__(self):
         # All tasks, in insertion order
         self._tasks: list[Task] = []
+
+        # All chains, in insertion order
+        self._chains: list[TaskChain] = []
 
         logger.info("TaskQueue initialized")
 
@@ -286,6 +414,51 @@ class TaskQueue:
     def to_broadcast_list(self) -> list[dict]:
         """Return all tasks as dicts, newest first — for dashboard broadcast."""
         return [t.to_dict() for t in reversed(self._tasks)]
+
+    # -------------------------------------------------------------------
+    # Chain management
+    # -------------------------------------------------------------------
+
+    def add_chain(self, chain: "TaskChain"):
+        """Store a chain and add its first step to the task list.
+
+        Only the first step is added so get_next() picks it up naturally.
+        Subsequent steps are added by the orchestrator after each step completes.
+        """
+        self._chains.append(chain)
+
+        if chain.steps:
+            first_step = chain.steps[0]
+            self._tasks.append(first_step)
+            logger.info(
+                "Chain %s added (%d steps), first step %s queued: %s",
+                chain.short_id, chain.total_steps, first_step.short_id,
+                first_step.description[:80],
+            )
+
+    def get_chain_for_task(self, task_id: str) -> "TaskChain | None":
+        """Find which chain a task belongs to, if any."""
+        for chain in self._chains:
+            for step in chain.steps:
+                if step.task_id == task_id:
+                    return chain
+        return None
+
+    def get_chain(self, chain_id: str) -> "TaskChain | None":
+        """Look up a chain by its UUID or short ID prefix."""
+        for chain in self._chains:
+            if chain.chain_id == chain_id or chain.chain_id.startswith(chain_id):
+                return chain
+        return None
+
+    @property
+    def chains(self) -> list["TaskChain"]:
+        """All chains, in insertion order."""
+        return list(self._chains)
+
+    def chains_to_broadcast_list(self) -> list[dict]:
+        """Return all chains as dicts, newest first — for dashboard broadcast."""
+        return [c.to_dict() for c in reversed(self._chains)]
 
     def __len__(self) -> int:
         """Total number of tasks (all statuses)."""
