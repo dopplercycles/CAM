@@ -3595,6 +3595,93 @@
             font-size: 0.85rem;
         }
 
+        /* --- Launch Readiness Panel --- */
+        .lr-section {
+            margin-bottom: 2rem;
+        }
+
+        .lr-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .lr-header h2 {
+            margin: 0;
+        }
+
+        .lr-btn {
+            background: transparent;
+            border: 1px solid #d29922;
+            color: #d29922;
+            padding: 0.35rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        .lr-btn:hover {
+            background: rgba(210, 153, 34, 0.15);
+        }
+
+        .lr-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .lr-progress-container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 0.75rem;
+            display: none;
+        }
+
+        .lr-progress-bar {
+            height: 6px;
+            background: #d29922;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .lr-progress-text {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #8b949e;
+            margin-top: 0.35rem;
+        }
+
+        .lr-summary {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .lr-summary.all-pass {
+            border-color: #238636;
+        }
+
+        .lr-summary.has-fail {
+            border-color: var(--danger);
+        }
+
+        .lr-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+        }
+
         /* --- Persona Panel --- */
         .persona-section {
             margin-bottom: 2rem;
@@ -4501,7 +4588,7 @@
         }
 
         /* --- Panel Size Presets --- */
-        [data-panel-size="compact"] > *:not(h2):not(.settings-header):not(.deploy-header):not(.msgbus-header):not(.self-test-header) {
+        [data-panel-size="compact"] > *:not(h2):not(.settings-header):not(.deploy-header):not(.msgbus-header):not(.self-test-header):not(.lr-header) {
             display: none !important;
         }
 
@@ -5396,6 +5483,21 @@
             </div>
         </section>
 
+        <section class="lr-section" data-panel-id="launch-readiness">
+            <div class="lr-header">
+                <h2>Launch Readiness</h2>
+                <button class="lr-btn" id="lr-btn" onclick="runLaunchReadiness()">Run Launch Check</button>
+            </div>
+            <div class="lr-progress-container" id="lr-progress-container">
+                <div class="lr-progress-bar" id="lr-progress-bar"></div>
+                <div class="lr-progress-text" id="lr-progress-text">0 / 12</div>
+            </div>
+            <div class="lr-summary" id="lr-summary" style="display:none;"></div>
+            <div id="lr-results">
+                <div class="lr-empty">Click "Run Launch Check" to validate all subsystems end-to-end.</div>
+            </div>
+        </section>
+
         <section class="persona-section" id="persona-section" data-panel-id="persona">
             <div class="persona-header">
                 <h2>Persona</h2>
@@ -5506,6 +5608,7 @@
             { id: 'event-log', name: 'Activity Log' },
             { id: 'security', name: 'Security & Audit' },
             { id: 'self-test', name: 'System Self-Test' },
+            { id: 'launch-readiness', name: 'Launch Readiness' },
             { id: 'persona', name: 'Persona' },
             { id: 'settings', name: 'Settings' },
             { id: 'agents', name: 'Agent Status Board' },
@@ -5753,6 +5856,10 @@
                     handleSecurityAuditFiltered(data);
                 } else if (data.type === "self_test_results") {
                     renderSelfTestResults(data);
+                } else if (data.type === "launch_readiness_progress") {
+                    handleLRProgress(data);
+                } else if (data.type === "launch_readiness_results") {
+                    renderLRResults(data);
                 } else if (data.type === "schedule_status") {
                     handleScheduleStatus(data);
                 } else if (data.type === "schedule_created") {
@@ -8153,6 +8260,93 @@
             }
 
             document.getElementById("self-test-results").innerHTML = html;
+        }
+
+        // ---------------------------------------------------------------
+        // Launch Readiness
+        // ---------------------------------------------------------------
+
+        function runLaunchReadiness() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const btn = document.getElementById("lr-btn");
+            btn.disabled = true;
+            btn.textContent = "Running...";
+            document.getElementById("lr-results").innerHTML =
+                '<div class="lr-empty">Running integration checks...</div>';
+            document.getElementById("lr-summary").style.display = "none";
+
+            // Show and reset progress bar
+            const progContainer = document.getElementById("lr-progress-container");
+            progContainer.style.display = "block";
+            document.getElementById("lr-progress-bar").style.width = "0%";
+            document.getElementById("lr-progress-text").textContent = "0 / 12";
+
+            ws.send(JSON.stringify({ type: "run_launch_readiness" }));
+        }
+
+        function handleLRProgress(data) {
+            const pct = Math.round((data.completed / data.total) * 100);
+            document.getElementById("lr-progress-bar").style.width = pct + "%";
+            document.getElementById("lr-progress-text").textContent =
+                `${data.completed} / ${data.total} — ${data.result.name}`;
+        }
+
+        function renderLRResults(data) {
+            const btn = document.getElementById("lr-btn");
+            btn.disabled = false;
+            btn.textContent = "Run Launch Check";
+
+            // Hide progress bar
+            document.getElementById("lr-progress-container").style.display = "none";
+
+            // Summary bar
+            const summaryEl = document.getElementById("lr-summary");
+            summaryEl.style.display = "flex";
+            summaryEl.className = "lr-summary " +
+                (data.failed === 0 ? "all-pass" : "has-fail");
+            summaryEl.innerHTML = `
+                <span class="st-pass-count">${data.passed} passed</span>
+                <span class="st-fail-count">${data.failed} failed</span>
+                <span>of ${data.total}</span>
+                <span class="st-duration">${(data.duration_ms / 1000).toFixed(1)}s</span>
+            `;
+
+            // Group results by category
+            const categories = {};
+            const categoryOrder = [
+                "prerequisite", "task_flow", "agent",
+                "data", "resilience", "communication"
+            ];
+            for (const r of (data.results || [])) {
+                const cat = r.category || "other";
+                if (!categories[cat]) categories[cat] = [];
+                categories[cat].push(r);
+            }
+
+            let html = "";
+            for (const cat of categoryOrder) {
+                const items = categories[cat];
+                if (!items) continue;
+                html += `<div class="self-test-category">`;
+                html += `<div class="self-test-category-label">${cat.replace("_", " ")}</div>`;
+                for (const r of items) {
+                    const cls = r.passed ? "st-pass" : "st-fail";
+                    const dur = r.duration_ms < 1000
+                        ? `${Math.round(r.duration_ms)}ms`
+                        : `${(r.duration_ms / 1000).toFixed(1)}s`;
+                    html += `
+                        <div class="self-test-item">
+                            <div class="st-dot ${cls}"></div>
+                            <div class="st-name">${r.name}</div>
+                            <div class="st-message">${r.message}</div>
+                            <div class="st-time">${dur}</div>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            }
+
+            document.getElementById("lr-results").innerHTML = html;
         }
 
         // ---------------------------------------------------------------

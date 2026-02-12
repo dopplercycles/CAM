@@ -51,6 +51,7 @@ from tools.content.tts_pipeline import TTSPipeline
 from agents.research_agent import ResearchAgent
 from agents.business_agent import BusinessAgent, BusinessStore
 from tests.self_test import SelfTest
+from tests.integration_test import LaunchReadiness
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +166,9 @@ kill_switch_active: bool = False
 
 # Last self-test results cache — populated when dashboard runs self-test
 last_self_test_results: dict | None = None
+
+# Last launch readiness results cache — populated when dashboard runs integration test
+last_launch_readiness_results: dict | None = None
 
 # Background task handle for the orchestrator loop
 orchestrator_task: asyncio.Task | None = None
@@ -1715,6 +1719,8 @@ async def dashboard_websocket(websocket: WebSocket):
             await websocket.close(code=4401, reason="Not authenticated")
             return
 
+    global last_self_test_results, last_launch_readiness_results
+
     await websocket.accept()
     dashboard_clients.append(websocket)
     logger.info(
@@ -1883,6 +1889,13 @@ async def dashboard_websocket(websocket: WebSocket):
         await websocket.send_json({
             "type": "telegram_status",
             "connected": telegram_bot.is_connected,
+        })
+
+    # Send cached launch readiness results if available
+    if last_launch_readiness_results:
+        await websocket.send_json({
+            "type": "launch_readiness_results",
+            **last_launch_readiness_results,
         })
 
     try:
@@ -2932,7 +2945,6 @@ async def dashboard_websocket(websocket: WebSocket):
 
             elif msg.get("type") == "run_self_test":
                 # Run the system self-test suite
-                global last_self_test_results
                 self_test = SelfTest(
                     config=config,
                     event_logger=event_logger,
@@ -2954,6 +2966,48 @@ async def dashboard_websocket(websocket: WebSocket):
                 last_self_test_results = results
                 await broadcast_to_dashboards({
                     "type": "self_test_results",
+                    **results,
+                })
+
+            elif msg.get("type") == "run_launch_readiness":
+                # Run the launch readiness integration test suite
+                async def lr_progress(completed, total, result):
+                    """Broadcast real-time progress to all dashboards."""
+                    await broadcast_to_dashboards({
+                        "type": "launch_readiness_progress",
+                        "completed": completed,
+                        "total": total,
+                        "result": result,
+                    })
+
+                lr = LaunchReadiness(
+                    config=config,
+                    event_logger=event_logger,
+                    router=orchestrator.router,
+                    registry=registry,
+                    task_queue=task_queue,
+                    short_term_memory=short_term_memory,
+                    working_memory=working_memory,
+                    episodic_memory=episodic_memory,
+                    long_term_memory=long_term_memory,
+                    analytics=analytics,
+                    security_audit_log=security_audit_log,
+                    agent_websockets=agent_websockets,
+                    port=config.dashboard.port,
+                    orchestrator=orchestrator,
+                    notification_manager=notification_manager,
+                    backup_manager=backup_manager,
+                    telegram_bot=telegram_bot,
+                    content_agent=content_agent,
+                    research_agent=research_agent,
+                    business_agent=business_agent,
+                    self_test_class=SelfTest,
+                    on_progress=lr_progress,
+                )
+                results = await lr.run_all()
+                last_launch_readiness_results = results
+                await broadcast_to_dashboards({
+                    "type": "launch_readiness_results",
                     **results,
                 })
 
