@@ -747,7 +747,7 @@ business_agent = BusinessAgent(
 # Doppler Scout — motorcycle listing scraper with deal scoring
 _scout_cfg = getattr(config, 'scout', None)
 _scout_criteria = SearchCriteria(
-    makes=getattr(_scout_cfg, 'makes', SearchCriteria.makes),
+    makes=getattr(_scout_cfg, 'makes', ["honda", "yamaha", "suzuki", "kawasaki", "harley-davidson", "ducati"]),
     models=getattr(_scout_cfg, 'models', []),
     year_min=getattr(_scout_cfg, 'year_min', 0),
     year_max=getattr(_scout_cfg, 'year_max', 0),
