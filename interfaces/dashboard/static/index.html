@@ -990,6 +990,117 @@
             font-size: 0.85rem;
         }
 
+        /* --- Backup & Recovery Section --- */
+        .backup-section {
+            margin-bottom: 2rem;
+        }
+
+        .backup-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .backup-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .backup-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .backup-card .card-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .backup-card .card-value {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .backup-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .backup-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .backup-row .backup-filename {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .backup-row .backup-size {
+            color: var(--text-secondary);
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .backup-row .backup-date {
+            color: var(--text-secondary);
+            min-width: 140px;
+            text-align: right;
+        }
+
+        .backup-btn {
+            padding: 0.3rem 0.7rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .backup-btn-primary {
+            background: var(--primary);
+            color: var(--bg-primary);
+        }
+
+        .backup-btn-primary:hover {
+            background: var(--primary-dim);
+        }
+
+        .backup-btn-restore {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .backup-btn-restore:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
         /* --- Memory Status Section --- */
         .memory-section {
             margin-bottom: 2rem;
@@ -4481,6 +4592,30 @@
             </div>
         </section>
 
+        <section class="backup-section">
+            <h2>Backup & Recovery</h2>
+            <div class="backup-header">
+                <div class="backup-cards">
+                    <div class="backup-card">
+                        <span class="card-label">Last Backup</span>
+                        <span class="card-value" id="backup-last-time">Never</span>
+                    </div>
+                    <div class="backup-card">
+                        <span class="card-label">Backups</span>
+                        <span class="card-value" id="backup-count">0</span>
+                    </div>
+                    <div class="backup-card">
+                        <span class="card-label">Total Size</span>
+                        <span class="card-value" id="backup-total-size">0 B</span>
+                    </div>
+                </div>
+                <button class="backup-btn backup-btn-primary" onclick="triggerBackup()" id="backup-now-btn">Backup Now</button>
+            </div>
+            <div class="backup-list" id="backup-list">
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">No backups yet</div>
+            </div>
+        </section>
+
         <section class="memory-section">
             <h2>Memory Status</h2>
             <div class="memory-cards">
@@ -4870,6 +5005,12 @@
                     handleDeployResult(data);
                 } else if (data.type === "deploy_progress") {
                     handleDeployProgress(data);
+                } else if (data.type === "backup_status") {
+                    handleBackupStatus(data);
+                } else if (data.type === "backup_result") {
+                    handleBackupResult(data);
+                } else if (data.type === "backup_restore_result") {
+                    handleBackupRestoreResult(data);
                 } else if (data.type === "memory_status") {
                     handleMemoryStatus(data);
                 } else if (data.type === "episodic_search_results") {
@@ -7708,6 +7849,98 @@
                     <span class="deploy-time">${time}</span>
                 </div>`;
             }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Backup & Recovery
+        // ---------------------------------------------------------------
+
+        let backupStatus = { last_backup: null, count: 0, total_size: 0, backups: [] };
+
+        function handleBackupStatus(data) {
+            backupStatus = {
+                last_backup: data.last_backup || null,
+                count: data.count || 0,
+                total_size: data.total_size || 0,
+                backups: data.backups || [],
+            };
+            renderBackupPanel();
+        }
+
+        function handleBackupResult(data) {
+            if (data.ok) {
+                addNotification("Backup complete: " + data.filename, "info");
+            } else {
+                addNotification("Backup failed: " + (data.error || "unknown"), "error");
+            }
+            const btn = document.getElementById("backup-now-btn");
+            if (btn) btn.disabled = false;
+        }
+
+        function handleBackupRestoreResult(data) {
+            if (data.ok) {
+                addNotification("Restore complete: " + data.files_restored + " files. Restart server to apply.", "info");
+            } else {
+                addNotification("Restore failed: " + (data.error || "unknown"), "error");
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return "0 B";
+            const units = ["B", "KB", "MB", "GB"];
+            let i = 0;
+            let val = bytes;
+            while (val >= 1024 && i < units.length - 1) {
+                val /= 1024;
+                i++;
+            }
+            return val.toFixed(1) + " " + units[i];
+        }
+
+        function renderBackupPanel() {
+            // Status cards
+            const lastEl = document.getElementById("backup-last-time");
+            const countEl = document.getElementById("backup-count");
+            const sizeEl = document.getElementById("backup-total-size");
+
+            if (backupStatus.last_backup) {
+                const ts = backupStatus.last_backup.created_at || backupStatus.last_backup.timestamp;
+                lastEl.textContent = ts ? new Date(ts).toLocaleString() : "Unknown";
+            } else {
+                lastEl.textContent = "Never";
+            }
+            countEl.textContent = backupStatus.count;
+            sizeEl.textContent = formatBytes(backupStatus.total_size);
+
+            // Backup list
+            const container = document.getElementById("backup-list");
+            if (!backupStatus.backups || backupStatus.backups.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.85rem;">No backups yet</div>';
+                return;
+            }
+
+            container.innerHTML = backupStatus.backups.map(b => {
+                const date = b.created_at ? new Date(b.created_at).toLocaleString() : "";
+                return `<div class="backup-row">
+                    <span class="backup-filename">${b.filename}</span>
+                    <span class="backup-size">${formatBytes(b.size)}</span>
+                    <span class="backup-date">${date}</span>
+                    <button class="backup-btn backup-btn-restore" onclick="restoreBackup('${b.filename}')">Restore</button>
+                </div>`;
+            }).join("");
+        }
+
+        function triggerBackup() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const btn = document.getElementById("backup-now-btn");
+            if (btn) btn.disabled = true;
+            ws.send(JSON.stringify({ type: "backup_now" }));
+        }
+
+        function restoreBackup(filename) {
+            if (!confirm("Restore from " + filename + "?\n\nThis will overwrite current data. The server will need a restart after restore.")) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: "backup_restore", filename: filename }));
         }
 
         // ---------------------------------------------------------------

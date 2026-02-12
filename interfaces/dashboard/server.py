@@ -26,6 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from core.agent_registry import AgentRegistry
 from core.config import get_config
 from core.event_logger import EventLogger
+from core.backup import BackupManager
 from core.deployer import Deployer
 from core.file_transfer import FileTransferManager, chunk_file_data, compute_checksum
 from core.health_monitor import HealthMonitor
@@ -395,6 +396,15 @@ scheduler = Scheduler(
     on_schedule_change=broadcast_schedule_status,
 )
 
+# Seed daily backup schedule if it doesn't already exist
+if not any(s.name == "Daily Backup" for s in scheduler._schedules.values()):
+    scheduler.add_schedule(
+        name="Daily Backup",
+        description="system_backup",
+        schedule_type=ScheduleType.DAILY,
+        run_at_time=config.backup.daily_backup_time,
+    )
+
 
 async def relay_file_to_agent(transfer, data: bytes, agent_ws):
     """Send file data to an agent in chunks over WebSocket.
@@ -444,6 +454,9 @@ deployer = Deployer(
     relay_fn=relay_file_to_agent,
     config=config,
 )
+
+# Backup manager — creates/restores/rotates backup archives
+backup_manager = BackupManager(config=config, event_logger=event_logger)
 
 
 # ---------------------------------------------------------------------------
@@ -549,6 +562,14 @@ async def dispatch_to_agent(task, plan):
             return business_result
     except Exception as e:
         logger.warning("Business agent failed for task %s: %s", task.short_id, e)
+
+    # --- System tasks: backup ---
+    if task.description == "system_backup":
+        task.assigned_agent = "backup_manager"
+        result = backup_manager.backup()
+        if result.get("ok"):
+            return f"Backup complete: {result['filename']} ({result['file_count']} files)"
+        return f"Backup failed: {result.get('error', 'unknown error')}"
 
     # --- Routing: find the target agent ---
     agent_id = None
@@ -960,6 +981,7 @@ app.state.business_agent = business_agent
 app.state.security_audit_log = security_audit_log
 app.state.session_manager = session_manager
 app.state.deployer = deployer
+app.state.backup_manager = backup_manager
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -1266,6 +1288,12 @@ async def get_security_audit():
 async def get_deploy_status():
     """Return deployer status: local version, agent versions, recent history."""
     return deployer.get_status()
+
+
+@app.get("/api/backup/status")
+async def get_backup_status():
+    """Return backup system status: last backup, count, total size, list."""
+    return backup_manager.get_status()
 
 
 @app.get("/api/config")
@@ -1698,6 +1726,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "deploy_status",
         **deployer.get_status(),
+    })
+
+    # Send backup status
+    await websocket.send_json({
+        "type": "backup_status",
+        **backup_manager.get_status(),
     })
 
     # Send current schedule state
@@ -2233,6 +2267,27 @@ async def dashboard_websocket(websocket: WebSocket):
                 await broadcast_to_dashboards({
                     "type": "deploy_status",
                     **deployer.get_status(),
+                })
+
+            elif msg.get("type") == "backup_now":
+                # Run backup immediately
+                result = backup_manager.backup()
+                await broadcast_to_dashboards({
+                    "type": "backup_result",
+                    **result,
+                })
+                await broadcast_to_dashboards({
+                    "type": "backup_status",
+                    **backup_manager.get_status(),
+                })
+
+            elif msg.get("type") == "backup_restore":
+                # Restore from a specific backup archive
+                filename = msg.get("filename", "")
+                result = backup_manager.restore(filename)
+                await broadcast_to_dashboards({
+                    "type": "backup_restore_result",
+                    **result,
                 })
 
             elif msg.get("type") == "schedule_create":

@@ -176,6 +176,11 @@ _DEFAULTS: dict[str, Any] = {
         "approval_timeout": 30,
         "log_tier1_actions": True,
     },
+    "backup": {
+        "backup_dir": "data/backups",
+        "max_backups": 10,
+        "daily_backup_time": "03:00",
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value
