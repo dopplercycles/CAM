@@ -3326,6 +3326,101 @@
             font-size: 0.85rem;
         }
 
+        /* --- Media Library --- */
+
+        .ml-stats-row {
+            display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .ml-stat-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 0.6rem 1rem; text-align: center; min-width: 90px;
+        }
+        .ml-stat-value {
+            font-size: 1.4rem; font-weight: 700; color: var(--text-primary);
+        }
+        .ml-stat-label {
+            font-size: 0.75rem; color: var(--text-tertiary); text-transform: uppercase;
+        }
+
+        .ml-tool-status {
+            font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 1rem;
+        }
+        .ml-tool-ok { color: var(--accent-green, #4ade80); }
+        .ml-tool-missing { color: var(--accent-red, #f87171); }
+
+        .ml-scan-bar {
+            display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .ml-scan-bar button {
+            background: var(--accent-blue, #3b82f6); color: #fff; border: none;
+            border-radius: 6px; padding: 0.4rem 1rem; cursor: pointer; font-size: 0.85rem;
+        }
+        .ml-scan-bar button:hover { opacity: 0.85; }
+        .ml-scan-bar .ml-watch-dir {
+            font-size: 0.8rem; color: var(--text-tertiary);
+        }
+
+        .ml-file-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+        .ml-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 1rem;
+        }
+        .ml-card-header {
+            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+        }
+        .ml-card-filename {
+            font-weight: 600; font-size: 0.95rem; color: var(--text-primary);
+            word-break: break-all;
+        }
+        .ml-badge {
+            display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+        }
+        .ml-badge-pending    { background: #6b7280; color: #fff; }
+        .ml-badge-scanning   { background: #3b82f6; color: #fff; }
+        .ml-badge-processing { background: #eab308; color: #000; }
+        .ml-badge-ready      { background: #22c55e; color: #fff; }
+        .ml-badge-failed     { background: #ef4444; color: #fff; }
+
+        .ml-card-body {
+            display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-start;
+        }
+        .ml-thumb-preview {
+            width: 160px; height: 90px; object-fit: cover; border-radius: 4px;
+            background: var(--bg-tertiary, #1e1e1e); flex-shrink: 0;
+        }
+        .ml-thumb-placeholder {
+            width: 160px; height: 90px; border-radius: 4px;
+            background: var(--bg-tertiary, #1e1e1e); display: flex;
+            align-items: center; justify-content: center;
+            color: var(--text-tertiary); font-size: 0.75rem; flex-shrink: 0;
+        }
+        .ml-card-meta {
+            display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .ml-card-meta span { white-space: nowrap; }
+
+        .ml-card-actions {
+            display: flex; gap: 0.4rem; margin-top: 0.6rem; flex-wrap: wrap;
+        }
+        .ml-card-actions button {
+            background: var(--bg-tertiary, #2a2a2a); color: var(--text-secondary);
+            border: 1px solid var(--border-primary); border-radius: 4px;
+            padding: 0.25rem 0.6rem; font-size: 0.75rem; cursor: pointer;
+        }
+        .ml-card-actions button:hover {
+            background: var(--accent-blue, #3b82f6); color: #fff; border-color: transparent;
+        }
+        .ml-card-actions button.ml-btn-danger:hover {
+            background: var(--accent-red, #ef4444);
+        }
+
+        .ml-empty {
+            color: var(--text-tertiary); font-style: italic; padding: 1rem 0;
+        }
+
         /* --- Voice Synthesis (TTS) --- */
         .tts-section {
             margin-bottom: 2rem;
@@ -7240,6 +7335,31 @@
             </div>
         </section>
 
+        <section data-panel-id="media-library" style="display:none;">
+            <h2>Media Library</h2>
+
+            <div class="ml-stats-row" id="ml-stats-row">
+                <div class="ml-stat-card"><div class="ml-stat-value" id="ml-stat-total">0</div><div class="ml-stat-label">Total Files</div></div>
+                <div class="ml-stat-card"><div class="ml-stat-value" id="ml-stat-processing">0</div><div class="ml-stat-label">Processing</div></div>
+                <div class="ml-stat-card"><div class="ml-stat-value" id="ml-stat-ready">0</div><div class="ml-stat-label">Ready</div></div>
+                <div class="ml-stat-card"><div class="ml-stat-value" id="ml-stat-failed">0</div><div class="ml-stat-label">Failed</div></div>
+            </div>
+
+            <div class="ml-tool-status" id="ml-tool-status">
+                Tools: <span id="ml-tool-ffmpeg">ffmpeg: checking...</span> &nbsp;
+                <span id="ml-tool-ffprobe">ffprobe: checking...</span>
+            </div>
+
+            <div class="ml-scan-bar">
+                <button onclick="mediaScan()">Scan for New Files</button>
+                <span class="ml-watch-dir" id="ml-watch-dir">Watch: data/media/import</span>
+            </div>
+
+            <div class="ml-file-list" id="ml-file-list">
+                <div class="ml-empty">No media files yet. Click "Scan for New Files" to import footage.</div>
+            </div>
+        </section>
+
         <section class="tts-section" data-panel-id="tts">
             <h2>Voice Synthesis</h2>
 
@@ -8613,6 +8733,7 @@
             { id: 'content', name: 'Content Calendar' },
             { id: 'pipeline', name: 'Content Pipeline' },
             { id: 'youtube', name: 'YouTube Publishing' },
+            { id: 'media-library', name: 'Media Library' },
             { id: 'tts', name: 'Voice Synthesis' },
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
@@ -8911,6 +9032,29 @@
                     }
                 } else if (data.type === "yt_stats_updated") {
                     if (!data.ok) console.warn("YT stats update failed:", data.error);
+
+                // Media Library
+                } else if (data.type === "media_status") {
+                    handleMediaStatus(data);
+                } else if (data.type === "media_scanned") {
+                    if (data.ok) console.log("Scanned", data.count, "new file(s)");
+                } else if (data.type === "media_processed") {
+                    if (!data.ok) console.warn("Media processing failed:", data.error);
+                } else if (data.type === "media_extracted") {
+                    if (!data.ok) console.warn("Metadata extraction failed:", data.error);
+                } else if (data.type === "media_thumbs_generated") {
+                    if (data.ok) console.log("Generated", data.count, "thumbnail(s)");
+                } else if (data.type === "media_thumb_suggested") {
+                    if (!data.ok) console.warn("Thumbnail suggestion failed:", data.error);
+                } else if (data.type === "media_transcoded") {
+                    if (!data.ok) console.warn("Transcode failed:", data.error);
+                } else if (data.type === "media_linked_pipeline") {
+                    if (!data.ok) console.warn("Pipeline link failed:", data.error);
+                } else if (data.type === "media_linked_youtube") {
+                    if (!data.ok) console.warn("YouTube link failed:", data.error);
+                } else if (data.type === "media_deleted") {
+                    if (!data.ok) console.warn("Media delete failed:", data.error);
+
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
                 } else if (data.type === "tts_result") {
@@ -10990,6 +11134,188 @@
             if (!confirm("Delete this video?")) return;
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "yt_delete", video_id: videoId }));
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Media Library
+        // ---------------------------------------------------------------
+
+        let mediaFiles = [];
+        let mediaStatus = { total: 0, pending: 0, scanning: 0, processing: 0, ready: 0, failed: 0 };
+        let mediaTools = { ffmpeg: false, ffprobe: false };
+
+        function handleMediaStatus(data) {
+            mediaFiles = data.media || [];
+            mediaStatus = data.status || mediaStatus;
+            mediaTools = data.tools || mediaTools;
+            renderMediaStats();
+            renderMediaToolStatus();
+            renderMediaFiles();
+        }
+
+        function renderMediaStats() {
+            const el = (id) => document.getElementById(id);
+            if (el("ml-stat-total")) el("ml-stat-total").textContent = mediaStatus.total || 0;
+            if (el("ml-stat-processing")) el("ml-stat-processing").textContent = (mediaStatus.scanning || 0) + (mediaStatus.processing || 0);
+            if (el("ml-stat-ready")) el("ml-stat-ready").textContent = mediaStatus.ready || 0;
+            if (el("ml-stat-failed")) el("ml-stat-failed").textContent = mediaStatus.failed || 0;
+        }
+
+        function renderMediaToolStatus() {
+            const ffmpegEl = document.getElementById("ml-tool-ffmpeg");
+            const ffprobeEl = document.getElementById("ml-tool-ffprobe");
+            if (ffmpegEl) {
+                ffmpegEl.textContent = "ffmpeg: " + (mediaTools.ffmpeg ? "available" : "not found");
+                ffmpegEl.className = mediaTools.ffmpeg ? "ml-tool-ok" : "ml-tool-missing";
+            }
+            if (ffprobeEl) {
+                ffprobeEl.textContent = "ffprobe: " + (mediaTools.ffprobe ? "available" : "not found");
+                ffprobeEl.className = mediaTools.ffprobe ? "ml-tool-ok" : "ml-tool-missing";
+            }
+        }
+
+        function renderMediaFiles() {
+            const container = document.getElementById("ml-file-list");
+            if (!container) return;
+
+            if (!mediaFiles.length) {
+                container.innerHTML = '<div class="ml-empty">No media files yet. Click "Scan for New Files" to import footage.</div>';
+                return;
+            }
+
+            container.innerHTML = mediaFiles.map(m => {
+                const statusClass = "ml-badge-" + m.status;
+
+                // Thumbnail or placeholder
+                let thumbHtml;
+                if (m.best_thumbnail) {
+                    thumbHtml = `<img class="ml-thumb-preview" src="/media/thumb/${encodeURIComponent(m.media_id)}" alt="thumbnail" onerror="this.style.display='none'">`;
+                } else {
+                    thumbHtml = `<div class="ml-thumb-placeholder">No thumbnail</div>`;
+                }
+
+                // Format file size
+                let sizeStr = "?";
+                if (m.file_size) {
+                    if (m.file_size >= 1073741824) sizeStr = (m.file_size / 1073741824).toFixed(1) + " GB";
+                    else if (m.file_size >= 1048576) sizeStr = (m.file_size / 1048576).toFixed(1) + " MB";
+                    else sizeStr = (m.file_size / 1024).toFixed(0) + " KB";
+                }
+
+                // Format duration
+                let durStr = "";
+                if (m.duration) {
+                    const mins = Math.floor(m.duration / 60);
+                    const secs = Math.floor(m.duration % 60);
+                    durStr = mins + ":" + String(secs).padStart(2, "0");
+                }
+
+                // Meta items
+                let metaItems = [];
+                if (durStr) metaItems.push("Duration: " + durStr);
+                if (m.resolution && m.resolution !== "unknown") metaItems.push("Res: " + m.resolution);
+                if (m.codec) metaItems.push("Codec: " + m.codec);
+                if (m.fps) metaItems.push("FPS: " + m.fps);
+                if (m.audio_codec) metaItems.push("Audio: " + m.audio_codec);
+                metaItems.push("Size: " + sizeStr);
+                if (m.format) metaItems.push("Format: " + m.format);
+
+                // Action buttons
+                let actions = "";
+                actions += `<button onclick="mediaProcess('${m.media_id}')">Process All</button>`;
+                actions += `<button onclick="mediaExtract('${m.media_id}')">Extract Metadata</button>`;
+                actions += `<button onclick="mediaThumbnails('${m.media_id}')">Gen Thumbnails</button>`;
+                actions += `<button onclick="mediaSuggestThumb('${m.media_id}')">Best Thumb</button>`;
+                actions += `<button onclick="mediaTranscode('${m.media_id}')">Transcode</button>`;
+                actions += `<button onclick="mediaLinkPipeline('${m.media_id}')">Link Pipeline</button>`;
+                actions += `<button onclick="mediaLinkYoutube('${m.media_id}')">Link YouTube</button>`;
+                actions += `<button class="ml-btn-danger" onclick="mediaDelete('${m.media_id}')">Delete</button>`;
+
+                // Link info
+                let linkInfo = [];
+                if (m.pipeline_id) linkInfo.push("Pipeline: " + m.pipeline_id.substring(0, 8));
+                if (m.youtube_video_id) linkInfo.push("YT: " + m.youtube_video_id.substring(0, 8));
+
+                return `<div class="ml-card">
+                    <div class="ml-card-header">
+                        <span class="ml-card-filename">${escapeHtml(m.filename)}</span>
+                        <span class="ml-badge ${statusClass}">${escapeHtml(m.status)}</span>
+                        <span style="font-size:0.7rem;color:var(--text-tertiary)">${escapeHtml(m.short_id)}</span>
+                    </div>
+                    <div class="ml-card-body">
+                        ${thumbHtml}
+                        <div class="ml-card-meta">${metaItems.map(i => "<span>" + escapeHtml(i) + "</span>").join("")}</div>
+                    </div>
+                    ${linkInfo.length ? '<div style="font-size:0.75rem;color:var(--text-tertiary);margin-top:0.3rem">' + linkInfo.map(l => escapeHtml(l)).join(" | ") + '</div>' : ''}
+                    <div class="ml-card-actions">${actions}</div>
+                </div>`;
+            }).join("");
+        }
+
+        // Media Library action functions
+        function mediaScan() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_scan" }));
+            }
+        }
+
+        function mediaProcess(mediaId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_process", media_id: mediaId }));
+            }
+        }
+
+        function mediaExtract(mediaId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_extract", media_id: mediaId }));
+            }
+        }
+
+        function mediaThumbnails(mediaId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_thumbnails", media_id: mediaId }));
+            }
+        }
+
+        function mediaSuggestThumb(mediaId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_suggest_thumb", media_id: mediaId }));
+            }
+        }
+
+        function mediaTranscode(mediaId) {
+            const fmt = prompt("Target format:", "mp4");
+            if (!fmt) return;
+            const res = prompt("Target resolution (e.g. 1920x1080, or leave blank):", "");
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "media_transcode", media_id: mediaId,
+                    format: fmt, resolution: res || null,
+                }));
+            }
+        }
+
+        function mediaLinkPipeline(mediaId) {
+            const pid = prompt("Content pipeline ID:");
+            if (!pid) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_link_pipeline", media_id: mediaId, pipeline_id: pid }));
+            }
+        }
+
+        function mediaLinkYoutube(mediaId) {
+            const ytId = prompt("YouTube video ID:");
+            if (!ytId) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_link_youtube", media_id: mediaId, youtube_video_id: ytId }));
+            }
+        }
+
+        function mediaDelete(mediaId) {
+            if (!confirm("Delete this media file?")) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "media_delete", media_id: mediaId }));
             }
         }
 

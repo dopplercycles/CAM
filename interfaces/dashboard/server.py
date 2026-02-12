@@ -49,6 +49,7 @@ from tools.doppler.market_analyzer import MarketAnalyzer
 from core.webhook_manager import WebhookManager
 from tools.content.pipeline import ContentPipelineManager
 from tools.content.youtube import YouTubeManager
+from tools.content.video_processor import VideoProcessor
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -395,6 +396,14 @@ async def broadcast_youtube_status():
     await broadcast_to_dashboards({
         "type": "youtube_status",
         **youtube_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_media_status():
+    """Push current media processing state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "media_status",
+        **video_processor.to_broadcast_dict(),
     })
 
 
@@ -1159,6 +1168,13 @@ youtube_manager = YouTubeManager(
     router=orchestrator.router,
 )
 
+# Video processor — media file import, metadata, thumbnails, transcoding
+video_processor = VideoProcessor(
+    db_path="data/media.db",
+    on_change=broadcast_media_status,
+    router=orchestrator.router,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1480,6 +1496,7 @@ async def lifespan(app: FastAPI):
     content_calendar.close()
     pipeline_manager.close()
     youtube_manager.close()
+    video_processor.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1536,6 +1553,7 @@ app.state.security_audit_log = security_audit_log
 app.state.webhook_manager = webhook_manager
 app.state.pipeline_manager = pipeline_manager
 app.state.youtube_manager = youtube_manager
+app.state.video_processor = video_processor
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2597,6 +2615,12 @@ async def dashboard_websocket(websocket: WebSocket):
         **youtube_manager.to_broadcast_dict(),
     })
 
+    # Send current media processing state
+    await websocket.send_json({
+        "type": "media_status",
+        **video_processor.to_broadcast_dict(),
+    })
+
     # Send current research results
     await websocket.send_json({
         "type": "research_status",
@@ -3645,6 +3669,86 @@ async def dashboard_websocket(websocket: WebSocket):
                     await broadcast_youtube_status()
                 else:
                     await websocket.send_json({"type": "yt_stats_updated", "ok": False, "error": "Video not found"})
+
+            # --- Media Library (Video Processor) ---
+
+            elif msg.get("type") == "media_scan":
+                new_files = video_processor.scan_footage()
+                await websocket.send_json({"type": "media_scanned", "ok": True, "count": len(new_files)})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_process":
+                media_id = msg.get("media_id", "")
+                result = await video_processor.process_media(media_id)
+                if result:
+                    await websocket.send_json({"type": "media_processed", "ok": True})
+                else:
+                    await websocket.send_json({"type": "media_processed", "ok": False, "error": "Processing failed"})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_extract":
+                media_id = msg.get("media_id", "")
+                result = video_processor.extract_metadata(media_id)
+                if result:
+                    await websocket.send_json({"type": "media_extracted", "ok": True})
+                else:
+                    await websocket.send_json({"type": "media_extracted", "ok": False, "error": "Extraction failed"})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_thumbnails":
+                media_id = msg.get("media_id", "")
+                thumbs = video_processor.generate_thumbnails(media_id)
+                await websocket.send_json({"type": "media_thumbs_generated", "ok": True, "count": len(thumbs)})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_suggest_thumb":
+                media_id = msg.get("media_id", "")
+                best = await video_processor.suggest_best_thumbnail(media_id)
+                if best:
+                    await websocket.send_json({"type": "media_thumb_suggested", "ok": True, "path": best})
+                else:
+                    await websocket.send_json({"type": "media_thumb_suggested", "ok": False, "error": "No candidates"})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_transcode":
+                media_id = msg.get("media_id", "")
+                fmt = msg.get("format", "mp4")
+                resolution = msg.get("resolution")
+                result = video_processor.transcode(media_id, target_format=fmt, target_resolution=resolution)
+                if result:
+                    await websocket.send_json({"type": "media_transcoded", "ok": True})
+                else:
+                    await websocket.send_json({"type": "media_transcoded", "ok": False, "error": "Transcode failed"})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_link_pipeline":
+                media_id = msg.get("media_id", "")
+                pipeline_id = msg.get("pipeline_id", "")
+                result = video_processor.link_pipeline(media_id, pipeline_id)
+                if result:
+                    await websocket.send_json({"type": "media_linked_pipeline", "ok": True})
+                else:
+                    await websocket.send_json({"type": "media_linked_pipeline", "ok": False, "error": "Not found"})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_link_youtube":
+                media_id = msg.get("media_id", "")
+                youtube_video_id = msg.get("youtube_video_id", "")
+                result = video_processor.link_youtube(media_id, youtube_video_id)
+                if result:
+                    await websocket.send_json({"type": "media_linked_youtube", "ok": True})
+                else:
+                    await websocket.send_json({"type": "media_linked_youtube", "ok": False, "error": "Not found"})
+                await broadcast_media_status()
+
+            elif msg.get("type") == "media_delete":
+                media_id = msg.get("media_id", "")
+                deleted = video_processor.delete_media(media_id)
+                if deleted:
+                    await websocket.send_json({"type": "media_deleted", "ok": True})
+                else:
+                    await websocket.send_json({"type": "media_deleted", "ok": False, "error": "Not found"})
+                await broadcast_media_status()
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")
