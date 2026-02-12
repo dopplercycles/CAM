@@ -53,6 +53,7 @@ from agents.content_agent import ContentAgent
 from tools.content.tts_pipeline import TTSPipeline
 from agents.research_agent import ResearchAgent
 from agents.business_agent import BusinessAgent, BusinessStore
+from tools.doppler.service_records import ServiceRecordStore
 from tests.self_test import SelfTest
 from tests.integration_test import LaunchReadiness
 
@@ -453,6 +454,19 @@ business_store = BusinessStore(
 )
 if getattr(_biz_cfg, 'seed_sample_data', True):
     business_store.seed_sample_data()
+
+async def broadcast_service_records_status():
+    """Push current service record data to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "service_records_status",
+        **service_store.to_broadcast_dict(),
+    })
+
+# Service record store — separate SQLite DB for vehicles + service records
+service_store = ServiceRecordStore(
+    db_path="data/service_records.db",
+    on_change=broadcast_service_records_status,
+)
 
 
 async def broadcast_security_audit_status():
@@ -1095,6 +1109,7 @@ async def lifespan(app: FastAPI):
     scout_store.close()
     market_analyzer.close()
     business_store.close()
+    service_store.close()
     security_audit_log.close()
     webhook_manager.close()
     analytics.close()
@@ -1131,6 +1146,7 @@ app.state.doppler_scout = doppler_scout
 app.state.market_analyzer = market_analyzer
 app.state.business_store = business_store
 app.state.business_agent = business_agent
+app.state.service_store = service_store
 app.state.security_audit_log = security_audit_log
 app.state.webhook_manager = webhook_manager
 app.state.pipeline_manager = pipeline_manager
@@ -1488,6 +1504,35 @@ async def get_market_trends():
 async def get_market_undervalued():
     """Return listings priced significantly below historical averages."""
     return {"undervalued": market_analyzer.detect_undervalued()}
+
+
+# ---------------------------------------------------------------------------
+# Service Records REST endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/service-report/{record_id}")
+async def download_service_report(record_id: str):
+    """Download a service record PDF report."""
+    # Path traversal protection — record_id must be a valid UUID
+    try:
+        uuid_obj = __import__("uuid").UUID(record_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid record ID"})
+
+    safe_id = str(uuid_obj)
+    pdf_path = Path("data/service_reports") / f"{safe_id}.pdf"
+
+    if not pdf_path.exists():
+        # Try generating it on the fly
+        result = service_store.generate_pdf(safe_id)
+        if result is None:
+            return JSONResponse(status_code=404, content={"error": "Record not found"})
+
+    return FileResponse(
+        str(pdf_path),
+        media_type="application/pdf",
+        filename=f"doppler-service-report-{safe_id[:8]}.pdf",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -2099,6 +2144,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "business_status",
         **business_store.to_broadcast_list(),
         "status": business_store.get_status(),
+    })
+
+    # Send current service records data
+    await websocket.send_json({
+        "type": "service_records_status",
+        **service_store.to_broadcast_dict(),
     })
 
     # Send current security audit state
@@ -3350,6 +3401,127 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 if removed:
                     await broadcast_business_status()
+
+            # -----------------------------------------------------------
+            # Service Records CRUD handlers
+            # -----------------------------------------------------------
+            elif msg.get("type") == "service_vehicle_create":
+                v = service_store.add_vehicle(
+                    year=msg.get("year", ""),
+                    make=msg.get("make", ""),
+                    model=msg.get("model", ""),
+                    vin=msg.get("vin", ""),
+                    owner_id=msg.get("owner_id", ""),
+                    owner_name=msg.get("owner_name", ""),
+                    color=msg.get("color", ""),
+                    mileage=int(msg.get("mileage", 0)),
+                    notes=msg.get("notes", ""),
+                )
+                event_logger.info(
+                    "business",
+                    f"Vehicle created: {v.display_name} ({v.short_id})",
+                    vehicle_id=v.short_id,
+                )
+                await broadcast_service_records_status()
+
+            elif msg.get("type") == "service_vehicle_delete":
+                vid = msg.get("vehicle_id", "")
+                removed = service_store.remove_vehicle(vid)
+                if removed:
+                    event_logger.info(
+                        "business",
+                        f"Vehicle deleted: {vid[:8]}",
+                        vehicle_id=vid[:8],
+                    )
+                await websocket.send_json({
+                    "type": "service_vehicle_deleted",
+                    "ok": removed,
+                })
+                if removed:
+                    await broadcast_service_records_status()
+
+            elif msg.get("type") == "service_record_create":
+                parts = msg.get("parts_used", [])
+                rec = service_store.add_record(
+                    vehicle_id=msg.get("vehicle_id", ""),
+                    customer_id=msg.get("customer_id", ""),
+                    customer_name=msg.get("customer_name", ""),
+                    date=msg.get("date", ""),
+                    service_type=msg.get("service_type", ""),
+                    services_performed=msg.get("services_performed", []),
+                    parts_used=parts,
+                    labor_hours=float(msg.get("labor_hours", 0)),
+                    labor_rate=float(msg.get("labor_rate", 75.0)),
+                    notes=msg.get("notes", ""),
+                    recommendations=msg.get("recommendations", ""),
+                    appointment_id=msg.get("appointment_id", ""),
+                    invoice_id=msg.get("invoice_id", ""),
+                )
+                event_logger.info(
+                    "business",
+                    f"Service record created: {rec.vehicle_summary} — ${rec.total_cost:.2f} ({rec.short_id})",
+                    record_id=rec.short_id,
+                )
+                await broadcast_service_records_status()
+
+            elif msg.get("type") == "service_record_update":
+                rec_id = msg.get("record_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("vehicle_id", "customer_id", "customer_name",
+                                    "date", "service_type", "services_performed",
+                                    "parts_used", "labor_hours", "labor_rate",
+                                    "notes", "recommendations")}
+                for float_key in ("labor_hours", "labor_rate"):
+                    if float_key in updates:
+                        updates[float_key] = float(updates[float_key])
+                updated = service_store.update_record(rec_id, **updates)
+                if updated:
+                    event_logger.info(
+                        "business",
+                        f"Service record updated: {updated.short_id}",
+                        record_id=updated.short_id,
+                    )
+                    await broadcast_service_records_status()
+
+            elif msg.get("type") == "service_record_delete":
+                rec_id = msg.get("record_id", "")
+                removed = service_store.remove_record(rec_id)
+                if removed:
+                    event_logger.info(
+                        "business",
+                        f"Service record deleted: {rec_id[:8]}",
+                        record_id=rec_id[:8],
+                    )
+                await websocket.send_json({
+                    "type": "service_record_deleted",
+                    "ok": removed,
+                })
+                if removed:
+                    await broadcast_service_records_status()
+
+            elif msg.get("type") == "service_record_pdf":
+                rec_id = msg.get("record_id", "")
+                try:
+                    pdf_path = service_store.generate_pdf(rec_id)
+                    if pdf_path:
+                        await websocket.send_json({
+                            "type": "service_record_pdf_result",
+                            "ok": True,
+                            "record_id": rec_id,
+                            "url": f"/api/service-report/{rec_id}",
+                        })
+                    else:
+                        await websocket.send_json({
+                            "type": "service_record_pdf_result",
+                            "ok": False,
+                            "error": "Record not found",
+                        })
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "service_record_pdf_result",
+                        "ok": False,
+                        "error": str(e),
+                    })
 
             elif msg.get("type") == "approval_response":
                 # Dashboard approving or rejecting a Tier 2 action

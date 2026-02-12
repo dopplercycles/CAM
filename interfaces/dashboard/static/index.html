@@ -3432,6 +3432,226 @@
             text-align: center;
         }
 
+        /* Service Records */
+        .svc-section {
+            margin-bottom: 2rem;
+        }
+        .svc-stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        .svc-stats-bar span {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .svc-sub-panel {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .svc-sub-panel h3 {
+            margin: 0 0 0.75rem 0;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+        .svc-form-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+        .svc-form-row input, .svc-form-row select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .svc-form-row input:focus, .svc-form-row select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .svc-form-row button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .svc-form-row button:hover {
+            opacity: 0.85;
+        }
+        .svc-vehicle-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .svc-vehicle-card .svc-v-info {
+            flex: 1;
+        }
+        .svc-vehicle-card .svc-v-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .svc-vehicle-card .svc-v-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .svc-vehicle-card .svc-v-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+        .svc-vehicle-card .svc-v-actions button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+        .svc-vehicle-card .svc-v-actions button:hover {
+            color: var(--text-primary);
+            border-color: var(--accent);
+        }
+        .svc-vehicle-card .svc-v-actions button.danger:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+        .svc-record-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .svc-record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .svc-record-header .svc-r-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        .svc-record-header .svc-r-type {
+            font-size: 0.75rem;
+            background: var(--accent);
+            color: #fff;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            text-transform: capitalize;
+        }
+        .svc-record-body {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .svc-record-body .svc-r-services {
+            margin: 0.3rem 0;
+        }
+        .svc-record-body .svc-r-parts {
+            margin: 0.3rem 0;
+        }
+        .svc-record-body .svc-r-cost {
+            margin-top: 0.4rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .svc-record-body .svc-r-notes {
+            margin-top: 0.3rem;
+            font-style: italic;
+            font-size: 0.8rem;
+        }
+        .svc-record-actions {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+        .svc-record-actions button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+        .svc-record-actions button:hover {
+            color: var(--text-primary);
+            border-color: var(--accent);
+        }
+        .svc-record-actions button.danger:hover {
+            border-color: var(--error);
+            color: var(--error);
+        }
+        .svc-empty {
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        .svc-history-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        .svc-add-record-form {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        .svc-add-record-form.visible {
+            display: block;
+        }
+        .svc-add-record-form h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+        .svc-parts-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+            margin-bottom: 0.3rem;
+        }
+        .svc-parts-row input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .svc-parts-row button {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+
         .scout-section {
             margin-bottom: 2rem;
         }
@@ -5677,6 +5897,82 @@
             </div>
         </section>
 
+        <section class="svc-section" data-panel-id="service-records">
+            <h2>Service Records</h2>
+
+            <div class="svc-stats-bar" id="svc-stats-bar">
+                Vehicles: <span id="svc-stat-vehicles">0</span> &middot;
+                Records: <span id="svc-stat-records">0</span> &middot;
+                This Month: <span id="svc-stat-month">0</span> &middot;
+                Revenue: <span id="svc-stat-revenue">$0.00</span>
+            </div>
+
+            <!-- Vehicles Sub-Panel -->
+            <div class="svc-sub-panel">
+                <h3>Vehicles</h3>
+                <div class="svc-form-row">
+                    <input type="text" id="svc-v-year" placeholder="Year" style="max-width:70px;">
+                    <input type="text" id="svc-v-make" placeholder="Make">
+                    <input type="text" id="svc-v-model" placeholder="Model">
+                    <input type="text" id="svc-v-vin" placeholder="VIN">
+                    <select id="svc-v-owner">
+                        <option value="">-- Owner --</option>
+                    </select>
+                    <button onclick="svcCreateVehicle()">Add Vehicle</button>
+                </div>
+                <div class="svc-form-row">
+                    <input type="text" id="svc-v-color" placeholder="Color" style="max-width:100px;">
+                    <input type="number" id="svc-v-mileage" placeholder="Mileage" style="max-width:100px;">
+                </div>
+                <div id="svc-vehicle-list">
+                    <div class="svc-empty">No vehicles yet.</div>
+                </div>
+            </div>
+
+            <!-- Service History Sub-Panel -->
+            <div class="svc-sub-panel">
+                <h3>Service History</h3>
+                <div class="svc-history-title" id="svc-history-title">Select a vehicle to view service history</div>
+                <div id="svc-record-list">
+                    <div class="svc-empty">No service records.</div>
+                </div>
+
+                <button class="svc-form-row" style="display:none;" id="svc-add-record-btn"
+                    onclick="svcToggleRecordForm()">Add Service Record</button>
+
+                <div class="svc-add-record-form" id="svc-add-record-form">
+                    <h4>New Service Record</h4>
+                    <div class="svc-form-row">
+                        <input type="date" id="svc-r-date">
+                        <select id="svc-r-type">
+                            <option value="diagnostic">Diagnostic</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="repair">Repair</option>
+                            <option value="inspection">Inspection</option>
+                        </select>
+                        <input type="number" id="svc-r-labor-hours" placeholder="Labor hrs" step="0.5" style="max-width:90px;">
+                        <input type="number" id="svc-r-labor-rate" placeholder="Rate" value="75" step="0.01" style="max-width:80px;">
+                    </div>
+                    <div class="svc-form-row">
+                        <input type="text" id="svc-r-services" placeholder="Services (comma-separated)" style="flex:1;">
+                    </div>
+                    <div class="svc-form-row">
+                        <input type="text" id="svc-r-notes" placeholder="Notes" style="flex:1;">
+                    </div>
+                    <div class="svc-form-row">
+                        <input type="text" id="svc-r-recommendations" placeholder="Recommendations" style="flex:1;">
+                    </div>
+                    <div id="svc-parts-list">
+                        <!-- Dynamic parts rows -->
+                    </div>
+                    <div class="svc-form-row">
+                        <button onclick="svcAddPartRow()" style="background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border);">+ Part</button>
+                        <button onclick="svcSubmitRecord()">Save Record</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="scout-section" data-panel-id="scout">
             <h2>Motorcycle Scout</h2>
 
@@ -6245,6 +6541,7 @@
             { id: 'tts', name: 'Voice Synthesis' },
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
+            { id: 'service-records', name: 'Service Records' },
             { id: 'scout', name: 'Motorcycle Scout' },
             { id: 'market-analytics', name: 'Market Analytics' },
             { id: 'webhooks', name: 'Webhooks' },
@@ -6501,6 +6798,14 @@
                     if (!data.ok) console.warn("Business invoice delete failed");
                 } else if (data.type === "business_inventory_deleted") {
                     if (!data.ok) console.warn("Business inventory delete failed");
+                } else if (data.type === "service_records_status") {
+                    handleServiceRecordsStatus(data);
+                } else if (data.type === "service_vehicle_deleted") {
+                    if (!data.ok) console.warn("Service vehicle delete failed");
+                } else if (data.type === "service_record_deleted") {
+                    if (!data.ok) console.warn("Service record delete failed");
+                } else if (data.type === "service_record_pdf_result") {
+                    handleServiceRecordPdf(data);
                 } else if (data.type === "scout_status") {
                     handleScoutStatus(data);
                 } else if (data.type === "scout_scan_result") {
@@ -8675,6 +8980,262 @@
                 </div>
                 `;
             }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Service Records
+        // ---------------------------------------------------------------
+        let svcVehicles = [];
+        let svcRecords = [];
+        let svcStatus = {};
+        let svcSelectedVehicleId = null;
+
+        function handleServiceRecordsStatus(data) {
+            svcVehicles = data.vehicles || [];
+            svcRecords = data.records || [];
+            svcStatus = data.status || {};
+            renderSvcVehicles();
+            renderSvcRecords();
+            updateSvcStats();
+            populateSvcOwnerDropdown();
+        }
+
+        function updateSvcStats() {
+            const s = svcStatus;
+            const el = id => document.getElementById(id);
+            const set = (id, val) => { const e = el(id); if (e) e.textContent = val; };
+            set("svc-stat-vehicles", s.total_vehicles || 0);
+            set("svc-stat-records", s.total_records || 0);
+            set("svc-stat-month", s.records_this_month || 0);
+            set("svc-stat-revenue", "$" + (s.total_revenue || 0).toFixed(2));
+        }
+
+        function populateSvcOwnerDropdown() {
+            const sel = document.getElementById("svc-v-owner");
+            if (!sel) return;
+            const current = sel.value;
+            sel.innerHTML = '<option value="">-- Owner --</option>';
+            // Use bizCustomers from the Business Operations panel
+            if (typeof bizCustomers !== "undefined") {
+                bizCustomers.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c.customer_id;
+                    opt.textContent = c.name;
+                    opt.dataset.name = c.name;
+                    sel.appendChild(opt);
+                });
+            }
+            if (current) sel.value = current;
+        }
+
+        // --- Vehicles ---
+        function svcCreateVehicle() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const ownerSel = document.getElementById("svc-v-owner");
+            const ownerOpt = ownerSel.options[ownerSel.selectedIndex];
+            ws.send(JSON.stringify({
+                type: "service_vehicle_create",
+                year: document.getElementById("svc-v-year").value.trim(),
+                make: document.getElementById("svc-v-make").value.trim(),
+                model: document.getElementById("svc-v-model").value.trim(),
+                vin: document.getElementById("svc-v-vin").value.trim(),
+                owner_id: ownerSel.value,
+                owner_name: ownerOpt && ownerOpt.dataset.name ? ownerOpt.dataset.name : "",
+                color: document.getElementById("svc-v-color").value.trim(),
+                mileage: parseInt(document.getElementById("svc-v-mileage").value) || 0,
+            }));
+            // Clear form
+            ["svc-v-year","svc-v-make","svc-v-model","svc-v-vin","svc-v-color","svc-v-mileage"].forEach(id => {
+                document.getElementById(id).value = "";
+            });
+            document.getElementById("svc-v-owner").value = "";
+        }
+
+        function svcDeleteVehicle(vehicleId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm("Delete this vehicle and its history?")) return;
+            ws.send(JSON.stringify({ type: "service_vehicle_delete", vehicle_id: vehicleId }));
+            if (svcSelectedVehicleId === vehicleId) {
+                svcSelectedVehicleId = null;
+                renderSvcRecords();
+            }
+        }
+
+        function svcViewHistory(vehicleId) {
+            svcSelectedVehicleId = vehicleId;
+            renderSvcRecords();
+            // Show add-record button
+            const btn = document.getElementById("svc-add-record-btn");
+            if (btn) btn.style.display = "";
+        }
+
+        function renderSvcVehicles() {
+            const container = document.getElementById("svc-vehicle-list");
+            if (!container) return;
+            if (svcVehicles.length === 0) {
+                container.innerHTML = '<div class="svc-empty">No vehicles yet.</div>';
+                return;
+            }
+            container.innerHTML = svcVehicles.map(v => {
+                const selected = v.vehicle_id === svcSelectedVehicleId ? "border-color:var(--accent);" : "";
+                const mileage = v.mileage ? `${v.mileage.toLocaleString()} mi` : "";
+                return `<div class="svc-vehicle-card" style="${selected}">
+                    <div class="svc-v-info">
+                        <div class="svc-v-name">${v.display_name}</div>
+                        <div class="svc-v-meta">
+                            ${v.vin ? "VIN: " + v.vin.substring(0, 11) + "..." : ""}
+                            ${v.owner_name ? " &middot; Owner: " + v.owner_name : ""}
+                            ${mileage ? " &middot; " + mileage : ""}
+                            ${v.color ? " &middot; " + v.color : ""}
+                        </div>
+                    </div>
+                    <div class="svc-v-actions">
+                        <button onclick="svcViewHistory('${v.vehicle_id}')">View History</button>
+                        <button class="danger" onclick="svcDeleteVehicle('${v.vehicle_id}')">Delete</button>
+                    </div>
+                </div>`;
+            }).join("");
+        }
+
+        // --- Service Records ---
+        function renderSvcRecords() {
+            const container = document.getElementById("svc-record-list");
+            const titleEl = document.getElementById("svc-history-title");
+            const addBtn = document.getElementById("svc-add-record-btn");
+            if (!container) return;
+
+            if (!svcSelectedVehicleId) {
+                if (titleEl) titleEl.textContent = "Select a vehicle to view service history";
+                container.innerHTML = '<div class="svc-empty">No service records.</div>';
+                if (addBtn) addBtn.style.display = "none";
+                return;
+            }
+
+            const vehicle = svcVehicles.find(v => v.vehicle_id === svcSelectedVehicleId);
+            if (titleEl && vehicle) {
+                titleEl.textContent = `Showing: ${vehicle.display_name}${vehicle.owner_name ? " (" + vehicle.owner_name + ")" : ""}`;
+            }
+            if (addBtn) addBtn.style.display = "";
+
+            const filtered = svcRecords.filter(r => r.vehicle_id === svcSelectedVehicleId);
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="svc-empty">No service records for this vehicle.</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(r => {
+                const services = (r.services_performed || []).join(", ");
+                const partsHtml = (r.parts_used || []).map(p =>
+                    `${p.description || "Part"}${p.quantity > 1 ? " x" + p.quantity : ""} ($${(p.quantity * p.unit_cost).toFixed(2)})`
+                ).join(", ");
+                return `<div class="svc-record-card">
+                    <div class="svc-record-header">
+                        <span class="svc-r-title">${r.date}</span>
+                        <span class="svc-r-type">${r.service_type || "service"}</span>
+                    </div>
+                    <div class="svc-record-body">
+                        ${services ? `<div class="svc-r-services">Services: ${services}</div>` : ""}
+                        ${partsHtml ? `<div class="svc-r-parts">Parts: ${partsHtml}</div>` : ""}
+                        <div class="svc-r-cost">
+                            Labor: ${r.labor_hours.toFixed(1)} hrs &times; $${r.labor_rate.toFixed(2)} = $${r.labor_total.toFixed(2)}
+                            &middot; Parts: $${r.parts_total.toFixed(2)}
+                            &middot; <strong>Total: $${r.total_cost.toFixed(2)}</strong>
+                        </div>
+                        ${r.notes ? `<div class="svc-r-notes">Notes: ${r.notes}</div>` : ""}
+                        ${r.recommendations ? `<div class="svc-r-notes">Rec: ${r.recommendations}</div>` : ""}
+                    </div>
+                    <div class="svc-record-actions">
+                        <button onclick="svcGeneratePdf('${r.record_id}')">PDF Report</button>
+                        <button class="danger" onclick="svcDeleteRecord('${r.record_id}')">Delete</button>
+                    </div>
+                </div>`;
+            }).join("");
+        }
+
+        // --- Record form ---
+        function svcToggleRecordForm() {
+            const form = document.getElementById("svc-add-record-form");
+            if (form) form.classList.toggle("visible");
+        }
+
+        function svcAddPartRow() {
+            const container = document.getElementById("svc-parts-list");
+            if (!container) return;
+            const row = document.createElement("div");
+            row.className = "svc-parts-row";
+            row.innerHTML = `
+                <input type="text" placeholder="Description" class="svc-part-desc" style="flex:1;">
+                <input type="text" placeholder="Part #" class="svc-part-pn" style="max-width:90px;">
+                <input type="number" placeholder="Qty" class="svc-part-qty" value="1" style="max-width:50px;">
+                <input type="number" placeholder="Unit $" class="svc-part-cost" step="0.01" style="max-width:80px;">
+                <button onclick="this.parentElement.remove()">&times;</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function svcSubmitRecord() {
+            if (!ws || ws.readyState !== WebSocket.OPEN || !svcSelectedVehicleId) return;
+
+            const vehicle = svcVehicles.find(v => v.vehicle_id === svcSelectedVehicleId);
+            const servicesStr = document.getElementById("svc-r-services").value.trim();
+            const services = servicesStr ? servicesStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+            // Gather parts
+            const parts = [];
+            document.querySelectorAll("#svc-parts-list .svc-parts-row").forEach(row => {
+                const desc = row.querySelector(".svc-part-desc").value.trim();
+                if (!desc) return;
+                parts.push({
+                    description: desc,
+                    part_number: row.querySelector(".svc-part-pn").value.trim(),
+                    quantity: parseInt(row.querySelector(".svc-part-qty").value) || 1,
+                    unit_cost: parseFloat(row.querySelector(".svc-part-cost").value) || 0,
+                });
+            });
+
+            ws.send(JSON.stringify({
+                type: "service_record_create",
+                vehicle_id: svcSelectedVehicleId,
+                customer_id: vehicle ? vehicle.owner_id : "",
+                customer_name: vehicle ? vehicle.owner_name : "",
+                date: document.getElementById("svc-r-date").value,
+                service_type: document.getElementById("svc-r-type").value,
+                services_performed: services,
+                parts_used: parts,
+                labor_hours: parseFloat(document.getElementById("svc-r-labor-hours").value) || 0,
+                labor_rate: parseFloat(document.getElementById("svc-r-labor-rate").value) || 75,
+                notes: document.getElementById("svc-r-notes").value.trim(),
+                recommendations: document.getElementById("svc-r-recommendations").value.trim(),
+            }));
+
+            // Clear form
+            document.getElementById("svc-r-date").value = "";
+            document.getElementById("svc-r-services").value = "";
+            document.getElementById("svc-r-notes").value = "";
+            document.getElementById("svc-r-recommendations").value = "";
+            document.getElementById("svc-r-labor-hours").value = "";
+            document.getElementById("svc-parts-list").innerHTML = "";
+            document.getElementById("svc-add-record-form").classList.remove("visible");
+        }
+
+        function svcDeleteRecord(recordId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm("Delete this service record?")) return;
+            ws.send(JSON.stringify({ type: "service_record_delete", record_id: recordId }));
+        }
+
+        function svcGeneratePdf(recordId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: "service_record_pdf", record_id: recordId }));
+        }
+
+        function handleServiceRecordPdf(data) {
+            if (data.ok && data.url) {
+                window.open(data.url, "_blank");
+            } else {
+                console.warn("PDF generation failed:", data.error);
+                alert("PDF generation failed: " + (data.error || "Unknown error"));
+            }
         }
 
         // ---------------------------------------------------------------
