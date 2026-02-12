@@ -2376,6 +2376,183 @@
             font-size: 0.85rem;
         }
 
+        /* --- Voice Synthesis (TTS) --- */
+        .tts-section {
+            margin-bottom: 2rem;
+        }
+
+        .tts-status-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: #7a8a9a;
+        }
+
+        .tts-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .tts-status-dot.ok { background: #4ade80; }
+        .tts-status-dot.error { background: #e74c3c; }
+
+        .tts-compose {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .tts-compose textarea {
+            width: 100%;
+            min-height: 80px;
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 0.75rem;
+            outline: none;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-bottom: 0.5rem;
+        }
+
+        .tts-compose textarea:focus {
+            border-color: #5b9bd5;
+        }
+
+        .tts-compose textarea::placeholder {
+            color: #4a5a6a;
+        }
+
+        .tts-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .tts-controls select {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .tts-controls select:focus {
+            border-color: #5b9bd5;
+        }
+
+        .tts-synthesize-btn {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .tts-synthesize-btn:hover {
+            background: #3b82f6;
+        }
+
+        .tts-synthesize-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tts-item {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tts-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .tts-item-meta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #5a6a7a;
+        }
+
+        .tts-item-meta .tts-voice-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            text-transform: uppercase;
+        }
+
+        .tts-item-text {
+            font-size: 0.85rem;
+            color: #8a9aaa;
+            margin-bottom: 0.5rem;
+            max-height: 3em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tts-item audio {
+            width: 100%;
+            height: 36px;
+        }
+
+        .tts-item-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .tts-delete-btn {
+            background: #2a3a4a;
+            border: 1px solid #e74c3c;
+            border-radius: 6px;
+            color: #e74c3c;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .tts-delete-btn:hover {
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        .tts-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
         /* --- Research Results --- */
         .research-section {
             margin-bottom: 2rem;
@@ -3528,6 +3705,29 @@
             </div>
         </section>
 
+        <section class="tts-section">
+            <h2>Voice Synthesis</h2>
+
+            <div class="tts-status-bar" id="tts-status">
+                <span class="tts-status-dot error"></span>
+                <span>Checking TTS status...</span>
+            </div>
+
+            <div class="tts-compose">
+                <textarea id="tts-text" placeholder="Enter text to synthesize..." maxlength="5000"></textarea>
+                <div class="tts-controls">
+                    <select id="tts-voice">
+                        <option value="">Default voice</option>
+                    </select>
+                    <button class="tts-synthesize-btn" id="tts-synthesize-btn" onclick="ttsSynthesize()">Synthesize</button>
+                </div>
+            </div>
+
+            <div id="tts-audio-list">
+                <div class="tts-empty">No audio files yet.</div>
+            </div>
+        </section>
+
         <section class="research-section">
             <h2>Research Results</h2>
 
@@ -3924,6 +4124,18 @@
                     if (!data.ok) console.warn("Content entry delete failed:", data.error);
                 } else if (data.type === "content_entry_updated") {
                     if (!data.ok) console.warn("Content entry update failed:", data.error);
+                } else if (data.type === "tts_status") {
+                    handleTTSStatus(data);
+                } else if (data.type === "tts_result") {
+                    handleTTSResult(data);
+                } else if (data.type === "tts_audio_list") {
+                    handleTTSAudioList(data);
+                } else if (data.type === "tts_voices") {
+                    handleTTSVoices(data);
+                } else if (data.type === "tts_deleted") {
+                    if (!data.ok) console.warn("TTS delete failed:", data.error);
+                } else if (data.type === "tts_queue_result") {
+                    handleTTSQueueResult(data);
                 } else if (data.type === "research_status") {
                     handleResearchStatus(data);
                 } else if (data.type === "research_result_deleted") {
@@ -5295,6 +5507,157 @@
                     </div>
                 `;
             }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Voice Synthesis (TTS)
+        // ---------------------------------------------------------------
+
+        function handleTTSStatus(data) {
+            const el = document.getElementById("tts-status");
+            if (!el) return;
+
+            const dotClass = data.initialized ? "ok" : "error";
+            let statusText = "";
+
+            if (data.initialized) {
+                statusText = `Piper ready — ${data.voice_count} voice(s), ${data.audio_count} audio file(s)`;
+            } else if (data.error) {
+                statusText = data.error;
+            } else {
+                statusText = "TTS not initialized";
+            }
+
+            el.innerHTML = `<span class="tts-status-dot ${dotClass}"></span><span>${escapeHtml(statusText)}</span>`;
+        }
+
+        function handleTTSVoices(data) {
+            const select = document.getElementById("tts-voice");
+            if (!select) return;
+
+            // Preserve current selection
+            const current = select.value;
+            select.innerHTML = '<option value="">Default voice</option>';
+
+            (data.voices || []).forEach(v => {
+                const opt = document.createElement("option");
+                opt.value = v;
+                opt.textContent = v;
+                select.appendChild(opt);
+            });
+
+            // Restore selection if still available
+            if (current) select.value = current;
+        }
+
+        function handleTTSAudioList(data) {
+            const container = document.getElementById("tts-audio-list");
+            if (!container) return;
+
+            const audioFiles = data.audio || [];
+            if (audioFiles.length === 0) {
+                container.innerHTML = '<div class="tts-empty">No audio files yet.</div>';
+                return;
+            }
+
+            container.innerHTML = audioFiles.map(a => {
+                const text = a.text ? escapeHtml(a.text.substring(0, 120)) : "(no text)";
+                const voice = a.voice || "unknown";
+                const duration = a.duration_secs ? `${a.duration_secs.toFixed(1)}s` : "";
+                const size = a.file_size_bytes ? formatBytes(a.file_size_bytes) : "";
+                const ts = a.timestamp ? new Date(a.timestamp).toLocaleString() : "";
+                const filename = a.filename || "";
+                const audioSrc = filename ? `/api/tts/audio/${encodeURIComponent(filename)}` : "";
+
+                return `
+                    <div class="tts-item">
+                        <div class="tts-item-header">
+                            <div class="tts-item-meta">
+                                <span class="tts-voice-badge">${escapeHtml(voice)}</span>
+                                ${duration ? `<span>${duration}</span>` : ""}
+                                ${size ? `<span>${size}</span>` : ""}
+                                ${ts ? `<span>${ts}</span>` : ""}
+                            </div>
+                            <div class="tts-item-actions">
+                                <button class="tts-delete-btn" onclick="ttsDeleteAudio('${escapeHtml(filename)}')">Delete</button>
+                            </div>
+                        </div>
+                        <div class="tts-item-text">${text}</div>
+                        ${audioSrc ? `<audio controls preload="none" src="${audioSrc}"></audio>` : ""}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function handleTTSResult(data) {
+            const btn = document.getElementById("tts-synthesize-btn");
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Synthesize";
+            }
+
+            if (!data.ok) {
+                const errorMsg = data.error || "Synthesis failed";
+                console.warn("TTS synthesis failed:", errorMsg);
+                // Show inline error
+                const statusEl = document.getElementById("tts-status");
+                if (statusEl) {
+                    const prev = statusEl.innerHTML;
+                    statusEl.innerHTML = `<span class="tts-status-dot error"></span><span style="color:#e74c3c">${escapeHtml(errorMsg)}</span>`;
+                    setTimeout(() => { statusEl.innerHTML = prev; }, 5000);
+                }
+                return;
+            }
+
+            // Refresh the audio list
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "tts_list_audio" }));
+                ws.send(JSON.stringify({ type: "tts_status" }));
+            }
+        }
+
+        function handleTTSQueueResult(data) {
+            // Refresh audio list after batch synthesis
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "tts_list_audio" }));
+                ws.send(JSON.stringify({ type: "tts_status" }));
+            }
+        }
+
+        function ttsSynthesize() {
+            const textEl = document.getElementById("tts-text");
+            const voiceEl = document.getElementById("tts-voice");
+            const btn = document.getElementById("tts-synthesize-btn");
+            if (!textEl || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const text = textEl.value.trim();
+            if (!text) return;
+
+            const voice = voiceEl ? voiceEl.value : "";
+
+            btn.disabled = true;
+            btn.textContent = "Synthesizing...";
+
+            const msg = { type: "tts_synthesize", text: text };
+            if (voice) msg.voice = voice;
+            ws.send(JSON.stringify(msg));
+
+            // Clear the textarea after sending
+            textEl.value = "";
+        }
+
+        function ttsDeleteAudio(filename) {
+            if (!confirm("Delete this audio file?")) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: "tts_delete", filename: filename }));
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return "0 B";
+            const k = 1024;
+            const sizes = ["B", "KB", "MB", "GB"];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
         }
 
         // ---------------------------------------------------------------

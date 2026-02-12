@@ -8,3 +8,4 @@ data/memory/chromadb/
 data/logs/
 data/schedules.json
 data/tasks/working_memory.json
+data/audio/

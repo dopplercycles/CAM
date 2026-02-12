@@ -53,7 +53,12 @@ CONTENT_KEYWORDS = [
     # General content terms
     "content", "script", "episode", "video title", "description draft",
     "show notes", "intro", "outro", "hook",
+    # TTS / voice synthesis
+    "tts", "synthesize", "voice", "audio", "speech", "narrate", "narration",
 ]
+
+# Keywords that trigger automatic TTS synthesis after content generation
+TTS_TRIGGER_KEYWORDS = ["synthesize", "tts", "voice over", "narrate", "narration", "speak"]
 
 # Task types that warrant a dedicated model call with the content
 # system prompt (Tier 3 creative/writing tasks). Other content tasks
@@ -127,6 +132,7 @@ class ContentAgent:
         calendar: ContentCalendar,
         event_logger,
         on_model_call: Callable | None = None,
+        tts_pipeline=None,
     ):
         self.router = router
         self.persona = persona
@@ -134,8 +140,12 @@ class ContentAgent:
         self.calendar = calendar
         self.event_logger = event_logger
         self._on_model_call = on_model_call
+        self.tts = tts_pipeline
 
-        logger.info("ContentAgent initialized")
+        logger.info(
+            "ContentAgent initialized (tts=%s)",
+            "available" if tts_pipeline else "none",
+        )
 
     # -------------------------------------------------------------------
     # Detection
@@ -250,6 +260,24 @@ class ContentAgent:
             except Exception:
                 logger.debug("Content agent calendar entry failed (non-fatal)", exc_info=True)
 
+        # --- Auto-synthesize if task requests TTS ---
+        if result and self.tts and self._should_auto_synthesize(task.description):
+            try:
+                tts_result = await self.tts.synthesize(result)
+                if tts_result.error:
+                    logger.info(
+                        "Content agent auto-TTS failed for %s: %s",
+                        task.short_id, tts_result.error,
+                    )
+                else:
+                    result += f"\n\n[Audio synthesized: {tts_result.audio_path} ({tts_result.duration_secs:.1f}s)]"
+                    logger.info(
+                        "Content agent auto-synthesized audio for %s: %s",
+                        task.short_id, tts_result.audio_path,
+                    )
+            except Exception:
+                logger.debug("Content agent auto-TTS failed (non-fatal)", exc_info=True)
+
         return result
 
     # -------------------------------------------------------------------
@@ -349,3 +377,34 @@ class ContentAgent:
             title = title[:60].rsplit(" ", 1)[0]
 
         return title.strip() or "Untitled Content"
+
+    # -------------------------------------------------------------------
+    # TTS synthesis
+    # -------------------------------------------------------------------
+
+    async def synthesize(self, text: str, voice: str | None = None):
+        """Synthesize text to speech using the TTS pipeline.
+
+        Args:
+            text:  Text to synthesize.
+            voice: Optional voice model name.
+
+        Returns:
+            SynthesisResult if TTS is available, None otherwise.
+        """
+        if not self.tts:
+            logger.debug("TTS synthesis requested but no TTS pipeline configured")
+            return None
+        return await self.tts.synthesize(text=text, voice=voice)
+
+    def _should_auto_synthesize(self, description: str) -> bool:
+        """Check if a task description requests TTS synthesis.
+
+        Args:
+            description: Task description text.
+
+        Returns:
+            True if the task mentions TTS trigger keywords.
+        """
+        desc_lower = description.lower()
+        return any(kw in desc_lower for kw in TTS_TRIGGER_KEYWORDS)

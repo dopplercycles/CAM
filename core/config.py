@@ -128,6 +128,12 @@ _DEFAULTS: dict[str, Any] = {
         "poll_interval": 0.5,
         "task_timeout": 120.0,
     },
+    "tts": {
+        "audio_dir": "data/audio",
+        "voices_dir": "data/audio/voices",
+        "default_voice": "en_US-lessac-medium",
+        "sample_rate": 22050,
+    },
     "content_calendar": {
         "db_path": "data/content_calendar.db",
     },

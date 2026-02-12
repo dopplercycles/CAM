@@ -42,6 +42,7 @@ from core.research_store import ResearchStore, ResearchStatus
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
+from tools.content.tts_pipeline import TTSPipeline
 from agents.research_agent import ResearchAgent
 from tests.self_test import SelfTest
 
@@ -659,6 +660,9 @@ orchestrator = Orchestrator(
     audit_log=security_audit_log,
 )
 
+# TTS pipeline — Piper TTS with graceful fallback
+tts_pipeline = TTSPipeline(config=config)
+
 # Content agent — local in-process agent for content tasks
 content_agent = ContentAgent(
     router=orchestrator.router,
@@ -667,6 +671,7 @@ content_agent = ContentAgent(
     calendar=content_calendar,
     event_logger=event_logger,
     on_model_call=on_model_call,
+    tts_pipeline=tts_pipeline,
 )
 
 # Research agent — local in-process agent for research tasks
@@ -848,6 +853,7 @@ app.state.long_term_memory = long_term_memory
 app.state.episodic_memory = episodic_memory
 app.state.content_calendar = content_calendar
 app.state.content_agent = content_agent
+app.state.tts_pipeline = tts_pipeline
 app.state.research_store = research_store
 app.state.research_agent = research_agent
 app.state.security_audit_log = security_audit_log
@@ -1096,6 +1102,38 @@ async def get_security_audit():
 async def get_config_endpoint():
     """Return current configuration as JSON."""
     return {"config": config.to_dict(), "last_loaded": config.last_loaded}
+
+
+@app.get("/api/tts/status")
+async def get_tts_status():
+    """Return current TTS pipeline status as JSON."""
+    return tts_pipeline.get_status()
+
+
+@app.get("/api/tts/audio")
+async def get_tts_audio_list():
+    """Return list of generated audio files with metadata."""
+    return {"audio": tts_pipeline.list_audio()}
+
+
+@app.get("/api/tts/audio/{filename}")
+async def get_tts_audio_file(filename: str):
+    """Serve a WAV audio file for browser playback.
+
+    Includes path traversal protection — filename must resolve
+    to a path within the audio directory.
+    """
+    audio_dir = Path(tts_pipeline._audio_dir).resolve()
+    file_path = (audio_dir / filename).resolve()
+
+    # Path traversal protection
+    if not str(file_path).startswith(str(audio_dir)):
+        return JSONResponse(status_code=403, content={"error": "Access denied"})
+
+    if not file_path.exists() or not file_path.suffix == ".wav":
+        return JSONResponse(status_code=404, content={"error": "File not found"})
+
+    return FileResponse(file_path, media_type="audio/wav", filename=filename)
 
 
 @app.post("/api/events/export")
@@ -1518,6 +1556,24 @@ async def dashboard_websocket(websocket: WebSocket):
         "working": working_memory.get_status(),
         "long_term": long_term_memory.get_status(),
         "episodic": episodic_memory.get_status(),
+    })
+
+    # Send TTS pipeline status
+    await websocket.send_json({
+        "type": "tts_status",
+        **tts_pipeline.get_status(),
+    })
+
+    # Send TTS audio list
+    await websocket.send_json({
+        "type": "tts_audio_list",
+        "audio": tts_pipeline.list_audio(),
+    })
+
+    # Send TTS voice list
+    await websocket.send_json({
+        "type": "tts_voices",
+        "voices": tts_pipeline.list_voices(),
     })
 
     # Send persona data for the persona preview panel
@@ -2259,6 +2315,81 @@ async def dashboard_websocket(websocket: WebSocket):
                 await broadcast_to_dashboards({
                     "type": "self_test_results",
                     **results,
+                })
+
+            elif msg.get("type") == "tts_synthesize":
+                tts_text = (msg.get("text") or "").strip()
+                tts_voice = msg.get("voice") or None
+                if not tts_text:
+                    await websocket.send_json({
+                        "type": "tts_result",
+                        "ok": False,
+                        "error": "Text is required",
+                    })
+                    continue
+
+                tts_result = await tts_pipeline.synthesize(
+                    text=tts_text, voice=tts_voice,
+                )
+                result_data = {
+                    "type": "tts_result",
+                    "ok": tts_result.error is None,
+                    **tts_result.to_dict(),
+                }
+                await broadcast_to_dashboards(result_data)
+                if not tts_result.error:
+                    event_logger.info(
+                        "tts",
+                        f"Synthesized audio: {tts_result.audio_path} ({tts_result.duration_secs:.1f}s)",
+                        voice=tts_result.voice,
+                    )
+
+            elif msg.get("type") == "tts_queue":
+                tts_items = msg.get("items") or []
+                tts_results = await tts_pipeline.queue_synthesis(tts_items)
+                await broadcast_to_dashboards({
+                    "type": "tts_queue_result",
+                    "results": [r.to_dict() for r in tts_results],
+                })
+
+            elif msg.get("type") == "tts_list_audio":
+                await websocket.send_json({
+                    "type": "tts_audio_list",
+                    "audio": tts_pipeline.list_audio(),
+                })
+
+            elif msg.get("type") == "tts_list_voices":
+                await websocket.send_json({
+                    "type": "tts_voices",
+                    "voices": tts_pipeline.list_voices(),
+                })
+
+            elif msg.get("type") == "tts_delete":
+                tts_filename = msg.get("filename", "")
+                tts_error = tts_pipeline.delete_audio(tts_filename)
+                if tts_error:
+                    await websocket.send_json({
+                        "type": "tts_deleted",
+                        "ok": False,
+                        "error": tts_error,
+                    })
+                else:
+                    event_logger.info("tts", f"Audio deleted: {tts_filename}")
+                    await broadcast_to_dashboards({
+                        "type": "tts_deleted",
+                        "ok": True,
+                        "filename": tts_filename,
+                    })
+                    # Broadcast updated audio list
+                    await broadcast_to_dashboards({
+                        "type": "tts_audio_list",
+                        "audio": tts_pipeline.list_audio(),
+                    })
+
+            elif msg.get("type") == "tts_status":
+                await websocket.send_json({
+                    "type": "tts_status",
+                    **tts_pipeline.get_status(),
                 })
 
             elif msg.get("type") == "episodic_search":
