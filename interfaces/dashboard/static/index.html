@@ -3471,6 +3471,250 @@
             font-size: 0.85rem;
         }
 
+        /* --- Market Analytics Panel --- */
+        .market-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .market-toolbar button {
+            padding: 0.4rem 0.8rem;
+            background: var(--btn-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .market-toolbar button:hover { background: var(--btn-hover); }
+        .market-toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .market-stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .market-stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .market-stat-card .stat-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .market-stat-card .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        .market-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 1rem 0 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.25rem;
+        }
+
+        .market-trend-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.6rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+        .market-trend-row:hover { background: var(--bg-secondary); }
+        .market-trend-name {
+            flex: 1;
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: capitalize;
+        }
+        .market-trend-arrow {
+            font-size: 1.1rem;
+            width: 1.5rem;
+            text-align: center;
+        }
+        .market-trend-arrow.rising { color: #ef4444; }
+        .market-trend-arrow.falling { color: #22c55e; }
+        .market-trend-arrow.stable { color: var(--text-tertiary); }
+        .market-trend-pct {
+            width: 5rem;
+            text-align: right;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .market-trend-pct.rising { color: #ef4444; }
+        .market-trend-pct.falling { color: #22c55e; }
+        .market-trend-pct.stable { color: var(--text-tertiary); }
+        .market-trend-price {
+            width: 5rem;
+            text-align: right;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .market-trend-pts {
+            width: 3.5rem;
+            text-align: right;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+        .market-sparkline {
+            width: 60px;
+            height: 20px;
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+        }
+        .market-sparkline-bar {
+            flex: 1;
+            background: #a78bfa;
+            border-radius: 1px;
+            min-height: 2px;
+        }
+
+        .market-deal-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.6rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .market-deal-discount {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #22c55e;
+            width: 3.5rem;
+        }
+        .market-deal-title {
+            flex: 1;
+            font-size: 0.85rem;
+        }
+        .market-deal-price {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .market-deal-avg {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        .market-heat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.6rem;
+            margin-top: 0.5rem;
+        }
+        .market-heat-cell {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem;
+            text-align: center;
+            transition: transform 0.15s;
+        }
+        .market-heat-cell:hover { transform: scale(1.03); }
+        .market-heat-cell .heat-location {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+        .market-heat-cell .heat-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .market-heat-cell .heat-avg {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+        .market-heat-cold { background: rgba(96, 165, 250, 0.1); }
+        .market-heat-warm { background: rgba(250, 204, 21, 0.1); }
+        .market-heat-hot  { background: rgba(239, 68, 68, 0.15); }
+
+        .market-detail-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .market-detail-overlay.active { display: flex; }
+        .market-detail-panel {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .market-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .market-detail-header h3 { margin: 0; font-size: 1.1rem; }
+        .market-detail-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .market-detail-sparkline {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 60px;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+        .market-detail-sparkline .bar {
+            flex: 1;
+            background: #a78bfa;
+            border-radius: 2px;
+            min-height: 3px;
+            position: relative;
+        }
+        .market-detail-sparkline .bar:hover { background: #c4b5fd; }
+        .market-detail-table {
+            width: 100%;
+            font-size: 0.8rem;
+            border-collapse: collapse;
+        }
+        .market-detail-table th {
+            text-align: left;
+            color: var(--text-secondary);
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .market-detail-table td {
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .market-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+        }
+
         /* --- Self-Test Panel --- */
         .self-test-section {
             margin-bottom: 2rem;
@@ -5158,6 +5402,66 @@
             </div>
         </section>
 
+        <section data-panel-id="market-analytics" style="display:none;">
+            <h2>Market Analytics</h2>
+
+            <div class="market-toolbar">
+                <button onclick="triggerMarketSnapshot()" id="market-snapshot-btn">Take Snapshot</button>
+                <button onclick="triggerMarketReport()" id="market-report-btn">Generate Report</button>
+                <button onclick="downloadLatestReport()" id="market-download-btn" disabled>Download Report</button>
+            </div>
+
+            <div class="market-stat-cards" id="market-stat-cards">
+                <div class="market-stat-card">
+                    <div class="stat-value" id="market-stat-makes">0</div>
+                    <div class="stat-label">Tracked Makes</div>
+                </div>
+                <div class="market-stat-card">
+                    <div class="stat-value" id="market-stat-snapshots">0</div>
+                    <div class="stat-label">Total Snapshots</div>
+                </div>
+                <div class="market-stat-card">
+                    <div class="stat-value" id="market-stat-date">—</div>
+                    <div class="stat-label">Latest Snapshot</div>
+                </div>
+                <div class="market-stat-card">
+                    <div class="stat-value" id="market-stat-reports">0</div>
+                    <div class="stat-label">Reports Generated</div>
+                </div>
+            </div>
+
+            <div class="market-section-title">Price Trends by Make/Model</div>
+            <div id="market-trends">
+                <div class="market-empty">No trend data yet. Take snapshots to build price history.</div>
+            </div>
+
+            <div class="market-section-title">Undervalued Listings</div>
+            <div id="market-deals">
+                <div class="market-empty">No undervalued listings detected.</div>
+            </div>
+
+            <div class="market-section-title">Listings by Location</div>
+            <div id="market-heatgrid" class="market-heat-grid">
+                <div class="market-empty">No location data available.</div>
+            </div>
+
+            <div class="market-detail-overlay" id="market-detail-overlay" onclick="closeMarketDetail(event)">
+                <div class="market-detail-panel" onclick="event.stopPropagation()">
+                    <div class="market-detail-header">
+                        <h3 id="market-detail-title">Price History</h3>
+                        <button class="market-detail-close" onclick="closeMarketDetail()">&times;</button>
+                    </div>
+                    <div class="market-detail-sparkline" id="market-detail-chart"></div>
+                    <table class="market-detail-table">
+                        <thead>
+                            <tr><th>Date</th><th>Avg Price</th><th>Min</th><th>Max</th><th>Count</th></tr>
+                        </thead>
+                        <tbody id="market-detail-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <section class="command-palette-section" data-panel-id="command-palette">
             <h2>Command Palette</h2>
 
@@ -5597,6 +5901,7 @@
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
             { id: 'scout', name: 'Motorcycle Scout' },
+            { id: 'market-analytics', name: 'Market Analytics' },
             { id: 'command-palette', name: 'Command Palette' },
             { id: 'file-transfer', name: 'File Transfer' },
             { id: 'deploy', name: 'Connector Deploy' },
@@ -5848,6 +6153,23 @@
                     if (!data.ok) console.warn("Scout delete failed:", data.error);
                 } else if (data.type === "scout_rescored") {
                     if (!data.ok) console.warn("Scout rescore failed:", data.error);
+                } else if (data.type === "market_analytics_status") {
+                    handleMarketAnalytics(data);
+                } else if (data.type === "market_snapshot_result") {
+                    if (data.ok) {
+                        const btn = document.getElementById("market-snapshot-btn");
+                        if (btn) { btn.disabled = false; btn.textContent = "Take Snapshot"; }
+                    } else {
+                        console.warn("Market snapshot failed:", data.error);
+                        const btn = document.getElementById("market-snapshot-btn");
+                        if (btn) { btn.disabled = false; btn.textContent = "Take Snapshot"; }
+                    }
+                } else if (data.type === "market_report_result") {
+                    const btn = document.getElementById("market-report-btn");
+                    if (btn) { btn.disabled = false; btn.textContent = "Generate Report"; }
+                    if (!data.ok) console.warn("Market report failed:", data.error);
+                } else if (data.type === "market_history_result") {
+                    handleMarketHistoryResult(data);
                 } else if (data.type === "approval_request") {
                     handleApprovalRequest(data);
                 } else if (data.type === "security_audit_status") {
@@ -7987,6 +8309,196 @@
                     </div>
                 `;
             }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Market Analytics
+        // ---------------------------------------------------------------
+        let marketData = {
+            tracked_makes: 0,
+            total_snapshots: 0,
+            latest_date: "",
+            report_count: 0,
+            latest_report_id: "",
+            trends: [],
+            undervalued: [],
+            location_summary: [],
+        };
+
+        function handleMarketAnalytics(data) {
+            marketData.tracked_makes = data.tracked_makes || 0;
+            marketData.total_snapshots = data.total_snapshots || 0;
+            marketData.latest_date = data.latest_date || "";
+            marketData.report_count = data.report_count || 0;
+            marketData.latest_report_id = data.latest_report_id || "";
+            marketData.trends = data.trends || [];
+            marketData.undervalued = data.undervalued || [];
+            marketData.location_summary = data.location_summary || [];
+            renderMarketStats();
+            renderMarketTrends();
+            renderMarketDeals();
+            renderMarketHeatGrid();
+            // Enable download button if reports exist
+            const dlBtn = document.getElementById("market-download-btn");
+            if (dlBtn) dlBtn.disabled = !marketData.latest_report_id;
+        }
+
+        function renderMarketStats() {
+            const el = (id, val) => {
+                const e = document.getElementById(id);
+                if (e) e.textContent = val;
+            };
+            el("market-stat-makes", marketData.tracked_makes);
+            el("market-stat-snapshots", marketData.total_snapshots);
+            el("market-stat-date", marketData.latest_date || "—");
+            el("market-stat-reports", marketData.report_count);
+        }
+
+        function renderMarketTrends() {
+            const container = document.getElementById("market-trends");
+            if (!container) return;
+            const trends = marketData.trends;
+            if (!trends.length) {
+                container.innerHTML = '<div class="market-empty">No trend data yet. Take snapshots to build price history.</div>';
+                return;
+            }
+            container.innerHTML = trends.map(t => {
+                const arrows = { rising: "↑", falling: "↓", stable: "→" };
+                const arrow = arrows[t.direction] || "→";
+                const dir = t.direction || "stable";
+                const name = t.model ? `${t.make} ${t.model}` : t.make;
+                const pctStr = (t.change_pct >= 0 ? "+" : "") + t.change_pct.toFixed(1) + "%";
+                const priceStr = "$" + Math.round(t.recent_avg).toLocaleString();
+                return `
+                    <div class="market-trend-row" onclick="showMarketDetail('${escapeHtml(t.make)}', '${escapeHtml(t.model || "")}')">
+                        <span class="market-trend-name">${escapeHtml(name)}</span>
+                        <span class="market-trend-arrow ${dir}">${arrow}</span>
+                        <span class="market-trend-pct ${dir}">${pctStr}</span>
+                        <span class="market-trend-price">${priceStr}</span>
+                        <span class="market-trend-pts">${t.data_points} pts</span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderMarketDeals() {
+            const container = document.getElementById("market-deals");
+            if (!container) return;
+            const deals = marketData.undervalued;
+            if (!deals.length) {
+                container.innerHTML = '<div class="market-empty">No undervalued listings detected.</div>';
+                return;
+            }
+            container.innerHTML = deals.map(d => {
+                const yearStr = d.year ? d.year + " " : "";
+                const title = yearStr + (d.make || "") + " " + (d.model || "");
+                return `
+                    <div class="market-deal-row">
+                        <span class="market-deal-discount">-${d.discount_pct.toFixed(0)}%</span>
+                        <span class="market-deal-title">${escapeHtml(title.trim())}</span>
+                        <span class="market-deal-price">$${d.price.toLocaleString()}</span>
+                        <span class="market-deal-avg">(avg: $${Math.round(d.avg_price).toLocaleString()})</span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderMarketHeatGrid() {
+            const container = document.getElementById("market-heatgrid");
+            if (!container) return;
+            const locs = marketData.location_summary;
+            if (!locs.length) {
+                container.innerHTML = '<div class="market-empty">No location data available.</div>';
+                return;
+            }
+            const maxCount = Math.max(...locs.map(l => l.count), 1);
+            container.innerHTML = locs.map(l => {
+                const ratio = l.count / maxCount;
+                const heat = ratio > 0.6 ? "hot" : ratio > 0.3 ? "warm" : "cold";
+                const hotStr = l.hot_deals ? ` (${l.hot_deals} hot)` : "";
+                return `
+                    <div class="market-heat-cell market-heat-${heat}">
+                        <div class="heat-location">${escapeHtml(l.location)}</div>
+                        <div class="heat-count">${l.count} listings${hotStr}</div>
+                        <div class="heat-avg">avg $${Math.round(l.avg_price).toLocaleString()}</div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function triggerMarketSnapshot() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const btn = document.getElementById("market-snapshot-btn");
+            if (btn) { btn.disabled = true; btn.textContent = "Taking snapshot..."; }
+            ws.send(JSON.stringify({ type: "market_snapshot" }));
+        }
+
+        function triggerMarketReport() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const btn = document.getElementById("market-report-btn");
+            if (btn) { btn.disabled = true; btn.textContent = "Generating..."; }
+            ws.send(JSON.stringify({ type: "market_generate_report", report_type: "weekly" }));
+        }
+
+        function downloadLatestReport() {
+            if (!marketData.latest_report_id) return;
+            window.open("/api/market/report/" + marketData.latest_report_id + "/download", "_blank");
+        }
+
+        function showMarketDetail(make, model) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const overlay = document.getElementById("market-detail-overlay");
+            const title = document.getElementById("market-detail-title");
+            const chart = document.getElementById("market-detail-chart");
+            const tbody = document.getElementById("market-detail-tbody");
+            if (title) {
+                const name = model ? `${make} ${model}` : make;
+                title.textContent = `Price History — ${name}`;
+            }
+            if (chart) chart.innerHTML = '<div class="market-empty">Loading...</div>';
+            if (tbody) tbody.innerHTML = "";
+            if (overlay) overlay.classList.add("active");
+            ws.send(JSON.stringify({ type: "market_get_history", make, model, days: 30 }));
+        }
+
+        function handleMarketHistoryResult(data) {
+            if (!data.ok) {
+                console.warn("Market history failed:", data.error);
+                return;
+            }
+            const chart = document.getElementById("market-detail-chart");
+            const tbody = document.getElementById("market-detail-tbody");
+            const history = data.history || [];
+            if (!history.length) {
+                if (chart) chart.innerHTML = '<div class="market-empty">No history data.</div>';
+                return;
+            }
+            // Render sparkline bars
+            const maxPrice = Math.max(...history.map(h => h.avg_price), 1);
+            if (chart) {
+                chart.innerHTML = history.map(h => {
+                    const pct = Math.max((h.avg_price / maxPrice) * 100, 5);
+                    return `<div class="bar" style="height:${pct}%" title="${h.snapshot_date}: $${Math.round(h.avg_price)}"></div>`;
+                }).join("");
+            }
+            // Render data table
+            if (tbody) {
+                tbody.innerHTML = history.map(h => `
+                    <tr>
+                        <td>${h.snapshot_date}</td>
+                        <td>$${Math.round(h.avg_price).toLocaleString()}</td>
+                        <td>$${(h.min_price || 0).toLocaleString()}</td>
+                        <td>$${(h.max_price || 0).toLocaleString()}</td>
+                        <td>${h.listing_count || 0}</td>
+                    </tr>
+                `).join("");
+            }
+        }
+
+        function closeMarketDetail(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const overlay = document.getElementById("market-detail-overlay");
+            if (overlay) overlay.classList.remove("active");
         }
 
         // ---------------------------------------------------------------

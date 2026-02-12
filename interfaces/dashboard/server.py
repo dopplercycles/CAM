@@ -44,6 +44,7 @@ from core.scheduler import Scheduler, ScheduleType
 from core.content_calendar import ContentCalendar, ContentType, ContentStatus
 from core.research_store import ResearchStore, ResearchStatus
 from tools.doppler.scout import ScoutStore, DopplerScout, SearchCriteria, ListingStatus
+from tools.doppler.market_analyzer import MarketAnalyzer
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -370,6 +371,22 @@ scout_store = ScoutStore(
     db_path=getattr(getattr(config, 'scout', None),
                     'db_path', 'data/scout.db'),
     on_change=broadcast_scout_status,
+)
+
+
+async def broadcast_market_analytics():
+    """Push current market analytics to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "market_analytics_status",
+        **market_analyzer.get_summary(),
+    })
+
+
+# Market analyzer — price tracking and trend analysis (separate DB)
+market_analyzer = MarketAnalyzer(
+    db_path="data/market_analytics.db",
+    scout_store=scout_store,
+    on_change=broadcast_market_analytics,
 )
 
 
@@ -855,6 +872,10 @@ doppler_scout = DopplerScout(
     on_model_call=on_model_call,
 )
 
+# Wire up market analyzer with the model router now that orchestrator is ready
+market_analyzer.router = orchestrator.router
+market_analyzer._on_model_call = on_model_call
+
 
 # ---------------------------------------------------------------------------
 # Kill switch — CAM Constitution: "Prominent, always visible. One click
@@ -998,6 +1019,7 @@ async def lifespan(app: FastAPI):
     content_calendar.close()
     research_store.close()
     scout_store.close()
+    market_analyzer.close()
     business_store.close()
     security_audit_log.close()
     analytics.close()
@@ -1031,6 +1053,7 @@ app.state.research_store = research_store
 app.state.research_agent = research_agent
 app.state.scout_store = scout_store
 app.state.doppler_scout = doppler_scout
+app.state.market_analyzer = market_analyzer
 app.state.business_store = business_store
 app.state.business_agent = business_agent
 app.state.security_audit_log = security_audit_log
@@ -1320,6 +1343,74 @@ async def rescore_scout_listing(entry_id: str):
     except Exception as e:
         logger.warning("Scout rescore failed: %s", e)
         return {"ok": False, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Market Analytics REST endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/market")
+async def get_market_analytics():
+    """Return current market analytics summary as JSON."""
+    return market_analyzer.get_summary()
+
+
+@app.post("/api/market/snapshot")
+async def take_market_snapshot():
+    """Take a price snapshot from current scout listings."""
+    try:
+        count = market_analyzer.take_snapshot()
+        await broadcast_market_analytics()
+        return {"ok": True, "inserted": count}
+    except Exception as e:
+        logger.warning("Market snapshot failed: %s", e)
+        return {"ok": False, "error": str(e)}
+
+
+@app.post("/api/market/report")
+async def generate_market_report(request: Request):
+    """Generate a market analytics report via model router."""
+    try:
+        body = await request.json()
+        report_type = body.get("report_type", "weekly")
+        report = await market_analyzer.generate_report(report_type)
+        await broadcast_market_analytics()
+        return {"ok": True, **report}
+    except Exception as e:
+        logger.warning("Market report generation failed: %s", e)
+        return {"ok": False, "error": str(e)}
+
+
+@app.get("/api/market/report/{report_id}/download")
+async def download_market_report(report_id: str):
+    """Download a market report as a markdown file."""
+    # Path traversal protection — report_id must be a valid UUID
+    try:
+        uuid_obj = __import__("uuid").UUID(report_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid report ID"})
+
+    md = market_analyzer.export_report_markdown(str(uuid_obj))
+    if md is None:
+        return JSONResponse(status_code=404, content={"error": "Report not found"})
+
+    return Response(
+        content=md,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="market-report-{report_id[:8]}.md"'},
+    )
+
+
+@app.get("/api/market/trends")
+async def get_market_trends():
+    """Return price trends for all tracked makes/models."""
+    return {"trends": market_analyzer.get_all_trends(days=30)}
+
+
+@app.get("/api/market/undervalued")
+async def get_market_undervalued():
+    """Return listings priced significantly below historical averages."""
+    return {"undervalued": market_analyzer.detect_undervalued()}
 
 
 @app.get("/api/business")
@@ -1832,6 +1923,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "scout_status",
         "entries": scout_store.to_broadcast_list(),
         "status": scout_store.get_status(),
+    })
+
+    # Send current market analytics
+    await websocket.send_json({
+        "type": "market_analytics_status",
+        **market_analyzer.get_summary(),
     })
 
     # Send current business data
@@ -2671,6 +2768,63 @@ async def dashboard_websocket(websocket: WebSocket):
                 except Exception as e:
                     await websocket.send_json({
                         "type": "scout_rescored",
+                        "ok": False,
+                        "error": str(e),
+                    })
+
+            # -----------------------------------------------------------
+            # Market Analytics handlers
+            # -----------------------------------------------------------
+            elif msg.get("type") == "market_snapshot":
+                try:
+                    count = market_analyzer.take_snapshot()
+                    await websocket.send_json({
+                        "type": "market_snapshot_result",
+                        "ok": True,
+                        "inserted": count,
+                    })
+                    await broadcast_market_analytics()
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "market_snapshot_result",
+                        "ok": False,
+                        "error": str(e),
+                    })
+
+            elif msg.get("type") == "market_generate_report":
+                try:
+                    report_type = msg.get("report_type", "weekly")
+                    report = await market_analyzer.generate_report(report_type)
+                    await websocket.send_json({
+                        "type": "market_report_result",
+                        "ok": True,
+                        **report,
+                    })
+                    await broadcast_market_analytics()
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "market_report_result",
+                        "ok": False,
+                        "error": str(e),
+                    })
+
+            elif msg.get("type") == "market_get_history":
+                try:
+                    history = market_analyzer.get_price_history(
+                        make=msg.get("make", ""),
+                        model=msg.get("model", ""),
+                        days=msg.get("days", 30),
+                    )
+                    await websocket.send_json({
+                        "type": "market_history_result",
+                        "ok": True,
+                        "make": msg.get("make", ""),
+                        "model": msg.get("model", ""),
+                        "history": history,
+                    })
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "market_history_result",
                         "ok": False,
                         "error": str(e),
                     })
