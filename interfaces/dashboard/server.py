@@ -55,6 +55,7 @@ from tools.content.tts_pipeline import TTSPipeline
 from agents.research_agent import ResearchAgent
 from agents.business_agent import BusinessAgent, BusinessStore
 from tools.doppler.service_records import ServiceRecordStore
+from tools.doppler.diagnostics import DiagnosticEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
 from tests.integration_test import LaunchReadiness
@@ -497,6 +498,13 @@ service_store = ServiceRecordStore(
     on_change=broadcast_service_records_status,
 )
 
+async def broadcast_diagnostics_status():
+    """Push current diagnostic engine state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "diagnostics_status",
+        **diagnostic_engine.to_broadcast_dict(),
+    })
+
 
 async def broadcast_security_audit_status():
     """Push current security audit state to all connected dashboard browsers."""
@@ -919,6 +927,15 @@ orchestrator = Orchestrator(
     context_manager=context_manager,
 )
 
+# Diagnostic decision tree engine — YAML-based diagnostic workflows
+diagnostic_engine = DiagnosticEngine(
+    db_path="data/diagnostics.db",
+    trees_dir="config/diagnostic_trees",
+    service_store=service_store,
+    router=orchestrator.router,
+    on_change=broadcast_diagnostics_status,
+)
+
 # TTS pipeline — Piper TTS with graceful fallback
 tts_pipeline = TTSPipeline(config=config)
 
@@ -1174,6 +1191,7 @@ async def lifespan(app: FastAPI):
     market_analyzer.close()
     business_store.close()
     service_store.close()
+    diagnostic_engine.close()
     security_audit_log.close()
     webhook_manager.close()
     analytics.close()
@@ -1211,6 +1229,7 @@ app.state.market_analyzer = market_analyzer
 app.state.business_store = business_store
 app.state.business_agent = business_agent
 app.state.service_store = service_store
+app.state.diagnostic_engine = diagnostic_engine
 app.state.security_audit_log = security_audit_log
 app.state.webhook_manager = webhook_manager
 app.state.pipeline_manager = pipeline_manager
@@ -2246,6 +2265,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "service_records_status",
         **service_store.to_broadcast_dict(),
+    })
+
+    # Send current diagnostic engine state
+    await websocket.send_json({
+        "type": "diagnostics_status",
+        **diagnostic_engine.to_broadcast_dict(),
     })
 
     # Send current knowledge ingestion state
@@ -3696,6 +3721,116 @@ async def dashboard_websocket(websocket: WebSocket):
                         "ok": False,
                         "error": str(e),
                     })
+
+            # -----------------------------------------------------------
+            # Diagnostic Decision Tree handlers
+            # -----------------------------------------------------------
+            elif msg.get("type") == "diag_start_session":
+                tree_id = msg.get("tree_id", "")
+                vehicle_id = msg.get("vehicle_id", "")
+                vehicle_summary = msg.get("vehicle_summary", "")
+                customer_name = msg.get("customer_name", "")
+                session = diagnostic_engine.start_session(
+                    tree_id=tree_id,
+                    vehicle_id=vehicle_id,
+                    vehicle_summary=vehicle_summary,
+                    customer_name=customer_name,
+                )
+                if session:
+                    node = diagnostic_engine.get_current_node(session.session_id)
+                    await websocket.send_json({
+                        "type": "diag_session_started",
+                        "ok": True,
+                        "session": session.to_dict(),
+                        "node": node,
+                    })
+                    event_logger.info(
+                        "diagnostics",
+                        "Diagnostic session started",
+                        tree_id=tree_id,
+                        session_id=session.short_id,
+                    )
+                    await broadcast_diagnostics_status()
+                else:
+                    await websocket.send_json({
+                        "type": "diag_session_started",
+                        "ok": False,
+                        "error": f"Unknown tree: {tree_id}",
+                    })
+
+            elif msg.get("type") == "diag_answer":
+                session_id = msg.get("session_id", "")
+                answer_index = int(msg.get("answer_index", 0))
+                result = diagnostic_engine.answer_question(session_id, answer_index)
+                await websocket.send_json({
+                    "type": "diag_answer_result",
+                    **result,
+                })
+                if result.get("ok"):
+                    await broadcast_diagnostics_status()
+
+            elif msg.get("type") == "diag_go_back":
+                session_id = msg.get("session_id", "")
+                result = diagnostic_engine.go_back(session_id)
+                await websocket.send_json({
+                    "type": "diag_go_back_result",
+                    **result,
+                })
+                if result.get("ok"):
+                    await broadcast_diagnostics_status()
+
+            elif msg.get("type") == "diag_ai_suggest":
+                session_id = msg.get("session_id", "")
+                result = await diagnostic_engine.get_ai_suggestions(session_id)
+                await websocket.send_json({
+                    "type": "diag_ai_suggest_result",
+                    **result,
+                })
+
+            elif msg.get("type") == "diag_complete":
+                session_id = msg.get("session_id", "")
+                result = diagnostic_engine.complete_and_save_record(session_id)
+                await websocket.send_json({
+                    "type": "diag_complete_result",
+                    **result,
+                })
+                if result.get("ok"):
+                    await broadcast_diagnostics_status()
+                    await broadcast_service_records_status()
+
+            elif msg.get("type") == "diag_abandon":
+                session_id = msg.get("session_id", "")
+                session = diagnostic_engine.abandon_session(session_id)
+                await websocket.send_json({
+                    "type": "diag_abandon_result",
+                    "ok": session is not None,
+                    "session": session.to_dict() if session else None,
+                })
+                if session:
+                    await broadcast_diagnostics_status()
+
+            elif msg.get("type") == "diag_reload_trees":
+                diagnostic_engine.reload_trees()
+                await websocket.send_json({
+                    "type": "diag_reload_result",
+                    "ok": True,
+                    "trees_loaded": len(diagnostic_engine._trees),
+                })
+                event_logger.info(
+                    "diagnostics",
+                    "Diagnostic trees reloaded",
+                    trees_loaded=len(diagnostic_engine._trees),
+                )
+                await broadcast_diagnostics_status()
+
+            elif msg.get("type") == "diag_update_notes":
+                session_id = msg.get("session_id", "")
+                notes = msg.get("notes", "")
+                ok = diagnostic_engine.update_notes(session_id, notes)
+                await websocket.send_json({
+                    "type": "diag_notes_result",
+                    "ok": ok,
+                })
 
             elif msg.get("type") == "knowledge_scan_inbox":
                 results = knowledge_ingest.scan_inbox()

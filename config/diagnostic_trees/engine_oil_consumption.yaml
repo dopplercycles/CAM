@@ -1,0 +1,191 @@
+tree_id: engine_oil_consumption
+category: engine
+name: "Excessive Oil Consumption"
+description: "Engine using more oil than normal between changes, visible smoke, or oil leaks."
+safety_warnings:
+  - "Hot oil causes severe burns — let engine cool before checking."
+  - "Clean up any oil spills immediately — oil on tires is extremely dangerous."
+
+nodes:
+  start:
+    type: question
+    text: "Is the oil disappearing or can you see where it's going?"
+    context: "Oil either leaks out externally (you'll see it), burns internally (exhaust smoke), or both. Determining which narrows the diagnosis fast."
+    answers:
+      - label: "Visible oil leaks on engine or ground"
+        next: leak_location
+      - label: "No visible leaks but oil level drops"
+        next: smoke_check
+      - label: "Both — leaking AND smoking"
+        next: leak_location
+
+  leak_location:
+    type: question
+    text: "Where is the oil leaking from?"
+    context: "Clean the engine thoroughly, run it, then check. Oil migrates and drips from the lowest point, so trace it up to the source."
+    answers:
+      - label: "Valve cover / rocker cover gasket area"
+        next: finding_valve_cover_leak
+      - label: "Base gasket / cylinder base"
+        next: finding_base_gasket_leak
+      - label: "Oil filter or drain plug area"
+        next: finding_simple_leak
+      - label: "Front of engine (crankshaft seal area)"
+        next: finding_crank_seal
+
+  smoke_check:
+    type: question
+    text: "What color smoke comes from the exhaust?"
+    context: "Blue/gray smoke = burning oil. White smoke = coolant (head gasket). Black smoke = rich fuel. Check when cold-starting and when revving after idle."
+    answers:
+      - label: "Blue or gray smoke"
+        next: smoke_timing
+      - label: "White smoke (sweet smell)"
+        next: finding_coolant_burning
+      - label: "No visible smoke"
+        next: consumption_rate
+
+  smoke_timing:
+    type: question
+    text: "When does the blue smoke appear?"
+    context: "Smoke on startup that clears = valve seals. Smoke under acceleration = rings. Smoke constantly = both or severe wear."
+    answers:
+      - label: "On cold startup, then clears"
+        next: finding_valve_seals
+      - label: "Under hard acceleration or deceleration"
+        next: finding_rings
+      - label: "All the time"
+        next: finding_severe_wear
+
+  consumption_rate:
+    type: question
+    text: "How much oil is being used between changes? (Estimate per 1000 miles)"
+    context: "Some oil consumption is normal — up to 1 quart per 3000 miles on many engines. More than 1 quart per 1000 miles is excessive."
+    answers:
+      - label: "Less than 1 quart per 3000 miles"
+        next: finding_normal_consumption
+      - label: "1 quart per 1000-3000 miles"
+        next: finding_valve_seals
+      - label: "More than 1 quart per 1000 miles"
+        next: finding_severe_wear
+
+  finding_valve_cover_leak:
+    type: finding
+    title: "Valve Cover Gasket Leak"
+    severity: medium
+    description: "Oil is leaking from the valve cover/rocker cover gasket. This is a common and usually straightforward repair."
+    recommended_actions:
+      - "Replace valve cover gasket"
+      - "Check valve cover bolts for proper torque (don't overtighten)"
+      - "Inspect cover for warping if gasket has been replaced recently"
+      - "Clean all mating surfaces thoroughly"
+    possible_parts:
+      - "Valve cover gasket"
+      - "Valve cover bolt seals/grommets"
+
+  finding_base_gasket_leak:
+    type: finding
+    title: "Cylinder Base Gasket Leak"
+    severity: high
+    description: "Oil is leaking from the cylinder base gasket. This is a more involved repair requiring cylinder removal."
+    recommended_actions:
+      - "Plan for top-end disassembly"
+      - "Replace base gasket and inspect cylinder/case mating surfaces"
+      - "While apart, inspect piston and rings"
+      - "Check for excessive crankcase pressure (blocked breather)"
+    possible_parts:
+      - "Cylinder base gasket"
+      - "Complete top-end gasket set (recommended while in there)"
+
+  finding_simple_leak:
+    type: finding
+    title: "Oil Filter or Drain Plug Leak"
+    severity: low
+    description: "Oil is leaking from the oil filter or drain plug area. Usually a simple fix."
+    recommended_actions:
+      - "Check oil filter is properly tightened and O-ring is seated"
+      - "Check drain plug torque and washer condition"
+      - "Replace crush washer on drain plug"
+      - "If filter housing leaks, check O-ring"
+    possible_parts:
+      - "Drain plug crush washer"
+      - "Oil filter O-ring"
+
+  finding_crank_seal:
+    type: finding
+    title: "Crankshaft Oil Seal Leak"
+    severity: high
+    description: "Oil is leaking from the crankshaft seal at the front or output shaft seal. Seal has hardened or worn."
+    recommended_actions:
+      - "Replace crankshaft seal — may require special tools or partial engine disassembly"
+      - "Check seal surface on crank for grooves or wear"
+      - "Inspect for excessive crankcase pressure that could be pushing oil past the seal"
+    possible_parts:
+      - "Crankshaft oil seal"
+      - "Seal installation tool"
+
+  finding_valve_seals:
+    type: finding
+    title: "Worn Valve Guide Seals"
+    severity: medium
+    description: "Oil is seeping past the valve guide seals into the combustion chamber. Classic symptom is blue smoke on startup that clears after a minute."
+    recommended_actions:
+      - "Replace valve guide seals — can often be done with head on the engine"
+      - "Check valve guide wear/play while seals are out"
+      - "If guides are worn, they need to be replaced or reamed + oversized seals installed"
+    possible_parts:
+      - "Valve guide seals (full set)"
+      - "Valve guides (if worn)"
+
+  finding_rings:
+    type: finding
+    title: "Worn Piston Rings"
+    severity: high
+    description: "Piston rings are worn and allowing oil past into the combustion chamber. Confirmed by blue smoke under acceleration and high oil consumption."
+    recommended_actions:
+      - "Compression test and leak-down test to confirm"
+      - "Top-end rebuild: new rings at minimum, likely new pistons"
+      - "Check cylinder bore for wear, out-of-round, or scoring"
+      - "Hone or bore cylinders as needed"
+    possible_parts:
+      - "Piston rings"
+      - "Pistons (if worn or damaged)"
+      - "Top-end gasket set"
+
+  finding_severe_wear:
+    type: finding
+    title: "Severe Oil Consumption — Multiple Causes"
+    severity: critical
+    description: "Very high oil consumption with constant smoke indicates significant internal engine wear — likely both rings and valve seals."
+    recommended_actions:
+      - "Full compression and leak-down test"
+      - "Evaluate: top-end rebuild vs complete engine rebuild vs replacement engine"
+      - "Get cost estimates before deciding on approach"
+      - "Check service history for missed maintenance"
+    possible_parts:
+      - "Complete engine rebuild kit"
+      - "Replacement engine (evaluate cost vs rebuild)"
+
+  finding_coolant_burning:
+    type: finding
+    title: "Coolant Entering Combustion Chamber"
+    severity: critical
+    description: "White smoke with a sweet smell indicates coolant is being burned. This is NOT an oil consumption issue — it's a head gasket or crack."
+    recommended_actions:
+      - "Block test (combustion gas test) on coolant"
+      - "Pressure test cooling system"
+      - "Check oil for milky contamination"
+      - "Head gasket replacement likely needed"
+    follow_up_trees:
+      - engine_overheating
+
+  finding_normal_consumption:
+    type: finding
+    title: "Normal Oil Consumption"
+    severity: low
+    description: "Oil consumption within normal range. All engines use some oil — it's normal."
+    recommended_actions:
+      - "Continue monitoring level between changes"
+      - "Use quality oil at the correct weight"
+      - "Check for very small external leaks (weeping gaskets)"
+      - "Ensure PCV/breather system is functioning (excessive crankcase pressure increases consumption)"

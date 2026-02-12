@@ -1,0 +1,264 @@
+tree_id: suspension_handling
+category: suspension
+name: "Suspension & Handling"
+description: "Bike handles poorly, feels unstable, or suspension components show signs of wear."
+safety_warnings:
+  - "Fork springs are under tension — follow proper procedures when disassembling."
+  - "Suspension problems directly affect rider safety — do not ride if handling is dangerous."
+
+nodes:
+  start:
+    type: question
+    text: "What is the primary symptom?"
+    context: "Handling issues can come from front, rear, or chassis components. Narrowing it down first saves a lot of time."
+    answers:
+      - label: "Front end feels loose or wallowy"
+        next: front_check
+      - label: "Rear feels harsh or bouncy"
+        next: rear_check
+      - label: "Bike pulls to one side"
+        next: alignment_check
+      - label: "Wobble or headshake at speed"
+        next: headshake_check
+
+  front_check:
+    type: question
+    text: "Check the fork legs — any oil on the fork tubes or dust seals?"
+    context: "Leaking fork seals are the most common front suspension issue. Oil on the lower legs or stanchions is the giveaway."
+    answers:
+      - label: "Yes — oil visible on fork tubes"
+        next: finding_fork_seals
+      - label: "No oil visible"
+        next: fork_action_check
+
+  fork_action_check:
+    type: question
+    text: "Push down firmly on the front end and release. How does it respond?"
+    context: "It should compress smoothly and return without bouncing. Multiple bounces = worn damping. Won't return = stuck or no spring tension."
+    answers:
+      - label: "Bounces multiple times"
+        next: finding_fork_oil
+      - label: "Returns very slowly or not at all"
+        next: finding_fork_oil
+      - label: "Feels normal — smooth compress and return"
+        next: steering_bearing_check
+
+  steering_bearing_check:
+    type: question
+    text: "With the front wheel off the ground, turn the bars lock to lock. Any notchiness or resistance?"
+    context: "Steering head bearings should be silky smooth. A notchy feeling (especially at center) means they're worn or damaged."
+    answers:
+      - label: "Notchy or tight spots"
+        next: finding_steering_bearings
+      - label: "Smooth but loose/clunky"
+        next: finding_steering_bearings
+      - label: "Smooth and properly snug"
+        next: finding_front_other
+
+  rear_check:
+    type: question
+    text: "Bounce the rear end. Does the shock(s) control the movement?"
+    context: "Push down on the seat/rear and release. Should compress and return smoothly once. Bouncing or no resistance indicates worn shock."
+    answers:
+      - label: "Bounces or feels soft/dead"
+        next: finding_rear_shock
+      - label: "Feels overly harsh"
+        next: rear_linkage_check
+
+  rear_linkage_check:
+    type: question
+    text: "Does the bike have linkage-type rear suspension? Check linkage bearings for play."
+    context: "Grab the swingarm and try to move it side to side. Any play in linkage bearings causes harsh action and poor handling."
+    answers:
+      - label: "Linkage has play or is seized"
+        next: finding_linkage
+      - label: "No linkage (direct-mount shock)"
+        next: finding_rear_shock
+      - label: "Linkage feels tight"
+        next: finding_rear_shock
+
+  alignment_check:
+    type: question
+    text: "Check rear wheel alignment — are the chain adjuster marks even on both sides?"
+    context: "Misaligned rear wheel is the most common cause of pulling to one side. Check the marks on both chain adjusters."
+    answers:
+      - label: "Marks are uneven"
+        next: finding_alignment
+      - label: "Marks are even"
+        next: tire_check
+
+  tire_check:
+    type: question
+    text: "Inspect both tires. Even wear pattern? Proper pressure? No cupping or flat spots?"
+    context: "Uneven tire wear causes handling problems. Check tread depth, wear pattern, and inflation pressure."
+    answers:
+      - label: "Uneven wear or low pressure found"
+        next: finding_tires
+      - label: "Tires look good and pressure is correct"
+        next: finding_frame_check
+
+  headshake_check:
+    type: question
+    text: "At what speed does the wobble or headshake occur?"
+    context: "Low-speed wobble is usually steering bearings or tire. High-speed headshake can be more serious — frame, swingarm bearings, or wheel bearings."
+    answers:
+      - label: "Low speed (under 40 mph)"
+        next: steering_bearing_check
+      - label: "High speed (60+ mph)"
+        next: wheel_bearing_check
+
+  wheel_bearing_check:
+    type: question
+    text: "With each wheel off the ground, grab it at 12 and 6 o'clock and try to rock it. Any play?"
+    context: "Any clunking or play in a wheel bearing is a safety issue. Also spin the wheel and listen for roughness or grinding."
+    answers:
+      - label: "Play or roughness detected"
+        next: finding_wheel_bearings
+      - label: "Both wheels feel solid and smooth"
+        next: finding_headshake_other
+
+  finding_fork_seals:
+    type: finding
+    title: "Leaking Fork Seals"
+    severity: high
+    description: "Fork seals are leaking oil. This reduces damping performance and can contaminate brake rotors — safety issue."
+    recommended_actions:
+      - "Replace fork seals and dust covers"
+      - "Inspect fork tubes (stanchions) for pitting, scratches, or rust — this damages new seals"
+      - "Change fork oil while seals are out"
+      - "If stanchions are damaged, they need to be re-chromed or replaced"
+    possible_parts:
+      - "Fork seal kit (seals + dust covers)"
+      - "Fork oil (check weight in service manual)"
+      - "Fork tubes (if pitted or damaged)"
+
+  finding_fork_oil:
+    type: finding
+    title: "Fork Oil Degraded or Incorrect Level"
+    severity: medium
+    description: "Fork damping is not working properly. Fork oil breaks down over time and changes viscosity, leading to poor handling."
+    recommended_actions:
+      - "Change fork oil — use correct weight per service manual"
+      - "Set correct oil level/height per service manual"
+      - "Inspect damping rod and internal components while apart"
+      - "Consider upgrading to cartridge emulator if poor stock damping"
+    possible_parts:
+      - "Fork oil (correct weight)"
+      - "Fork seals (replace preventively while apart)"
+
+  finding_steering_bearings:
+    type: finding
+    title: "Worn Steering Head Bearings"
+    severity: high
+    description: "Steering head bearings are worn, notched, or improperly adjusted. This directly affects stability and is a safety issue."
+    recommended_actions:
+      - "Replace steering head bearings (tapered roller recommended over ball type)"
+      - "Inspect bearing races for pitting or brinnelling"
+      - "Set proper preload after installation (firm but free)"
+      - "This requires a bearing race driver and press"
+    possible_parts:
+      - "Steering head bearing kit"
+      - "Bearing race driver set"
+
+  finding_front_other:
+    type: finding
+    title: "Front End Issue — Further Investigation Needed"
+    severity: medium
+    description: "Forks, steering bearings, and basic checks appear OK but the front end still doesn't feel right."
+    recommended_actions:
+      - "Check front axle alignment and torque"
+      - "Inspect front wheel bearings for play"
+      - "Check fork alignment in the triple clamps"
+      - "Verify tire pressure and condition"
+      - "Check brake caliper for dragging"
+
+  finding_rear_shock:
+    type: finding
+    title: "Rear Shock Worn or Failed"
+    severity: high
+    description: "Rear shock absorber is not providing proper damping. Worn shocks make the bike unstable and reduce tire contact."
+    recommended_actions:
+      - "Replace rear shock — most OEM shocks are not rebuildable"
+      - "Consider upgrading to an adjustable aftermarket shock"
+      - "Check shock mounting bolts and bushings"
+      - "Verify proper preload setting for rider weight"
+    possible_parts:
+      - "Rear shock absorber"
+      - "Shock mounting hardware"
+
+  finding_linkage:
+    type: finding
+    title: "Rear Suspension Linkage Worn"
+    severity: high
+    description: "Rear suspension linkage bearings are worn or seized. This causes harshness, poor traction, and unpredictable handling."
+    recommended_actions:
+      - "Disassemble, clean, and inspect all linkage bearings"
+      - "Replace any bearings with play or roughness"
+      - "Grease all bearings thoroughly on reassembly"
+      - "Check swingarm pivot bearings at the same time"
+    possible_parts:
+      - "Rear linkage bearing kit"
+      - "Swingarm pivot bearings"
+
+  finding_alignment:
+    type: finding
+    title: "Rear Wheel Misalignment"
+    severity: medium
+    description: "Rear wheel is not aligned with the front. The bike will pull to one side and tire wear will be uneven."
+    recommended_actions:
+      - "Adjust chain adjusters to match marks on both sides"
+      - "Use a string alignment method for accurate measurement"
+      - "Check chain/belt tension after alignment"
+      - "Verify swingarm is straight (crash damage can bend it)"
+
+  finding_tires:
+    type: finding
+    title: "Tire Condition or Pressure Issue"
+    severity: high
+    description: "Tire pressure is incorrect or tires show abnormal wear patterns. Tires are the single most important handling component."
+    recommended_actions:
+      - "Set pressure to manufacturer spec (check owner's manual, not tire sidewall)"
+      - "Inspect for cupping, flat spots, or uneven wear"
+      - "Replace tires if tread depth is below 2/32 inch"
+      - "Check tire age — rubber hardens after 5 years regardless of tread"
+    possible_parts:
+      - "Front tire"
+      - "Rear tire"
+
+  finding_wheel_bearings:
+    type: finding
+    title: "Worn Wheel Bearings"
+    severity: critical
+    description: "Wheel bearing has play or roughness. A wheel bearing failure at speed is catastrophic — this must be repaired immediately."
+    recommended_actions:
+      - "Replace wheel bearings immediately — DO NOT ride"
+      - "Replace in pairs (both sides of the wheel)"
+      - "Inspect axle and spacers for wear"
+      - "Check bearing seals — water intrusion is the usual cause"
+    possible_parts:
+      - "Wheel bearing set"
+      - "Axle (if worn)"
+      - "Wheel spacers"
+
+  finding_headshake_other:
+    type: finding
+    title: "High-Speed Headshake — Complex Diagnosis"
+    severity: high
+    description: "High-speed headshake with good wheel bearings. Multiple factors can contribute — frame, swingarm, or aerodynamics."
+    recommended_actions:
+      - "Check swingarm pivot bearings for play"
+      - "Inspect frame for cracks or misalignment (crash history?)"
+      - "Verify steering damper function (if equipped)"
+      - "Check all fasteners for proper torque"
+      - "Consider aftermarket steering damper"
+
+  finding_frame_check:
+    type: finding
+    title: "Possible Frame or Chassis Issue"
+    severity: high
+    description: "Tires and alignment are OK but bike still pulls. May be a bent frame, fork, or swingarm."
+    recommended_actions:
+      - "Check for crash history"
+      - "Measure frame alignment (requires straight edge or jig)"
+      - "Check fork legs for straightness (roll on flat surface)"
+      - "Inspect swingarm for cracks or bends"

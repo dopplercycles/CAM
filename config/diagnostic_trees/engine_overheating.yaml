@@ -1,0 +1,230 @@
+tree_id: engine_overheating
+category: engine
+name: "Engine Overheating"
+description: "Temperature gauge reads high, coolant boiling over, or heat-related performance loss."
+safety_warnings:
+  - "NEVER open the radiator cap on a hot engine — pressurized coolant causes severe burns."
+  - "Let the engine cool completely before working on the cooling system."
+
+nodes:
+  start:
+    type: question
+    text: "Is the bike liquid-cooled or air/oil-cooled?"
+    context: "Air-cooled bikes run hotter by nature, especially in traffic. Liquid-cooled bikes have more components to diagnose."
+    answers:
+      - label: "Liquid-cooled"
+        next: coolant_level
+      - label: "Air/oil-cooled"
+        next: air_cooled_check
+
+  coolant_level:
+    type: question
+    text: "Check coolant level in the overflow tank (engine cold). Is it at the proper level?"
+    context: "Check the overflow/expansion tank first — there are LOW and HIGH marks. Only check the radiator cap level if the overflow is empty."
+    answers:
+      - label: "Coolant level is low or empty"
+        next: leak_check
+      - label: "Coolant level is normal"
+        next: fan_check
+
+  leak_check:
+    type: question
+    text: "Can you see any coolant leaks? Check under the bike, around hoses, water pump, and radiator."
+    context: "Coolant is usually bright green, orange, or pink. Check hose connections, water pump weep hole, and radiator for wet spots."
+    answers:
+      - label: "Yes — visible external leak"
+        next: finding_coolant_leak
+      - label: "No visible external leak"
+        next: finding_internal_leak
+
+  fan_check:
+    type: question
+    text: "When the temp gauge gets high, does the radiator fan turn on?"
+    context: "Let the bike idle until it gets hot. The fan should kick on around 200-220F (93-104C). Listen and watch for the fan."
+    answers:
+      - label: "Fan runs when hot"
+        next: thermostat_check
+      - label: "Fan never turns on"
+        next: finding_fan_failure
+      - label: "No electric fan (air-assisted radiator only)"
+        next: thermostat_check
+
+  thermostat_check:
+    type: question
+    text: "Feel the radiator hoses with the engine at operating temp. Is the top hose hot and the bottom hose warm?"
+    context: "If the top hose is hot but the bottom hose is cold, the thermostat isn't opening. Both should be warm/hot at operating temp."
+    safety: "Hoses can be very hot — touch carefully."
+    answers:
+      - label: "Both hoses warm/hot — thermostat opening"
+        next: radiator_check
+      - label: "Top hot, bottom cold — thermostat stuck closed"
+        next: finding_thermostat
+      - label: "Both hoses cold — no circulation at all"
+        next: finding_water_pump
+
+  radiator_check:
+    type: question
+    text: "Inspect the radiator. Are the fins clean and unobstructed? Any visible damage or bending?"
+    context: "Mud, bugs, and debris blocking airflow is a very common cause of overheating. Also check for bent fins blocking more than 20% of the surface."
+    answers:
+      - label: "Radiator blocked/dirty"
+        next: finding_blocked_radiator
+      - label: "Radiator clean and undamaged"
+        next: finding_head_gasket_suspect
+
+  air_cooled_check:
+    type: question
+    text: "When does the overheating occur?"
+    context: "Air-cooled bikes need airflow to cool. Sitting in traffic on a hot day is the worst case. Some overheating in those conditions can be normal."
+    answers:
+      - label: "Only in stop-and-go traffic on hot days"
+        next: finding_air_cooled_normal
+      - label: "Even at highway speed or cool weather"
+        next: oil_check
+      - label: "After extended high-RPM riding"
+        next: oil_check
+
+  oil_check:
+    type: question
+    text: "Check the oil level and condition. Is the oil at the correct level and does it look normal?"
+    context: "Oil is a critical coolant in air/oil-cooled engines. Low oil or degraded oil can't carry heat away effectively."
+    answers:
+      - label: "Oil level good, looks normal"
+        next: finding_air_cooled_mechanical
+      - label: "Oil low or looks milky/contaminated"
+        next: finding_oil_issue
+
+  finding_coolant_leak:
+    type: finding
+    title: "External Coolant Leak"
+    severity: high
+    description: "Visible coolant leak is causing the system to lose coolant and overheat. Must be repaired before riding."
+    recommended_actions:
+      - "Identify the exact leak source — hose, clamp, water pump, radiator, or gasket"
+      - "Pressure test the cooling system (15-18 PSI) to find small leaks"
+      - "Replace leaking hose or tighten clamp"
+      - "Check water pump weep hole — if leaking, the pump seal is failing"
+      - "Top off with correct coolant type after repair"
+    possible_parts:
+      - "Radiator hoses"
+      - "Hose clamps"
+      - "Water pump seal/gasket"
+      - "Coolant (match OEM spec)"
+
+  finding_internal_leak:
+    type: finding
+    title: "Possible Internal Coolant Leak"
+    severity: critical
+    description: "Coolant is disappearing without visible external leaks. Coolant may be leaking internally into the combustion chamber or oil."
+    recommended_actions:
+      - "Check oil for milky/chocolate appearance (coolant mixing with oil)"
+      - "Check exhaust for sweet smell or white smoke (coolant burning)"
+      - "Pressure test the cooling system and watch for pressure drop"
+      - "Combustion gas test on coolant (block tester) — this detects head gasket leaks"
+    possible_parts:
+      - "Head gasket"
+      - "Cylinder head (if warped)"
+
+  finding_fan_failure:
+    type: finding
+    title: "Cooling Fan Not Operating"
+    severity: high
+    description: "The electric radiator fan is not turning on when the engine reaches operating temperature. The engine will overheat in low-speed or stopped conditions."
+    recommended_actions:
+      - "Check fan fuse"
+      - "Check fan relay"
+      - "Test coolant temperature sensor/switch (the one that triggers the fan)"
+      - "Apply 12V directly to fan motor to verify it spins"
+      - "Check wiring from temp sensor to relay to fan"
+    possible_parts:
+      - "Cooling fan motor"
+      - "Fan relay"
+      - "Coolant temperature switch"
+
+  finding_thermostat:
+    type: finding
+    title: "Thermostat Stuck Closed"
+    severity: high
+    description: "The thermostat is not opening, preventing coolant from circulating through the radiator. This will cause rapid overheating."
+    recommended_actions:
+      - "Replace the thermostat — they're cheap and not worth trying to fix"
+      - "Verify by removing and placing in hot water — it should open around 180F (82C)"
+      - "Always replace the thermostat gasket/O-ring at the same time"
+    possible_parts:
+      - "Thermostat"
+      - "Thermostat gasket/O-ring"
+
+  finding_water_pump:
+    type: finding
+    title: "Water Pump Failure"
+    severity: critical
+    description: "No coolant circulation at all. The water pump impeller may be broken, stripped, or the pump shaft may be seized."
+    recommended_actions:
+      - "Check that the water pump is mechanically driven (verify belt/gear connection)"
+      - "Remove water pump and inspect impeller for damage"
+      - "Check for corroded or stripped impeller shaft"
+    possible_parts:
+      - "Water pump"
+      - "Water pump gasket"
+      - "Coolant"
+
+  finding_blocked_radiator:
+    type: finding
+    title: "Blocked or Damaged Radiator"
+    severity: medium
+    description: "Radiator fins are blocked with debris or physically damaged, preventing proper heat dissipation."
+    recommended_actions:
+      - "Clean radiator fins gently with low-pressure water (back to front)"
+      - "Straighten bent fins with a fin comb"
+      - "If internally clogged, flush the cooling system"
+      - "Consider radiator replacement if severely damaged"
+    possible_parts:
+      - "Radiator (if damaged beyond cleaning)"
+      - "Radiator fin comb tool"
+
+  finding_head_gasket_suspect:
+    type: finding
+    title: "Possible Head Gasket or Deeper Issue"
+    severity: critical
+    description: "Coolant level is normal, fan works, thermostat opens, and radiator is clear — but the engine still overheats. Head gasket or internal engine issue is likely."
+    recommended_actions:
+      - "Block test (combustion gas test) on the coolant"
+      - "Compression test and leak-down test"
+      - "Check for exhaust gases in coolant"
+      - "Inspect oil for coolant contamination"
+
+  finding_air_cooled_normal:
+    type: finding
+    title: "Normal Air-Cooled Behavior"
+    severity: low
+    description: "Air-cooled engines run hot in stop-and-go traffic. This is by design — they need airflow to cool."
+    recommended_actions:
+      - "Avoid extended idling in hot weather"
+      - "Use quality oil rated for air-cooled engines (typically 20W-50)"
+      - "Consider an oil cooler kit if this is a frequent problem"
+      - "Keep fins clean and free of debris"
+
+  finding_air_cooled_mechanical:
+    type: finding
+    title: "Air-Cooled Engine Running Too Hot"
+    severity: high
+    description: "Engine is overheating even with adequate airflow. Possible mechanical issue — lean fuel mixture, timing off, or internal problem."
+    recommended_actions:
+      - "Check for lean condition (exhaust color, plug color)"
+      - "Verify ignition timing"
+      - "Check valve clearances (tight valves = hot engine)"
+      - "Inspect cooling fins for cracks or missing pieces"
+      - "Consider compression test"
+
+  finding_oil_issue:
+    type: finding
+    title: "Oil Level or Contamination Problem"
+    severity: high
+    description: "Oil is either low or contaminated. In an air/oil-cooled engine, oil is a primary cooling medium."
+    recommended_actions:
+      - "Top off or change oil immediately"
+      - "If oil is milky — coolant intrusion (on liquid/oil-cooled engines), head gasket suspect"
+      - "If oil level keeps dropping, check for leaks and consumption"
+      - "Use correct weight oil for your climate and engine type"
+    follow_up_trees:
+      - engine_oil_consumption

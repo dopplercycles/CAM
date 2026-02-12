@@ -3954,6 +3954,132 @@
             text-align: center;
         }
 
+        /* --- Diagnostic Decision Trees --- */
+        .diag-section { margin-bottom: 2rem; }
+        .diag-toolbar {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .diag-stat { font-size: 0.85rem; color: var(--text-secondary); }
+        .diag-stat b { color: var(--text-primary); }
+        .diag-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem; margin-bottom: 1.5rem;
+        }
+        .diag-tree-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 1rem; cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .diag-tree-card:hover {
+            border-color: #3b82f6; background: rgba(59,130,246,0.06);
+        }
+        .diag-tree-card h4 { margin: 0 0 0.25rem 0; font-size: 0.95rem; color: var(--text-primary); }
+        .diag-tree-card .diag-cat {
+            display: inline-block; font-size: 0.7rem; text-transform: uppercase;
+            letter-spacing: 0.05em; padding: 2px 6px; border-radius: 4px;
+            font-weight: 600; margin-bottom: 0.4rem;
+        }
+        .diag-cat-electrical { background: rgba(234,179,8,0.15); color: #eab308; }
+        .diag-cat-engine { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .diag-cat-suspension { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .diag-tree-card .diag-desc {
+            font-size: 0.8rem; color: var(--text-secondary);
+            margin-bottom: 0.4rem; line-height: 1.3;
+        }
+        .diag-tree-card .diag-nodes { font-size: 0.75rem; color: var(--text-tertiary); }
+
+        .diag-walker {
+            background: var(--bg-secondary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 1.25rem;
+        }
+        .diag-walker-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;
+        }
+        .diag-walker-header h3 { margin: 0; font-size: 1rem; }
+        .diag-walker-header .diag-vehicle { font-size: 0.85rem; color: var(--text-secondary); }
+        .diag-breadcrumbs {
+            font-size: 0.75rem; color: var(--text-tertiary);
+            margin-bottom: 1rem; word-break: break-all;
+        }
+        .diag-breadcrumbs span { color: var(--text-secondary); }
+        .diag-safety {
+            background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3);
+            border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem;
+            font-size: 0.85rem; color: #eab308;
+        }
+        .diag-question { font-size: 1rem; color: var(--text-primary); margin-bottom: 0.3rem; font-weight: 600; }
+        .diag-context { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.4; }
+        .diag-answer-btn {
+            display: block; width: 100%; text-align: left;
+            background: var(--bg-tertiary); border: 1px solid var(--border-primary);
+            border-radius: 6px; padding: 0.7rem 1rem; margin-bottom: 0.5rem;
+            color: var(--text-primary); font-family: inherit; font-size: 0.9rem;
+            cursor: pointer; transition: border-color 0.15s, background 0.15s;
+        }
+        .diag-answer-btn:hover { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
+
+        .diag-finding {
+            background: var(--bg-tertiary); border-radius: 6px;
+            padding: 0.8rem 1rem; margin-bottom: 0.75rem;
+            border-left: 3px solid #6b7280;
+        }
+        .diag-finding.sev-low { border-left-color: #22c55e; }
+        .diag-finding.sev-medium { border-left-color: #eab308; }
+        .diag-finding.sev-high { border-left-color: #f97316; }
+        .diag-finding.sev-critical { border-left-color: #ef4444; }
+        .diag-finding h5 { margin: 0 0 0.3rem 0; font-size: 0.9rem; }
+        .diag-finding .diag-sev {
+            font-size: 0.7rem; text-transform: uppercase; font-weight: 700;
+            letter-spacing: 0.05em; margin-left: 0.5rem;
+        }
+        .diag-finding p { font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.4rem 0; }
+        .diag-finding ul { margin: 0.3rem 0 0 1.2rem; padding: 0; }
+        .diag-finding li { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.15rem; }
+
+        .diag-actions {
+            display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;
+        }
+        .diag-actions button {
+            border-radius: 6px; padding: 0.5rem 1rem;
+            font-family: inherit; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--border-primary);
+            background: var(--bg-tertiary); color: var(--text-primary);
+        }
+        .diag-actions .diag-btn-primary { background: #2563eb; border-color: #3b82f6; color: #fff; }
+        .diag-actions .diag-btn-danger { background: #dc2626; border-color: #ef4444; color: #fff; }
+        .diag-actions .diag-btn-success { background: #16a34a; border-color: #22c55e; color: #fff; }
+
+        .diag-notes-area {
+            width: 100%; min-height: 60px; background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary); border-radius: 6px;
+            padding: 0.6rem; color: var(--text-primary); font-family: inherit;
+            font-size: 0.85rem; resize: vertical; margin-top: 0.75rem;
+        }
+
+        .diag-ai-box {
+            background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 6px; padding: 0.8rem; margin-top: 0.75rem;
+            font-size: 0.85rem; color: var(--text-secondary); white-space: pre-wrap;
+        }
+
+        .diag-history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.5rem 0.75rem; background: var(--bg-secondary);
+            border: 1px solid var(--border-primary); border-radius: 6px;
+            margin-bottom: 0.4rem; font-size: 0.85rem;
+        }
+        .diag-history-item .diag-hist-name { color: var(--text-primary); font-weight: 500; }
+        .diag-history-item .diag-hist-meta { color: var(--text-tertiary); font-size: 0.75rem; }
+        .diag-status-badge {
+            font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;
+            font-weight: 600; text-transform: uppercase;
+        }
+        .diag-status-completed { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .diag-status-abandoned { background: rgba(107,114,128,0.15); color: #6b7280; }
+        .diag-status-active { background: rgba(59,130,246,0.15); color: #3b82f6; }
+
         .scout-section {
             margin-bottom: 2rem;
         }
@@ -6320,6 +6446,33 @@
             </div>
         </section>
 
+        <section class="diag-section" data-panel-id="diagnostics">
+            <h2>Diagnostic Decision Trees</h2>
+            <div class="diag-toolbar">
+                <span class="diag-stat">Trees: <b id="diag-tree-count">0</b></span>
+                <span class="diag-stat">Active: <b id="diag-active-count">0</b></span>
+                <span class="diag-stat">Completed: <b id="diag-completed-count">0</b></span>
+                <select id="diag-cat-filter" style="background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:6px;color:var(--text-primary);padding:0.35rem 0.6rem;font-size:0.85rem;">
+                    <option value="">All Categories</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="engine">Engine</option>
+                    <option value="suspension">Suspension</option>
+                </select>
+                <button style="background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:6px;color:var(--text-primary);font-family:inherit;font-size:0.85rem;padding:0.4rem 0.8rem;cursor:pointer;" onclick="diagReloadTrees()">Reload Trees</button>
+            </div>
+            <div id="diag-tree-grid" class="diag-grid"></div>
+            <div id="diag-walker" style="display:none;"></div>
+            <div id="diag-findings-section" style="display:none;margin-top:1rem;">
+                <h4 style="margin:0 0 0.5rem 0;font-size:0.9rem;">Findings</h4>
+                <div id="diag-findings-list"></div>
+            </div>
+            <div id="diag-ai-section" style="display:none;"></div>
+            <h4 style="margin:1.5rem 0 0.5rem 0;font-size:0.9rem;">Recent Sessions</h4>
+            <div id="diag-history-list">
+                <div class="ki-empty">No diagnostic sessions yet.</div>
+            </div>
+        </section>
+
         <section class="scout-section" data-panel-id="scout">
             <h2>Motorcycle Scout</h2>
 
@@ -6891,6 +7044,7 @@
             { id: 'business', name: 'Business Operations' },
             { id: 'service-records', name: 'Service Records' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
+            { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'scout', name: 'Motorcycle Scout' },
             { id: 'market-analytics', name: 'Market Analytics' },
             { id: 'webhooks', name: 'Webhooks' },
@@ -7163,6 +7317,24 @@
                     handleKnowledgeStatus(data);
                 } else if (data.type === "knowledge_scan_result") {
                     if (!data.ok) console.warn("Knowledge inbox scan failed");
+                } else if (data.type === "diagnostics_status") {
+                    handleDiagnosticsStatus(data);
+                } else if (data.type === "diag_session_started") {
+                    handleDiagSessionStarted(data);
+                } else if (data.type === "diag_answer_result") {
+                    handleDiagAnswerResult(data);
+                } else if (data.type === "diag_go_back_result") {
+                    handleDiagGoBackResult(data);
+                } else if (data.type === "diag_ai_suggest_result") {
+                    handleDiagAiSuggestResult(data);
+                } else if (data.type === "diag_complete_result") {
+                    handleDiagCompleteResult(data);
+                } else if (data.type === "diag_abandon_result") {
+                    handleDiagAbandonResult(data);
+                } else if (data.type === "diag_reload_result") {
+                    if (data.ok) console.log("Diagnostic trees reloaded:", data.trees_loaded);
+                } else if (data.type === "diag_notes_result") {
+                    // Notes saved silently
                 } else if (data.type === "scout_status") {
                     handleScoutStatus(data);
                 } else if (data.type === "scout_scan_result") {
@@ -9867,6 +10039,350 @@
             renderAgents = function() {
                 _origRenderAgentsForKI.apply(this, arguments);
                 renderKnowledgePanel();
+            };
+        }
+
+        // ---------------------------------------------------------------
+        // Diagnostic Decision Trees
+        // ---------------------------------------------------------------
+        let diagTrees = [];
+        let diagSessions = [];
+        let diagStatus = {};
+        let diagActiveSession = null;   // session object during walk
+        let diagActiveNode = null;       // current node data during walk
+
+        function handleDiagnosticsStatus(data) {
+            diagTrees = data.trees || [];
+            diagSessions = data.sessions || [];
+            diagStatus = data.status || {};
+            renderDiagPanel();
+        }
+
+        function renderDiagPanel() {
+            const s = diagStatus;
+            const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+            set("diag-tree-count", s.trees_loaded || 0);
+            set("diag-active-count", s.active || 0);
+            set("diag-completed-count", s.completed || 0);
+            renderDiagTreeGrid();
+            renderDiagHistory();
+        }
+
+        function renderDiagTreeGrid() {
+            const grid = document.getElementById("diag-tree-grid");
+            if (!grid) return;
+            // Hide grid if a session is active
+            if (diagActiveSession) { grid.style.display = "none"; return; }
+            grid.style.display = "";
+
+            const catFilter = document.getElementById("diag-cat-filter");
+            const filterVal = catFilter ? catFilter.value : "";
+            const filtered = filterVal ? diagTrees.filter(t => t.category === filterVal) : diagTrees;
+
+            if (!filtered.length) {
+                grid.innerHTML = '<div class="ki-empty">No diagnostic trees loaded.</div>';
+                return;
+            }
+            grid.innerHTML = filtered.map(t => `
+                <div class="diag-tree-card" onclick="diagStartSession('${t.tree_id}')">
+                    <span class="diag-cat diag-cat-${t.category}">${t.category}</span>
+                    <h4>${esc(t.name)}</h4>
+                    <div class="diag-desc">${esc(t.description)}</div>
+                    <div class="diag-nodes">${t.node_count} steps</div>
+                </div>
+            `).join("");
+        }
+
+        // Category filter change
+        document.addEventListener("DOMContentLoaded", () => {
+            const f = document.getElementById("diag-cat-filter");
+            if (f) f.addEventListener("change", renderDiagTreeGrid);
+        });
+
+        function diagStartSession(treeId) {
+            if (!ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({
+                type: "diag_start_session",
+                tree_id: treeId,
+                vehicle_id: "",
+                vehicle_summary: "",
+                customer_name: "",
+            }));
+        }
+
+        function handleDiagSessionStarted(data) {
+            if (!data.ok) { console.warn("Failed to start diagnostic session:", data.error); return; }
+            diagActiveSession = data.session;
+            diagActiveNode = data.node;
+            showDiagWalker();
+        }
+
+        function showDiagWalker() {
+            const walker = document.getElementById("diag-walker");
+            const grid = document.getElementById("diag-tree-grid");
+            if (!walker || !diagActiveSession || !diagActiveNode) return;
+            if (grid) grid.style.display = "none";
+            walker.style.display = "";
+            renderDiagNode();
+        }
+
+        function hideDiagWalker() {
+            const walker = document.getElementById("diag-walker");
+            const grid = document.getElementById("diag-tree-grid");
+            const findingsSection = document.getElementById("diag-findings-section");
+            const aiSection = document.getElementById("diag-ai-section");
+            if (walker) walker.style.display = "none";
+            if (grid) grid.style.display = "";
+            if (findingsSection) findingsSection.style.display = "none";
+            if (aiSection) aiSection.style.display = "none";
+            diagActiveSession = null;
+            diagActiveNode = null;
+        }
+
+        function renderDiagNode() {
+            const walker = document.getElementById("diag-walker");
+            if (!walker || !diagActiveNode) return;
+
+            const n = diagActiveNode;
+            const s = diagActiveSession;
+            const bc = (n.breadcrumbs || []).map(b => `<span>${esc(b)}</span>`).join(" &rsaquo; ");
+
+            let safetyHtml = "";
+            if (n.safety) {
+                safetyHtml = `<div class="diag-safety">&#9888; Safety: ${esc(n.safety)}</div>`;
+            }
+
+            let bodyHtml = "";
+            if (n.type === "question") {
+                const answersHtml = (n.answers || []).map((a, i) =>
+                    `<button class="diag-answer-btn" onclick="diagAnswer(${i})">${esc(a.label)}</button>`
+                ).join("");
+                bodyHtml = `
+                    <div class="diag-question">${esc(n.text)}</div>
+                    ${n.context ? `<div class="diag-context">${esc(n.context)}</div>` : ""}
+                    ${answersHtml}
+                `;
+            } else if (n.type === "finding") {
+                bodyHtml = renderDiagFindingInline(n);
+            }
+
+            const notesVal = s.notes || "";
+            walker.innerHTML = `
+                <div class="diag-walker">
+                    <div class="diag-walker-header">
+                        <h3>${esc(s.tree_name)}</h3>
+                        <span class="diag-vehicle">${esc(s.vehicle_summary || "No vehicle selected")}</span>
+                    </div>
+                    <div class="diag-breadcrumbs">${bc}</div>
+                    ${safetyHtml}
+                    ${bodyHtml}
+                    <textarea class="diag-notes-area" id="diag-notes-input"
+                        placeholder="Technician notes..." onchange="diagSaveNotes()">${esc(notesVal)}</textarea>
+                    <div class="diag-actions">
+                        <button onclick="diagGoBack()">Back</button>
+                        <button onclick="diagAiSuggest()">AI Suggestions</button>
+                        <button class="diag-btn-success" onclick="diagComplete()">Complete &amp; Save Record</button>
+                        <button class="diag-btn-danger" onclick="diagAbandon()">Abandon</button>
+                    </div>
+                </div>
+            `;
+
+            // Show findings list if any
+            renderDiagFindings();
+        }
+
+        function renderDiagFindingInline(n) {
+            const sevClass = n.severity ? `sev-${n.severity}` : "";
+            const sevLabel = n.severity ? n.severity.toUpperCase() : "";
+            const actionsHtml = (n.recommended_actions || []).map(a => `<li>${esc(a)}</li>`).join("");
+            const partsHtml = (n.possible_parts || []).length ?
+                `<p style="margin-top:0.4rem;font-weight:600;font-size:0.8rem;">Possible parts:</p>
+                 <ul>${n.possible_parts.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : "";
+            const followHtml = (n.follow_up_trees || []).length ?
+                `<p style="margin-top:0.4rem;font-size:0.8rem;color:var(--text-tertiary);">
+                 Suggested follow-up: ${n.follow_up_trees.map(t => esc(t)).join(", ")}</p>` : "";
+
+            return `
+                <div class="diag-finding ${sevClass}">
+                    <h5>${esc(n.title || "")} <span class="diag-sev">${sevLabel}</span></h5>
+                    <p>${esc(n.description || "")}</p>
+                    ${actionsHtml ? `<ul>${actionsHtml}</ul>` : ""}
+                    ${partsHtml}
+                    ${followHtml}
+                </div>
+            `;
+        }
+
+        function renderDiagFindings() {
+            const section = document.getElementById("diag-findings-section");
+            const list = document.getElementById("diag-findings-list");
+            if (!section || !list || !diagActiveSession) return;
+            const findings = diagActiveSession.findings || [];
+            if (!findings.length) { section.style.display = "none"; return; }
+            section.style.display = "";
+            list.innerHTML = findings.map(f => {
+                const sevClass = f.severity ? `sev-${f.severity}` : "";
+                const sevLabel = f.severity ? f.severity.toUpperCase() : "";
+                return `
+                    <div class="diag-finding ${sevClass}">
+                        <h5>${esc(f.title || "")} <span class="diag-sev">${sevLabel}</span></h5>
+                        <p>${esc(f.description || "")}</p>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function diagAnswer(index) {
+            if (!ws || ws.readyState !== 1 || !diagActiveSession) return;
+            ws.send(JSON.stringify({
+                type: "diag_answer",
+                session_id: diagActiveSession.session_id,
+                answer_index: index,
+            }));
+        }
+
+        function handleDiagAnswerResult(data) {
+            if (!data.ok) { console.warn("Diag answer failed:", data.error); return; }
+            diagActiveNode = data.node;
+            if (data.is_finding && data.finding) {
+                if (!diagActiveSession.findings) diagActiveSession.findings = [];
+                diagActiveSession.findings.push(data.finding);
+            }
+            if (data.answers) diagActiveSession.answers = data.answers;
+            if (data.node && data.node.session) {
+                diagActiveSession = data.node.session;
+            }
+            renderDiagNode();
+        }
+
+        function diagGoBack() {
+            if (!ws || ws.readyState !== 1 || !diagActiveSession) return;
+            ws.send(JSON.stringify({
+                type: "diag_go_back",
+                session_id: diagActiveSession.session_id,
+            }));
+        }
+
+        function handleDiagGoBackResult(data) {
+            if (!data.ok) { console.warn("Diag go back failed:", data.error); return; }
+            diagActiveNode = data.node;
+            if (data.node && data.node.session) {
+                diagActiveSession = data.node.session;
+            }
+            renderDiagNode();
+        }
+
+        function diagAiSuggest() {
+            if (!ws || ws.readyState !== 1 || !diagActiveSession) return;
+            const aiSection = document.getElementById("diag-ai-section");
+            if (aiSection) {
+                aiSection.style.display = "";
+                aiSection.innerHTML = '<div class="diag-ai-box">Asking AI for suggestions...</div>';
+            }
+            ws.send(JSON.stringify({
+                type: "diag_ai_suggest",
+                session_id: diagActiveSession.session_id,
+            }));
+        }
+
+        function handleDiagAiSuggestResult(data) {
+            const aiSection = document.getElementById("diag-ai-section");
+            if (!aiSection) return;
+            if (data.ok && data.suggestions) {
+                aiSection.style.display = "";
+                aiSection.innerHTML = `<div class="diag-ai-box"><strong>AI Suggestions:</strong>\n${esc(data.suggestions)}</div>`;
+            } else {
+                aiSection.innerHTML = `<div class="diag-ai-box" style="border-color:rgba(239,68,68,0.3);">AI suggestions unavailable: ${esc(data.error || "Unknown error")}</div>`;
+            }
+        }
+
+        function diagComplete() {
+            if (!ws || ws.readyState !== 1 || !diagActiveSession) return;
+            if (!confirm("Complete this diagnostic session and save as a service record?")) return;
+            ws.send(JSON.stringify({
+                type: "diag_complete",
+                session_id: diagActiveSession.session_id,
+            }));
+        }
+
+        function handleDiagCompleteResult(data) {
+            if (!data.ok) { console.warn("Diag complete failed:", data.error); return; }
+            hideDiagWalker();
+        }
+
+        function diagAbandon() {
+            if (!ws || ws.readyState !== 1 || !diagActiveSession) return;
+            if (!confirm("Abandon this diagnostic session?")) return;
+            ws.send(JSON.stringify({
+                type: "diag_abandon",
+                session_id: diagActiveSession.session_id,
+            }));
+        }
+
+        function handleDiagAbandonResult(data) {
+            if (!data.ok) { console.warn("Diag abandon failed:", data.error); return; }
+            hideDiagWalker();
+        }
+
+        function diagSaveNotes() {
+            if (!ws || ws.readyState !== 1 || !diagActiveSession) return;
+            const el = document.getElementById("diag-notes-input");
+            if (!el) return;
+            ws.send(JSON.stringify({
+                type: "diag_update_notes",
+                session_id: diagActiveSession.session_id,
+                notes: el.value,
+            }));
+        }
+
+        function diagReloadTrees() {
+            if (!ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({ type: "diag_reload_trees" }));
+        }
+
+        function renderDiagHistory() {
+            const list = document.getElementById("diag-history-list");
+            if (!list) return;
+            const past = diagSessions.filter(s => s.status !== "active");
+            if (!past.length) {
+                list.innerHTML = '<div class="ki-empty">No diagnostic sessions yet.</div>';
+                return;
+            }
+            list.innerHTML = past.slice(0, 25).map(s => {
+                const statusCls = `diag-status-${s.status}`;
+                const time = s.completed_at ? new Date(s.completed_at).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) : "";
+                const date = s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "";
+                return `
+                    <div class="diag-history-item">
+                        <div>
+                            <span class="diag-hist-name">${esc(s.tree_name)}</span>
+                            ${s.vehicle_summary ? ` &middot; <span style="color:var(--text-secondary)">${esc(s.vehicle_summary)}</span>` : ""}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <span class="diag-status-badge ${statusCls}">${s.status}</span>
+                            <span class="diag-hist-meta">${date} ${time}</span>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // Escape HTML helper (reuse existing esc if available)
+        if (typeof esc !== "function") {
+            function esc(s) {
+                if (!s) return "";
+                const d = document.createElement("div");
+                d.textContent = String(s);
+                return d.innerHTML;
+            }
+        }
+
+        // Hook into renderAgents for panel updates
+        const _origRenderAgentsForDiag = typeof renderAgents === "function" ? renderAgents : null;
+        if (_origRenderAgentsForDiag) {
+            renderAgents = function() {
+                _origRenderAgentsForDiag.apply(this, arguments);
+                renderDiagPanel();
             };
         }
 

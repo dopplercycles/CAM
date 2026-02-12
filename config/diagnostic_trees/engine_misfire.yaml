@@ -1,0 +1,315 @@
+tree_id: engine_misfire
+category: engine
+name: "Engine Misfire"
+description: "Engine runs rough, misfires, stumbles, or has uneven idle."
+safety_warnings:
+  - "Do not touch spark plug wires or coils while engine is running — high voltage."
+  - "Work in a well-ventilated area when engine is running."
+
+nodes:
+  start:
+    type: question
+    text: "When does the misfire occur?"
+    context: "The pattern of the misfire tells you a lot. A constant misfire is different from one that only appears at certain RPMs or under load."
+    answers:
+      - label: "Constant — at idle and while riding"
+        next: single_or_multi
+      - label: "Only at idle"
+        next: idle_misfire
+      - label: "Only under load / acceleration"
+        next: load_misfire
+      - label: "Intermittent / random"
+        next: intermittent_check
+
+  single_or_multi:
+    type: question
+    text: "Does it feel like one cylinder is dead, or does the whole engine feel rough?"
+    context: "On a multi-cylinder bike, a dead cylinder is very noticeable — the exhaust note changes and you lose power. On a single, you'd feel constant stumbling."
+    answers:
+      - label: "One cylinder feels dead"
+        next: plug_check
+      - label: "All cylinders feel rough"
+        next: fuel_quality
+      - label: "Single cylinder engine"
+        next: plug_check
+
+  plug_check:
+    type: question
+    text: "Pull the spark plug(s). What do they look like?"
+    context: "Plug reading: tan/light brown = good. Black/sooty = rich. White/blistered = lean. Wet/fouled = fuel washing or oil. Inspect electrode wear too."
+    answers:
+      - label: "Black and sooty (carbon fouled)"
+        next: finding_rich_condition
+      - label: "White or blistered"
+        next: finding_lean_condition
+      - label: "Wet with fuel"
+        next: finding_fuel_fouled
+      - label: "Oily/wet with oil"
+        next: finding_oil_fouled
+      - label: "Normal looking (tan/brown)"
+        next: coil_check
+
+  coil_check:
+    type: question
+    text: "Test the ignition coil(s). Measure primary and secondary resistance with a multimeter."
+    context: "Primary: typically 1-4 ohms. Secondary: typically 8,000-15,000 ohms. Check your service manual for exact specs. Coils that are out of spec or read open/shorted cause misfires."
+    answers:
+      - label: "Coil readings out of spec"
+        next: finding_bad_coil
+      - label: "Coil readings within spec"
+        next: compression_test
+      - label: "Can't measure right now"
+        next: compression_test
+
+  compression_test:
+    type: question
+    text: "Run a compression test on all cylinders. Are they within spec and within 10% of each other?"
+    context: "Low compression on one cylinder points to a mechanical issue — valves, rings, or head gasket."
+    answers:
+      - label: "All cylinders good and even"
+        next: finding_electrical_intermittent
+      - label: "One cylinder low"
+        next: finding_low_compression
+      - label: "All cylinders low"
+        next: finding_engine_wear
+
+  idle_misfire:
+    type: question
+    text: "Does the idle smooth out if you raise RPM slightly (just off idle to 2000 RPM)?"
+    context: "If it smooths out above idle, the issue is likely in idle circuit, air leak, or idle fuel mixture."
+    answers:
+      - label: "Yes — smooths out above idle"
+        next: vacuum_leak_check
+      - label: "No — still rough above idle"
+        next: single_or_multi
+
+  vacuum_leak_check:
+    type: question
+    text: "Spray carb cleaner around the intake boots and manifold with engine idling. Does RPM change?"
+    context: "If spraying around a joint causes RPM to change, air is leaking in there. This is a classic vacuum leak test."
+    safety: "Use short bursts of spray. Keep away from exhaust."
+    answers:
+      - label: "Yes — RPM changes (found the leak)"
+        next: finding_vacuum_leak
+      - label: "No RPM change anywhere"
+        next: finding_idle_circuit
+
+  load_misfire:
+    type: question
+    text: "Does the misfire happen at a specific RPM range or throttle position?"
+    context: "Different throttle positions use different fuel circuits. Low = pilot/slow jet. Mid = needle. High = main jet. Fuel-injected bikes may have different maps."
+    answers:
+      - label: "Low-to-mid throttle transition"
+        next: finding_fuel_transition
+      - label: "High RPM / wide open throttle"
+        next: finding_fuel_delivery_max
+      - label: "All through the range under load"
+        next: plug_check
+
+  intermittent_check:
+    type: question
+    text: "Does the misfire get worse when the engine is hot?"
+    context: "Intermittent misfires that worsen with heat often point to a failing ignition component — coils and ignition modules are common heat-failure items."
+    answers:
+      - label: "Yes — worse when hot"
+        next: finding_heat_sensitive
+      - label: "No — random regardless of temp"
+        next: finding_electrical_intermittent
+      - label: "Actually worse when cold, fine when warm"
+        next: finding_cold_enrichment
+
+  fuel_quality:
+    type: question
+    text: "How old is the fuel? Has the bike been sitting?"
+    context: "Fuel degrades in as little as 30 days. Ethanol fuel absorbs moisture. Old fuel is the #1 cause of running problems on bikes that have been sitting."
+    answers:
+      - label: "Fresh fuel (less than 30 days)"
+        next: plug_check
+      - label: "Old fuel or bike has been sitting"
+        next: finding_bad_fuel
+      - label: "Unsure"
+        next: finding_bad_fuel
+
+  finding_rich_condition:
+    type: finding
+    title: "Rich Fuel Condition"
+    severity: medium
+    description: "Black, sooty spark plugs indicate the engine is running rich — too much fuel for the amount of air."
+    recommended_actions:
+      - "Check air filter — a clogged air filter is the #1 cause of rich running"
+      - "Carbureted: check choke operation, float level, jet sizes"
+      - "Fuel-injected: check fuel pressure, injector condition, O2 sensor"
+      - "Check for stuck-open fuel injector"
+      - "Reset ECU adaptations after repair"
+
+  finding_lean_condition:
+    type: finding
+    title: "Lean Fuel Condition"
+    severity: high
+    description: "White or blistered spark plugs indicate the engine is running lean — not enough fuel. Lean conditions cause overheating and can damage pistons."
+    recommended_actions:
+      - "Check for vacuum/intake leaks immediately"
+      - "Verify fuel pressure (fuel-injected)"
+      - "Carbureted: check jet sizes, float level, fuel flow"
+      - "Check for clogged fuel filter"
+      - "DO NOT ride if severely lean — engine damage risk"
+    follow_up_trees:
+      - engine_overheating
+
+  finding_fuel_fouled:
+    type: finding
+    title: "Fuel-Fouled Spark Plug"
+    severity: medium
+    description: "Spark plug is wet with raw fuel. The cylinder is not firing and fuel is washing the plug."
+    recommended_actions:
+      - "Replace spark plug"
+      - "Check ignition coil and plug wire for that cylinder"
+      - "Check for stuck-open injector or flooded carburetor"
+      - "If plug fouls again quickly, deeper issue exists"
+
+  finding_oil_fouled:
+    type: finding
+    title: "Oil-Fouled Spark Plug"
+    severity: high
+    description: "Spark plug is wet with oil. Oil is getting into the combustion chamber — worn valve seals or piston rings."
+    recommended_actions:
+      - "Check oil consumption rate"
+      - "Compression test and leak-down test"
+      - "Worn valve guide seals are the most common cause"
+      - "Worn piston rings also cause this"
+    follow_up_trees:
+      - engine_oil_consumption
+
+  finding_bad_coil:
+    type: finding
+    title: "Faulty Ignition Coil"
+    severity: medium
+    description: "Ignition coil resistance is out of specification. The coil cannot produce adequate spark for consistent combustion."
+    recommended_actions:
+      - "Replace the faulty coil"
+      - "Check plug wire resistance while you're at it"
+      - "On coil-on-plug systems, swap coils between cylinders to confirm diagnosis"
+    possible_parts:
+      - "Ignition coil"
+      - "Spark plug wires/caps"
+
+  finding_low_compression:
+    type: finding
+    title: "Low Compression — Single Cylinder"
+    severity: high
+    description: "One cylinder reads significantly lower compression than the others. Mechanical issue in that cylinder."
+    recommended_actions:
+      - "Wet test (oil in cylinder) to differentiate rings vs valves"
+      - "Leak-down test to pinpoint where air escapes"
+      - "Check valve clearances on that cylinder"
+    possible_parts:
+      - "Valves / valve seals"
+      - "Piston rings"
+      - "Head gasket"
+
+  finding_engine_wear:
+    type: finding
+    title: "General Engine Wear"
+    severity: critical
+    description: "All cylinders show low compression. The engine has significant wear and may need a top-end or full rebuild."
+    recommended_actions:
+      - "Leak-down test all cylinders"
+      - "Check service history — when was the last valve adjustment?"
+      - "Evaluate cost of rebuild vs replacement engine"
+      - "Get a second opinion before committing to a rebuild"
+
+  finding_vacuum_leak:
+    type: finding
+    title: "Vacuum / Intake Leak"
+    severity: medium
+    description: "Air is leaking into the intake tract past the fuel metering point, causing a lean condition at idle."
+    recommended_actions:
+      - "Replace cracked or hardened intake boots/manifolds"
+      - "Check and replace intake O-rings"
+      - "Tighten intake clamps"
+      - "Check carburetor/throttle body mounting"
+    possible_parts:
+      - "Intake boots/manifolds"
+      - "Intake O-rings"
+      - "Carb/TB mounting gaskets"
+
+  finding_idle_circuit:
+    type: finding
+    title: "Idle Circuit / Pilot Jet Issue"
+    severity: medium
+    description: "Idle is rough but smooths out above idle, and no vacuum leak found. The idle fuel circuit is likely clogged or misadjusted."
+    recommended_actions:
+      - "Carbureted: clean pilot jets and idle passages"
+      - "Adjust fuel/air mixture screws"
+      - "Fuel-injected: clean throttle body, check idle air control valve"
+      - "Check for stuck PCV or breather valve"
+
+  finding_fuel_transition:
+    type: finding
+    title: "Fuel Delivery — Transition Circuit"
+    severity: medium
+    description: "Stumble during low-to-mid throttle transition. The fuel transition between circuits is lean."
+    recommended_actions:
+      - "Carbureted: adjust needle clip position (raise needle = richer)"
+      - "Check accelerator pump function (squirt test)"
+      - "Fuel-injected: check TPS signal, throttle body sync"
+      - "Check for intake leaks that worsen under vacuum"
+
+  finding_fuel_delivery_max:
+    type: finding
+    title: "Fuel Delivery at High RPM"
+    severity: high
+    description: "Misfire at high RPM or wide-open throttle suggests fuel delivery can't keep up with demand."
+    recommended_actions:
+      - "Check fuel filter for restriction"
+      - "Verify fuel pump output (pressure and volume)"
+      - "Carbureted: check main jet size, float level"
+      - "Check fuel tank vent (vacuum in tank starves fuel)"
+    possible_parts:
+      - "Fuel filter"
+      - "Fuel pump"
+      - "Main jets (carbureted)"
+
+  finding_heat_sensitive:
+    type: finding
+    title: "Heat-Sensitive Ignition Failure"
+    severity: high
+    description: "Misfire appears or worsens as the engine warms up. Classic sign of a failing ignition component that breaks down with heat."
+    recommended_actions:
+      - "Ignition coils are the most common heat-failure item — test when hot"
+      - "Check CDI/ignition module"
+      - "Check crankshaft position sensor"
+      - "Use a heat gun to isolate which component fails first"
+
+  finding_electrical_intermittent:
+    type: finding
+    title: "Intermittent Electrical Fault"
+    severity: medium
+    description: "Random misfire with good compression and fuel. Likely an intermittent electrical connection somewhere in the ignition system."
+    recommended_actions:
+      - "Wiggle test: move wiring harness sections while engine idles"
+      - "Check all ignition connectors for corrosion or loose pins"
+      - "Check ground connections"
+      - "Check for diagnostic trouble codes"
+
+  finding_cold_enrichment:
+    type: finding
+    title: "Cold Enrichment / Warm-Up Issue"
+    severity: low
+    description: "Engine runs rough when cold but smooths out at operating temperature. The cold-start enrichment system may be faulty."
+    recommended_actions:
+      - "Carbureted: check choke operation and enrichment circuit"
+      - "Fuel-injected: check coolant temp sensor (ECU uses this for cold enrichment)"
+      - "Some roughness when cold is normal — if it clears up quickly, may not need repair"
+
+  finding_bad_fuel:
+    type: finding
+    title: "Stale or Contaminated Fuel"
+    severity: medium
+    description: "Old fuel degrades and causes poor combustion. Ethanol-blend fuel absorbs moisture and can phase-separate."
+    recommended_actions:
+      - "Drain old fuel from tank"
+      - "Carbureted: drain and clean carb float bowls"
+      - "Replace fuel filter"
+      - "Fill with fresh, quality fuel"
+      - "Add fuel stabilizer if the bike will sit for extended periods"

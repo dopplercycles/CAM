@@ -1,0 +1,256 @@
+tree_id: electrical_no_start
+category: electrical
+name: "No Start Condition"
+description: "Motorcycle cranks but won't start, or won't crank at all."
+safety_warnings:
+  - "Disconnect battery negative terminal before testing electrical components."
+  - "Keep sparks and open flame away from the battery."
+
+nodes:
+  start:
+    type: question
+    text: "Does the starter motor crank when you press the start button?"
+    context: "Listen for cranking vs clicking vs silence. Make sure the kill switch is in RUN position and the bike is in neutral (or clutch pulled with side stand up)."
+    answers:
+      - label: "Yes — cranks normally but won't fire"
+        next: fuel_check
+      - label: "Clicks but doesn't crank"
+        next: starter_circuit
+      - label: "No sound at all"
+        next: battery_check
+
+  battery_check:
+    type: question
+    text: "What does the battery read with key off? (Multimeter on DC volts across terminals)"
+    context: "A healthy 12V battery should read 12.6V or higher at rest. Below 12.4V it's significantly discharged."
+    safety: "Wear safety glasses near the battery."
+    answers:
+      - label: "12.4V or higher"
+        next: kill_switch_check
+      - label: "Below 12.4V"
+        next: finding_dead_battery
+
+  kill_switch_check:
+    type: question
+    text: "With key ON: do dash lights, headlight, and neutral light illuminate?"
+    context: "If the battery is good but nothing lights up, the main fuse or ignition switch could be the problem."
+    answers:
+      - label: "Yes — lights come on normally"
+        next: starter_relay_check
+      - label: "No — nothing lights up"
+        next: main_fuse_check
+
+  main_fuse_check:
+    type: question
+    text: "Check the main fuse — is it blown?"
+    context: "Main fuse is usually 30A, located near the battery or under the seat. Pull it and visually inspect the element."
+    answers:
+      - label: "Yes — fuse is blown"
+        next: finding_blown_main_fuse
+      - label: "No — fuse looks good"
+        next: finding_ignition_switch
+
+  starter_relay_check:
+    type: question
+    text: "With someone pressing the start button, can you hear/feel the starter relay click?"
+    context: "The starter relay (solenoid) is usually near the battery. Put your hand on it and feel for a click when the button is pressed."
+    answers:
+      - label: "Yes — relay clicks but starter doesn't spin"
+        next: finding_bad_starter
+      - label: "No click at all"
+        next: finding_starter_relay
+
+  starter_circuit:
+    type: question
+    text: "Battery voltage while pressing the start button?"
+    context: "Connect multimeter to battery terminals and watch the voltage while cranking. A good battery shouldn't drop below 9.5V under load."
+    answers:
+      - label: "Drops below 9.5V"
+        next: finding_dead_battery
+      - label: "Stays above 9.5V but still just clicks"
+        next: finding_bad_starter
+
+  fuel_check:
+    type: question
+    text: "Is there fuel in the tank and is it getting to the engine?"
+    context: "Check fuel level. For fuel-injected bikes, turn key on and listen for the fuel pump priming (2-3 second whine). For carbureted bikes, check for fuel at the petcock or drain screw."
+    answers:
+      - label: "Fuel pump primes / fuel present at carb"
+        next: spark_check
+      - label: "No fuel pump sound / no fuel flow"
+        next: finding_fuel_delivery
+      - label: "Carbureted — unsure"
+        next: finding_fuel_delivery
+
+  spark_check:
+    type: question
+    text: "Pull a spark plug and ground it against the engine — do you get spark when cranking?"
+    context: "Remove plug, reconnect the plug wire, hold the plug threads against bare engine metal, and crank. Look for a bright blue spark."
+    safety: "Keep fingers clear of the electrode. Do not do this near fuel vapors."
+    answers:
+      - label: "Strong blue spark"
+        next: compression_check
+      - label: "Weak or orange spark"
+        next: finding_weak_spark
+      - label: "No spark at all"
+        next: finding_no_spark
+
+  compression_check:
+    type: question
+    text: "Do a compression test — what do the cylinders read?"
+    context: "Remove all spark plugs, screw in compression gauge, hold throttle wide open, crank 4-5 revolutions. Most motorcycles should read 120-180 PSI. More important that cylinders are within 10% of each other."
+    answers:
+      - label: "Good compression (120+ PSI, cylinders within 10%)"
+        next: finding_timing_or_sensor
+      - label: "Low compression on one or more cylinders"
+        next: finding_low_compression
+      - label: "Can't test right now"
+        next: finding_timing_or_sensor
+
+  finding_dead_battery:
+    type: finding
+    title: "Dead or Failing Battery"
+    severity: high
+    description: "Battery voltage is critically low or drops excessively under load. The battery cannot deliver enough current to crank the engine."
+    recommended_actions:
+      - "Load test the battery — a voltage reading alone doesn't tell the whole story"
+      - "Check battery age (3-5 year typical life for lead-acid, longer for lithium)"
+      - "Inspect terminals for corrosion — clean with baking soda and wire brush"
+      - "Check ground cable connection to frame"
+    possible_parts:
+      - "Replacement battery (match OEM CCA spec)"
+      - "Battery terminal cleaner/protector"
+    follow_up_trees:
+      - electrical_charging
+
+  finding_blown_main_fuse:
+    type: finding
+    title: "Blown Main Fuse"
+    severity: high
+    description: "The main fuse has blown, cutting all power to the electrical system. A blown main fuse often indicates a short circuit somewhere."
+    recommended_actions:
+      - "Replace fuse with correct amperage (never upsize)"
+      - "If new fuse blows immediately, there's a short — do NOT keep replacing fuses"
+      - "Inspect main wiring harness for chafed or pinched wires"
+      - "Check starter motor for internal short"
+    possible_parts:
+      - "Main fuse (match OEM amperage exactly)"
+
+  finding_ignition_switch:
+    type: finding
+    title: "Ignition Switch or Wiring Fault"
+    severity: medium
+    description: "Battery is good and main fuse is intact, but no power reaches the electrical system. The ignition switch or main wiring harness is suspect."
+    recommended_actions:
+      - "Test ignition switch with multimeter for continuity in ON position"
+      - "Check for corroded or loose connectors at the switch"
+      - "Inspect wiring harness from switch to fuse box"
+      - "Check for aftermarket alarm or accessory that may be interrupting power"
+
+  finding_starter_relay:
+    type: finding
+    title: "Starter Relay / Solenoid Failure"
+    severity: medium
+    description: "The starter relay is not clicking when the start button is pressed. Could be the relay itself, the start button, the clutch/neutral safety switch, or the wiring between them."
+    recommended_actions:
+      - "Bypass the starter button momentarily to test (jumper the relay trigger wire)"
+      - "Check clutch safety switch and neutral switch"
+      - "Test relay coil with multimeter"
+      - "Check the tip-over sensor (fuel-injected bikes)"
+    possible_parts:
+      - "Starter relay/solenoid"
+      - "Clutch switch"
+      - "Neutral safety switch"
+
+  finding_bad_starter:
+    type: finding
+    title: "Starter Motor Failure"
+    severity: high
+    description: "The starter relay engages but the motor doesn't spin, or spins weakly. The starter motor itself is likely worn out or has an internal fault."
+    recommended_actions:
+      - "Check starter motor cable connections for tightness and corrosion"
+      - "Tap the starter motor body lightly while pressing the button (sticking brushes)"
+      - "Remove and bench test the starter"
+      - "Inspect starter gear/clutch mechanism"
+    possible_parts:
+      - "Starter motor"
+      - "Starter motor rebuild kit (brushes, seals)"
+
+  finding_fuel_delivery:
+    type: finding
+    title: "Fuel Delivery Problem"
+    severity: medium
+    description: "The engine cranks but fuel is not reaching the cylinders. Could be fuel pump, fuel filter, injectors, or carburetor issues."
+    recommended_actions:
+      - "Check fuel pump fuse"
+      - "Verify fuel pump relay is clicking"
+      - "Check fuel filter for clogs (especially if bike sat with old fuel)"
+      - "For carbureted: clean carbs, check float bowls, verify petcock operation"
+      - "For fuel-injected: check fuel pressure at the rail"
+    possible_parts:
+      - "Fuel pump"
+      - "Fuel filter"
+      - "Carburetor rebuild kit"
+
+  finding_weak_spark:
+    type: finding
+    title: "Weak Ignition Spark"
+    severity: medium
+    description: "Spark is present but weak (orange instead of bright blue). Ignition components are degraded."
+    recommended_actions:
+      - "Replace spark plugs (always try the cheap fix first)"
+      - "Check plug gap against spec"
+      - "Test ignition coil primary and secondary resistance"
+      - "Check plug wires/caps for cracks or high resistance"
+    possible_parts:
+      - "Spark plugs (OEM spec)"
+      - "Ignition coil(s)"
+      - "Plug wires/caps"
+    follow_up_trees:
+      - engine_misfire
+
+  finding_no_spark:
+    type: finding
+    title: "No Spark — Ignition System Failure"
+    severity: high
+    description: "No spark at all on one or more cylinders. The ignition system has a fault — could be coil, pickup/crank sensor, CDI/ECU, or wiring."
+    recommended_actions:
+      - "Check for diagnostic codes (fuel-injected bikes)"
+      - "Test ignition coil primary and secondary resistance"
+      - "Check crankshaft position sensor (CKP)"
+      - "Verify kill switch wiring"
+      - "Check CDI/ECU connections and grounds"
+    possible_parts:
+      - "Ignition coil"
+      - "Crankshaft position sensor"
+      - "CDI unit or ECU"
+
+  finding_low_compression:
+    type: finding
+    title: "Low Engine Compression"
+    severity: critical
+    description: "One or more cylinders have low compression. This is a mechanical engine problem that prevents proper combustion."
+    recommended_actions:
+      - "Wet test: add a tablespoon of oil to the low cylinder and retest"
+      - "If wet test improves compression: worn rings"
+      - "If wet test doesn't help: valve or head gasket issue"
+      - "Check valve clearances"
+      - "Leak-down test for more specific diagnosis"
+    possible_parts:
+      - "Piston rings"
+      - "Head gasket"
+      - "Valves and valve seals"
+    follow_up_trees:
+      - engine_oil_consumption
+
+  finding_timing_or_sensor:
+    type: finding
+    title: "Possible Timing or Sensor Issue"
+    severity: medium
+    description: "Battery, fuel, spark, and compression appear OK but the engine won't start. Likely a timing or sensor issue preventing the ECU from firing correctly."
+    recommended_actions:
+      - "Check for stored diagnostic trouble codes"
+      - "Verify camshaft timing marks are aligned"
+      - "Check crankshaft and camshaft position sensors"
+      - "Check for vacuum leaks (spray carb cleaner around intake — RPM change = leak)"
+      - "Verify throttle position sensor (TPS) readings"

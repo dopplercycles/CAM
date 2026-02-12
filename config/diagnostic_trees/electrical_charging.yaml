@@ -1,0 +1,166 @@
+tree_id: electrical_charging
+category: electrical
+name: "Charging System"
+description: "Battery not charging, voltage dropping while riding, or battery light on."
+safety_warnings:
+  - "Disconnect battery before testing stator or regulator/rectifier connections."
+  - "Never disconnect the battery while the engine is running — this can damage the regulator/rectifier."
+
+nodes:
+  start:
+    type: question
+    text: "What's the battery voltage with the engine OFF (key off, fully rested)?"
+    context: "A fully charged battery reads 12.6V+. If it's below 12.4V, charge it fully before testing the charging system — you need a good battery to test the charging system."
+    answers:
+      - label: "12.4V or higher"
+        next: running_voltage
+      - label: "Below 12.4V"
+        next: charge_first
+
+  charge_first:
+    type: question
+    text: "Charge the battery fully, then retest. Does it hold 12.6V after charging?"
+    context: "Use a smart charger. If the battery won't hold a charge at all, it's likely bad and must be replaced before diagnosing the charging system."
+    answers:
+      - label: "Yes — holds charge"
+        next: running_voltage
+      - label: "No — won't hold charge"
+        next: finding_bad_battery
+
+  running_voltage:
+    type: question
+    text: "Start the engine. What voltage do you read at the battery at 3000 RPM?"
+    context: "A healthy charging system should put out 13.5V-14.8V at moderate RPM. Below 13V means the system isn't charging. Above 15V means overcharging."
+    answers:
+      - label: "13.5V - 14.8V (normal)"
+        next: parasitic_draw
+      - label: "Below 13V (undercharging)"
+        next: stator_check
+      - label: "Above 15V (overcharging)"
+        next: finding_bad_regulator_over
+
+  parasitic_draw:
+    type: question
+    text: "Charging voltage is normal. Does the battery drain when parked overnight?"
+    context: "If charging is fine but battery goes dead sitting, you have a parasitic draw. Normal draw is under 5mA with everything off."
+    answers:
+      - label: "Yes — battery drains overnight"
+        next: finding_parasitic_draw
+      - label: "No — battery holds fine"
+        next: finding_system_ok
+
+  stator_check:
+    type: question
+    text: "Check stator AC output: disconnect the stator connector and measure AC volts between the stator wires at 3000 RPM."
+    context: "Stator puts out AC before the regulator/rectifier converts it. Most bikes should read 30-80VAC between each pair of wires (check service manual for your specific bike)."
+    safety: "Be careful of moving parts with the engine running."
+    answers:
+      - label: "AC output is within spec on all legs"
+        next: rr_check
+      - label: "Low or no output on one or more legs"
+        next: finding_bad_stator
+
+  rr_check:
+    type: question
+    text: "Stator is good. Check the regulator/rectifier: with stator reconnected, is the R/R getting hot to the touch?"
+    context: "The R/R should be warm but not untouchable. If it's scorching hot, it's failing internally. Also check the R/R ground and connector for corrosion."
+    answers:
+      - label: "R/R is extremely hot"
+        next: finding_bad_regulator
+      - label: "R/R temp seems normal"
+        next: wiring_check
+
+  wiring_check:
+    type: question
+    text: "Check the main charging wire from R/R to battery. Any voltage drop across connections?"
+    context: "Measure voltage at R/R output and at battery positive while running. If there's more than 0.3V difference, you have a wiring/connection issue."
+    answers:
+      - label: "Voltage drop over 0.3V"
+        next: finding_wiring
+      - label: "Voltage drop minimal"
+        next: finding_bad_regulator
+
+  finding_bad_battery:
+    type: finding
+    title: "Battery Will Not Hold Charge"
+    severity: high
+    description: "Battery cannot hold a charge after being fully charged. The battery itself is the problem — it's sulfated or has a dead cell."
+    recommended_actions:
+      - "Replace battery"
+      - "Check battery age (3-5 years typical for lead-acid)"
+      - "After installing new battery, retest charging system to confirm R/R and stator are OK"
+    possible_parts:
+      - "Replacement battery (match OEM CCA spec)"
+
+  finding_bad_stator:
+    type: finding
+    title: "Stator Failure"
+    severity: high
+    description: "Stator is not producing sufficient AC output. One or more phase windings may be open or shorted. This is a common failure on high-mileage bikes."
+    recommended_actions:
+      - "Measure stator winding resistance (should be low and equal between all legs)"
+      - "Check for shorts to ground (infinite resistance from any stator wire to engine ground)"
+      - "Inspect stator visually for burned/melted windings"
+      - "Replace stator"
+    possible_parts:
+      - "Stator (OEM or quality aftermarket like Rick's Motorsport)"
+      - "Stator cover gasket"
+
+  finding_bad_regulator:
+    type: finding
+    title: "Regulator/Rectifier Failure"
+    severity: high
+    description: "The regulator/rectifier is not converting stator AC to proper DC charging voltage. Stator output is good but battery voltage stays low."
+    recommended_actions:
+      - "Replace regulator/rectifier"
+      - "Upgrade to MOSFET type R/R if available (more reliable, runs cooler)"
+      - "Check and clean all connections at R/R connector"
+      - "Verify good ground connection"
+    possible_parts:
+      - "Regulator/rectifier (MOSFET type recommended)"
+
+  finding_bad_regulator_over:
+    type: finding
+    title: "Overcharging — Regulator/Rectifier Failure"
+    severity: critical
+    description: "Charging voltage is above 15V. The voltage regulator has failed and is not limiting output. This will boil the battery and can damage electrical components."
+    recommended_actions:
+      - "STOP RIDING — overcharging damages the battery and can fry electronics"
+      - "Replace regulator/rectifier immediately"
+      - "Check battery for damage from overcharging (bulging, leaking)"
+      - "Inspect wiring harness for heat damage"
+    possible_parts:
+      - "Regulator/rectifier"
+      - "Battery (if damaged by overcharging)"
+
+  finding_wiring:
+    type: finding
+    title: "Charging Circuit Wiring Issue"
+    severity: medium
+    description: "Stator and R/R are working but voltage is being lost in the wiring between the charging system and the battery."
+    recommended_actions:
+      - "Clean and tighten all connections from R/R to battery"
+      - "Check main fuse holder for corrosion"
+      - "Inspect the charging wire for chafing or heat damage"
+      - "Check battery terminal connections"
+
+  finding_parasitic_draw:
+    type: finding
+    title: "Parasitic Battery Draw"
+    severity: medium
+    description: "Charging system works correctly but something is draining the battery when the bike is off. Normal parasitic draw is under 5mA."
+    recommended_actions:
+      - "Measure parasitic draw: multimeter in series with battery negative, key off, wait 5 minutes for modules to sleep"
+      - "Pull fuses one at a time to isolate the circuit causing the draw"
+      - "Common culprits: aftermarket accessories, alarm systems, USB chargers, stuck relays"
+      - "Check for corroded connectors that can create phantom paths"
+
+  finding_system_ok:
+    type: finding
+    title: "Charging System Operating Normally"
+    severity: low
+    description: "Battery voltage and charging output are within spec. The charging system appears to be functioning correctly."
+    recommended_actions:
+      - "If the original complaint was a dead battery, the battery itself may be failing"
+      - "Load test the battery to confirm it can hold charge under load"
+      - "Recheck in 1-2 weeks to see if symptoms return"
