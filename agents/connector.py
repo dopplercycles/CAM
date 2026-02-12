@@ -252,7 +252,7 @@ async def handle_restart_service(params: dict[str, str]) -> str:
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            "systemctl", "restart", service_name,
+            "sudo", "systemctl", "restart", service_name,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
