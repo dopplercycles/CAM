@@ -36,6 +36,7 @@ from core.notifications import NotificationManager
 from core.persona import Persona
 from interfaces.telegram.bot import TelegramBot
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
+from core.swarm import SwarmTask, SwarmStatus
 from core.orchestrator import Orchestrator
 from core.context_manager import ContextManager
 from core.analytics import Analytics
@@ -279,6 +280,14 @@ async def broadcast_chain_status():
     await broadcast_to_dashboards({
         "type": "chain_status",
         "chains": task_queue.chains_to_broadcast_list(),
+    })
+
+
+async def broadcast_swarm_status():
+    """Push current swarm state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "swarm_status",
+        "swarms": task_queue.swarms_to_broadcast_list(),
     })
 
 
@@ -617,6 +626,21 @@ async def on_chain_update(chain):
     )
 
 
+async def on_swarm_update(swarm):
+    """Called by the orchestrator when a swarm's status changes."""
+    await broadcast_swarm_status()
+    status_str = swarm.status.value if hasattr(swarm.status, 'value') else str(swarm.status)
+    severity = "error" if status_str == "failed" else "info"
+    done = len(swarm.completed_subtasks) + len(swarm.failed_subtasks)
+    total = len(swarm.subtasks)
+    getattr(event_logger, severity)(
+        "swarm",
+        f"Swarm '{swarm.name}' ({swarm.short_id}): {status_str} "
+        f"— {done}/{total} subtasks done ({swarm.progress_pct}%)",
+        swarm_id=swarm.short_id, status=status_str,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Agent dispatch — sends tasks to remote agents, waits for response
 # ---------------------------------------------------------------------------
@@ -869,6 +893,7 @@ orchestrator = Orchestrator(
     on_dispatch_to_agent=dispatch_to_agent,
     on_model_call=on_model_call,
     on_chain_update=on_chain_update,
+    on_swarm_update=on_swarm_update,
     on_approval_request=on_approval_request,
     audit_log=security_audit_log,
     context_manager=context_manager,
@@ -2071,6 +2096,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "chains": task_queue.chains_to_broadcast_list(),
     })
 
+    # Send current swarm state
+    await websocket.send_json({
+        "type": "swarm_status",
+        "swarms": task_queue.swarms_to_broadcast_list(),
+    })
+
     # Send notification history so the bell icon shows correct state
     await websocket.send_json({
         "type": "notification_history",
@@ -2508,6 +2539,78 @@ async def dashboard_websocket(websocket: WebSocket):
                     "short_id": chain.short_id,
                 })
                 await broadcast_chain_status()
+                await broadcast_task_status()
+
+            elif msg.get("type") == "swarm_submit":
+                # Submit a parallel swarm — all subtasks run at once
+                swarm_name = (msg.get("name") or "").strip()
+                objective = (msg.get("objective") or "").strip()
+                raw_subtasks = msg.get("subtasks") or []
+
+                if not swarm_name or not objective or not raw_subtasks:
+                    await websocket.send_json({
+                        "type": "swarm_submitted",
+                        "ok": False,
+                        "error": "Swarm name, objective, and at least one subtask are required",
+                    })
+                    continue
+
+                # Build Task objects for each subtask
+                subtask_list = []
+                for sub_def in raw_subtasks:
+                    desc = (sub_def.get("description") or "").strip()
+                    if not desc:
+                        continue
+                    complexity_str = (sub_def.get("complexity") or "auto").lower()
+                    try:
+                        complexity = TaskComplexity(complexity_str)
+                    except ValueError:
+                        complexity = TaskComplexity.AUTO
+                    raw_caps = sub_def.get("required_capabilities") or []
+                    caps = [c.strip() for c in raw_caps if isinstance(c, str) and c.strip()]
+
+                    subtask_list.append(Task(
+                        description=desc,
+                        source="swarm",
+                        complexity=complexity,
+                        required_capabilities=caps,
+                    ))
+
+                if not subtask_list:
+                    await websocket.send_json({
+                        "type": "swarm_submitted",
+                        "ok": False,
+                        "error": "No valid subtasks provided",
+                    })
+                    continue
+
+                swarm = SwarmTask(
+                    name=swarm_name,
+                    objective=objective,
+                    subtasks=subtask_list,
+                    source="dashboard",
+                )
+                task_queue.add_swarm(swarm)
+
+                logger.info(
+                    "Swarm %s submitted from dashboard (%d subtasks): %s",
+                    swarm.short_id, len(swarm.subtasks), swarm_name,
+                )
+                event_logger.info(
+                    "swarm",
+                    f"Swarm '{swarm_name}' ({swarm.short_id}) submitted: "
+                    f"{len(swarm.subtasks)} subtasks",
+                    swarm_id=swarm.short_id, subtasks=len(swarm.subtasks),
+                    source="dashboard",
+                )
+
+                await websocket.send_json({
+                    "type": "swarm_submitted",
+                    "ok": True,
+                    "swarm_id": swarm.swarm_id,
+                    "short_id": swarm.short_id,
+                })
+                await broadcast_swarm_status()
                 await broadcast_task_status()
 
             elif msg.get("type") == "file_send":

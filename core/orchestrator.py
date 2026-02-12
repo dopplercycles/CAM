@@ -21,6 +21,7 @@ import logging
 from datetime import datetime, timezone
 
 from core.task import Task, TaskQueue, TaskStatus, TaskComplexity, TaskChain, ChainStatus
+from core.swarm import SwarmTask, SwarmStatus
 from core.model_router import ModelRouter, ModelResponse
 from core.memory.short_term import ShortTermMemory
 from core.memory.working import WorkingMemory
@@ -92,6 +93,7 @@ class Orchestrator:
         on_dispatch_to_agent=None,
         on_model_call=None,
         on_chain_update=None,
+        on_swarm_update=None,
         on_approval_request=None,
         audit_log=None,
         context_manager: ContextManager | None = None,
@@ -152,6 +154,10 @@ class Orchestrator:
         # Optional callback for chain status changes.
         # Signature: async (chain: TaskChain) -> None
         self._on_chain_update = on_chain_update
+
+        # Optional callback for swarm status changes.
+        # Signature: async (swarm: SwarmTask) -> None
+        self._on_swarm_update = on_swarm_update
 
         # Optional callback for Tier 2 approval requests.
         # Signature: async (task: Task, perm_result: PermissionResult) -> None
@@ -228,6 +234,17 @@ class Orchestrator:
                 await result
         except Exception:
             logger.debug("Chain update callback error (non-fatal)", exc_info=True)
+
+    async def _notify_swarm_update(self, swarm: "SwarmTask"):
+        """Push a swarm status change to the dashboard (if callback is set)."""
+        if self._on_swarm_update is None:
+            return
+        try:
+            result = self._on_swarm_update(swarm)
+            if asyncio.iscoroutine(result):
+                await result
+        except Exception:
+            logger.debug("Swarm update callback error (non-fatal)", exc_info=True)
 
     # -------------------------------------------------------------------
     # The four phases
@@ -752,6 +769,29 @@ class Orchestrator:
                             chain.mark_completed()
                         await self._notify_chain_update(chain)
 
+                    # --- Swarm advancement ---
+                    swarm = self.queue.get_swarm_for_task(task.task_id)
+                    if swarm is not None:
+                        if swarm.assembly_task and task.task_id == swarm.assembly_task.task_id:
+                            # Assembly task just completed — swarm is done
+                            swarm.mark_completed(result)
+                        else:
+                            # A subtask just completed
+                            if swarm.status == SwarmStatus.PENDING:
+                                swarm.status = SwarmStatus.RUNNING
+
+                            if swarm.all_subtasks_done:
+                                if not swarm.completed_subtasks:
+                                    # Every subtask failed — no point assembling
+                                    swarm.mark_failed("All subtasks failed")
+                                else:
+                                    # At least some succeeded — assemble results
+                                    swarm.mark_assembling()
+                                    self.queue._tasks.append(swarm.assembly_task)
+                                    await self._notify_task_update()
+
+                        await self._notify_swarm_update(swarm)
+
                 except Exception as e:
                     # Task failed — log it, mark it, keep the loop running.
                     # Constitution failure hierarchy: stop action, secure,
@@ -787,6 +827,31 @@ class Orchestrator:
                     if chain is not None:
                         chain.mark_failed()
                         await self._notify_chain_update(chain)
+
+                    # --- Swarm failure (no cascade) ---
+                    # Unlike chains, a single subtask failure doesn't kill the
+                    # swarm. When the last subtask finishes (success or fail),
+                    # assembly is triggered if any succeeded. Only the assembly
+                    # task failing kills the swarm.
+                    swarm = self.queue.get_swarm_for_task(task.task_id)
+                    if swarm is not None:
+                        if swarm.assembly_task and task.task_id == swarm.assembly_task.task_id:
+                            # Assembly itself failed
+                            swarm.mark_failed(f"Assembly failed: {e}")
+                        else:
+                            # Subtask failed — check if all subtasks are now done
+                            if swarm.status == SwarmStatus.PENDING:
+                                swarm.status = SwarmStatus.RUNNING
+
+                            if swarm.all_subtasks_done:
+                                if not swarm.completed_subtasks:
+                                    swarm.mark_failed("All subtasks failed")
+                                else:
+                                    swarm.mark_assembling()
+                                    self.queue._tasks.append(swarm.assembly_task)
+                                    await self._notify_task_update()
+
+                        await self._notify_swarm_update(swarm)
 
         except asyncio.CancelledError:
             logger.info("Orchestrator loop cancelled")

@@ -28,7 +28,10 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.swarm import SwarmTask
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +292,9 @@ class TaskQueue:
         # All chains, in insertion order
         self._chains: list[TaskChain] = []
 
+        # All swarms, in insertion order
+        self._swarms: list["SwarmTask"] = []
+
         logger.info("TaskQueue initialized")
 
     # -------------------------------------------------------------------
@@ -464,6 +470,56 @@ class TaskQueue:
     def chains_to_broadcast_list(self) -> list[dict]:
         """Return all chains as dicts, newest first — for dashboard broadcast."""
         return [c.to_dict() for c in reversed(self._chains)]
+
+    # -------------------------------------------------------------------
+    # Swarm management
+    # -------------------------------------------------------------------
+
+    def add_swarm(self, swarm: "SwarmTask"):
+        """Store a swarm and queue ALL its subtasks at once.
+
+        Unlike chains (which queue only the first step), swarms queue
+        every subtask immediately so they can run in parallel across
+        multiple agents.
+        """
+        self._swarms.append(swarm)
+
+        for subtask in swarm.subtasks:
+            self._tasks.append(subtask)
+
+        logger.info(
+            "Swarm %s added (%d subtasks), all queued for parallel execution: %s",
+            swarm.short_id, len(swarm.subtasks), swarm.name,
+        )
+
+    def get_swarm_for_task(self, task_id: str) -> "SwarmTask | None":
+        """Find which swarm a task belongs to, if any.
+
+        Checks both the subtask list and the assembly task.
+        """
+        for swarm in self._swarms:
+            for subtask in swarm.subtasks:
+                if subtask.task_id == task_id:
+                    return swarm
+            if swarm.assembly_task and swarm.assembly_task.task_id == task_id:
+                return swarm
+        return None
+
+    def get_swarm(self, swarm_id: str) -> "SwarmTask | None":
+        """Look up a swarm by its UUID or short ID prefix."""
+        for swarm in self._swarms:
+            if swarm.swarm_id == swarm_id or swarm.swarm_id.startswith(swarm_id):
+                return swarm
+        return None
+
+    @property
+    def swarms(self) -> list["SwarmTask"]:
+        """All swarms, in insertion order."""
+        return list(self._swarms)
+
+    def swarms_to_broadcast_list(self) -> list[dict]:
+        """Return all swarms as dicts, newest first — for dashboard broadcast."""
+        return [s.to_dict() for s in reversed(self._swarms)]
 
     def __len__(self) -> int:
         """Total number of tasks (all statuses)."""

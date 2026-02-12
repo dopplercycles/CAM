@@ -2163,6 +2163,225 @@
             font-size: 0.85rem;
         }
 
+        /* --- Agent Swarm --- */
+        .swarm-section {
+            margin-bottom: 2rem;
+        }
+        .swarm-builder {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .swarm-builder-header {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .swarm-builder-header input {
+            flex: 1;
+            min-width: 140px;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+        .swarm-objective {
+            width: 100%;
+            min-height: 48px;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            resize: vertical;
+            margin-bottom: 0.75rem;
+            font-family: inherit;
+        }
+        .swarm-subtask-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .swarm-subtask-row input {
+            flex: 1;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+        }
+        .swarm-subtask-row select {
+            width: 90px;
+            padding: 0.35rem 0.3rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+        }
+        .swarm-subtask-row .swarm-caps-input {
+            width: 120px;
+        }
+        .swarm-subtask-row button {
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .swarm-subtask-row button:hover {
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+        .swarm-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .swarm-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .swarm-card-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        .swarm-card-id {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-left: 0.5rem;
+        }
+        .swarm-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .swarm-badge.pending { background: rgba(100,100,100,0.2); color: #999; }
+        .swarm-badge.running { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .swarm-badge.assembling { background: rgba(124,58,237,0.15); color: #a78bfa; }
+        .swarm-badge.completed { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .swarm-badge.failed { background: rgba(239,68,68,0.15); color: #f87171; }
+        .swarm-progress {
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        .swarm-progress-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            background: #7c3aed;
+        }
+        .swarm-progress-bar.completed { background: #22c55e; }
+        .swarm-progress-bar.failed { background: #ef4444; }
+        .swarm-progress-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-bottom: 0.75rem;
+        }
+        .swarm-hub {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .swarm-objective-pill {
+            background: rgba(124,58,237,0.12);
+            color: #a78bfa;
+            padding: 0.3rem 0.8rem;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            max-width: 100%;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .swarm-spokes {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .swarm-spoke {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            min-width: 80px;
+        }
+        .swarm-spoke-line {
+            width: 2px;
+            height: 16px;
+            background: var(--border-primary);
+        }
+        .swarm-spoke-node {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .swarm-spoke-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .swarm-spoke-dot.pending { background: #666; }
+        .swarm-spoke-dot.running { background: #60a5fa; }
+        .swarm-spoke-dot.completed { background: #4ade80; }
+        .swarm-spoke-dot.failed { background: #f87171; }
+        .swarm-spoke-agent {
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+        }
+        .swarm-result-preview {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .swarm-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+        }
+
         /* --- Task Scheduler --- */
         .schedule-section {
             margin-bottom: 2rem;
@@ -5679,6 +5898,27 @@
             </div>
         </section>
 
+        <section class="swarm-section" data-panel-id="swarms">
+            <h2>Agent Swarm</h2>
+
+            <div class="swarm-builder">
+                <div class="swarm-builder-header">
+                    <input type="text" id="swarm-name-input" placeholder="Swarm name..." autocomplete="off">
+                    <button class="chain-builder-btn" onclick="addSwarmSubtask()">+ Add Subtask</button>
+                    <button class="chain-builder-btn" onclick="loadTestSwarm()">Load Test Swarm</button>
+                    <button class="chain-builder-btn primary" id="swarm-submit-btn" onclick="submitSwarm()">Submit Swarm</button>
+                </div>
+                <textarea class="swarm-objective" id="swarm-objective-input" placeholder="High-level objective... (what should the combined results achieve?)"></textarea>
+                <div id="swarm-subtask-rows">
+                    <!-- Dynamic subtask rows rendered here -->
+                </div>
+            </div>
+
+            <div class="swarm-list" id="swarm-list">
+                <div class="swarm-empty">No swarms yet. Build one above or click "Load Test Swarm" to try it out.</div>
+            </div>
+        </section>
+
         <section class="schedule-section" data-panel-id="scheduler">
             <h2>Task Scheduler</h2>
 
@@ -6535,6 +6775,7 @@
         const PANEL_REGISTRY = [
             { id: 'tasks', name: 'Task Queue' },
             { id: 'chains', name: 'Task Chains' },
+            { id: 'swarms', name: 'Agent Swarm' },
             { id: 'scheduler', name: 'Task Scheduler' },
             { id: 'content', name: 'Content Calendar' },
             { id: 'pipeline', name: 'Content Pipeline' },
@@ -6745,6 +6986,10 @@
                     handleChainStatus(data);
                 } else if (data.type === "chain_submitted") {
                     if (!data.ok) console.warn("Chain submit failed:", data.error);
+                } else if (data.type === "swarm_status") {
+                    handleSwarmStatus(data);
+                } else if (data.type === "swarm_submitted") {
+                    if (!data.ok) console.warn("Swarm submit failed:", data.error);
                 } else if (data.type === "notification") {
                     handleNewNotification(data.notification, data.unread_count);
                 } else if (data.type === "notification_history") {
@@ -8063,6 +8308,173 @@
                 },
             ];
             renderChainBuilder();
+        }
+
+        // ---------------------------------------------------------------
+        // Agent Swarm
+        // ---------------------------------------------------------------
+        let swarms = [];
+        let swarmBuilderSubtasks = [];
+
+        function handleSwarmStatus(data) {
+            swarms = data.swarms || [];
+            renderSwarms();
+        }
+
+        function renderSwarms() {
+            const container = document.getElementById("swarm-list");
+            if (!container) return;
+
+            if (swarms.length === 0) {
+                container.innerHTML = '<div class="swarm-empty">No swarms yet. Build one above or click "Load Test Swarm" to try it out.</div>';
+                return;
+            }
+
+            container.innerHTML = swarms.map(s => {
+                const statusClass = s.status;
+                const progressClass = s.status === 'completed' ? 'completed' : s.status === 'failed' ? 'failed' : '';
+                const done = (s.subtasks || []).filter(t => t.status === 'completed' || t.status === 'failed').length;
+                const total = (s.subtasks || []).length;
+
+                // Hub-and-spoke visualization
+                const objectiveText = s.objective.length > 60 ? s.objective.slice(0, 57) + '...' : s.objective;
+                const spokes = (s.subtasks || []).map(t => {
+                    const label = t.description.length > 25 ? t.description.slice(0, 22) + '...' : t.description;
+                    const agent = t.assigned_agent || '';
+                    return `<div class="swarm-spoke">
+                        <div class="swarm-spoke-line"></div>
+                        <div class="swarm-spoke-node">
+                            <span class="swarm-spoke-dot ${t.status}"></span>
+                            <span title="${escapeHtml(t.description)}">${escapeHtml(label)}</span>
+                        </div>
+                        ${agent ? `<span class="swarm-spoke-agent">${escapeHtml(agent)}</span>` : ''}
+                    </div>`;
+                }).join('');
+
+                // Result preview for completed swarms
+                let resultHtml = '';
+                if (s.status === 'completed' && s.final_result) {
+                    const preview = String(s.final_result).length > 400
+                        ? String(s.final_result).slice(0, 397) + '...'
+                        : String(s.final_result);
+                    resultHtml = `<div class="swarm-result-preview">${escapeHtml(preview)}</div>`;
+                }
+                if (s.status === 'failed' && s.final_result) {
+                    resultHtml = `<div class="swarm-result-preview" style="border-left: 2px solid #ef4444;">${escapeHtml(String(s.final_result))}</div>`;
+                }
+
+                return `<div class="swarm-card">
+                    <div class="swarm-card-header">
+                        <div>
+                            <span class="swarm-card-name">${escapeHtml(s.name)}</span>
+                            <span class="swarm-card-id">(${s.short_id})</span>
+                        </div>
+                        <span class="swarm-badge ${statusClass}">${s.status}</span>
+                    </div>
+                    <div class="swarm-progress">
+                        <div class="swarm-progress-bar ${progressClass}" style="width: ${s.progress_pct}%"></div>
+                    </div>
+                    <div class="swarm-progress-label">${done}/${total} subtasks done${s.has_partial_failure ? ' (partial failure)' : ''}</div>
+                    <div class="swarm-hub">
+                        <div class="swarm-objective-pill" title="${escapeHtml(s.objective)}">${escapeHtml(objectiveText)}</div>
+                        <div class="swarm-spokes">${spokes}</div>
+                    </div>
+                    ${resultHtml}
+                </div>`;
+            }).join('');
+        }
+
+        // Builder functions
+        function renderSwarmBuilder() {
+            const container = document.getElementById("swarm-subtask-rows");
+            if (!container) return;
+
+            container.innerHTML = swarmBuilderSubtasks.map((sub, i) => `
+                <div class="swarm-subtask-row">
+                    <span style="font-size:0.75rem;color:var(--text-tertiary);min-width:18px;">${i + 1}.</span>
+                    <input type="text" value="${escapeHtml(sub.description)}" placeholder="Subtask description..."
+                           onchange="swarmBuilderSubtasks[${i}].description = this.value">
+                    <select onchange="swarmBuilderSubtasks[${i}].complexity = this.value">
+                        <option value="auto" ${sub.complexity === 'auto' ? 'selected' : ''}>Auto</option>
+                        <option value="low" ${sub.complexity === 'low' ? 'selected' : ''}>Low</option>
+                        <option value="medium" ${sub.complexity === 'medium' ? 'selected' : ''}>Medium</option>
+                        <option value="high" ${sub.complexity === 'high' ? 'selected' : ''}>High</option>
+                    </select>
+                    <input type="text" class="swarm-caps-input" value="${escapeHtml(sub.capabilities)}" placeholder="capabilities..."
+                           onchange="swarmBuilderSubtasks[${i}].capabilities = this.value">
+                    <button onclick="swarmBuilderSubtasks.splice(${i}, 1); renderSwarmBuilder();">x</button>
+                </div>
+            `).join('');
+        }
+
+        function addSwarmSubtask() {
+            swarmBuilderSubtasks.push({ description: '', complexity: 'auto', capabilities: '' });
+            renderSwarmBuilder();
+            // Focus the new input
+            setTimeout(() => {
+                const rows = document.querySelectorAll('#swarm-subtask-rows .swarm-subtask-row input[type="text"]');
+                if (rows.length) rows[rows.length - 2]?.focus();
+            }, 50);
+        }
+
+        function submitSwarm() {
+            const name = (document.getElementById("swarm-name-input")?.value || "").trim();
+            const objective = (document.getElementById("swarm-objective-input")?.value || "").trim();
+            if (!name || !objective) {
+                alert("Swarm name and objective are required.");
+                return;
+            }
+
+            const subtasks = swarmBuilderSubtasks
+                .filter(s => s.description.trim())
+                .map(s => ({
+                    description: s.description.trim(),
+                    complexity: s.complexity || "auto",
+                    required_capabilities: s.capabilities ? s.capabilities.split(",").map(c => c.trim()).filter(Boolean) : [],
+                }));
+
+            if (subtasks.length === 0) {
+                alert("Add at least one subtask with a description.");
+                return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "swarm_submit",
+                    name: name,
+                    objective: objective,
+                    subtasks: subtasks,
+                }));
+            }
+
+            // Clear builder
+            document.getElementById("swarm-name-input").value = "";
+            document.getElementById("swarm-objective-input").value = "";
+            swarmBuilderSubtasks = [];
+            renderSwarmBuilder();
+        }
+
+        function loadTestSwarm() {
+            document.getElementById("swarm-name-input").value = "Motorcycle Market Research";
+            document.getElementById("swarm-objective-input").value = "Research the current Portland-area motorcycle market for Doppler Cycles";
+            swarmBuilderSubtasks = [
+                {
+                    description: "Research Portland metro motorcycle registration stats, popular models, and riding season patterns",
+                    complexity: "medium",
+                    capabilities: "research",
+                },
+                {
+                    description: "Find and compare competing mobile motorcycle mechanics and diagnostic services in the Portland area",
+                    complexity: "medium",
+                    capabilities: "research",
+                },
+                {
+                    description: "Draft a 30-second elevator pitch for Doppler Cycles based on market positioning",
+                    complexity: "medium",
+                    capabilities: "content",
+                },
+            ];
+            renderSwarmBuilder();
         }
 
         // ---------------------------------------------------------------
