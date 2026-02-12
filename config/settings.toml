@@ -184,6 +184,24 @@ retry_base_seconds = 10
 retry_max_seconds = 3600
 inbound_secret = ""
 
+[reports]
+db_path = "data/reports.db"
+pdf_dir = "data/reports"
+daily_time = "06:00"
+weekly_time = "07:00"
+monthly_time = "08:00"
+
+[email]
+# Future: SMTP email delivery of reports
+enabled = false
+smtp_host = ""
+smtp_port = 587
+smtp_user = ""
+smtp_password = ""
+from_address = "cam@dopplercycles.com"
+to_address = ""
+use_tls = true
+
 [knowledge]
 db_path = "data/knowledge_ingest.db"
 inbox_dir = "data/knowledge/inbox"

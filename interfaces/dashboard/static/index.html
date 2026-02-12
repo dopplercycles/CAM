@@ -4080,6 +4080,60 @@
         .diag-status-abandoned { background: rgba(107,114,128,0.15); color: #6b7280; }
         .diag-status-active { background: rgba(59,130,246,0.15); color: #3b82f6; }
 
+        /* Scheduled Reports */
+        .reports-section { margin-bottom: 2rem; }
+        .reports-toolbar {
+            display: flex; gap: 0.5rem; align-items: center;
+            flex-wrap: wrap; margin-bottom: 1rem;
+        }
+        .reports-toolbar button {
+            background: var(--bg-tertiary); border: 1px solid var(--border-primary);
+            border-radius: 6px; color: var(--text-primary); font-family: inherit;
+            font-size: 0.85rem; padding: 0.4rem 0.8rem; cursor: pointer;
+        }
+        .reports-toolbar button:hover { border-color: #3b82f6; }
+        .reports-toolbar button.reports-btn-primary {
+            background: #2563eb; border-color: #3b82f6; color: #fff; font-weight: 600;
+        }
+        .reports-stats {
+            display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .reports-stat { font-size: 0.85rem; color: var(--text-secondary); }
+        .reports-stat b { color: var(--text-primary); }
+        .reports-viewer {
+            background: var(--bg-secondary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem; display: none;
+        }
+        .reports-viewer-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .reports-viewer-header h3 { margin: 0; font-size: 1rem; }
+        .reports-viewer-body { max-height: 500px; overflow-y: auto; }
+        .reports-list-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.6rem 0.75rem; border: 1px solid var(--border-primary);
+            border-radius: 6px; margin-bottom: 0.4rem; cursor: pointer;
+        }
+        .reports-list-item:hover { border-color: #3b82f6; background: rgba(59,130,246,0.04); }
+        .reports-type-badge {
+            font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem;
+            border-radius: 4px; text-transform: uppercase; white-space: nowrap;
+        }
+        .reports-type-daily { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .reports-type-weekly { background: rgba(168,85,247,0.15); color: #a855f7; }
+        .reports-type-monthly { background: rgba(234,179,8,0.15); color: #eab308; }
+        .reports-list-item .reports-title { flex: 1; font-size: 0.88rem; color: var(--text-primary); font-weight: 500; }
+        .reports-list-item .reports-date { font-size: 0.75rem; color: var(--text-tertiary); white-space: nowrap; }
+        .reports-list-actions { display: flex; gap: 0.3rem; }
+        .reports-list-actions button {
+            background: var(--bg-tertiary); border: 1px solid var(--border-primary);
+            border-radius: 4px; color: var(--text-secondary); font-size: 0.75rem;
+            padding: 0.2rem 0.5rem; cursor: pointer;
+        }
+        .reports-list-actions button:hover { border-color: #3b82f6; color: var(--text-primary); }
+        .reports-list-actions button.reports-del-btn:hover { border-color: #ef4444; color: #ef4444; }
+
         .scout-section {
             margin-bottom: 2rem;
         }
@@ -6473,6 +6527,38 @@
             </div>
         </section>
 
+        <section class="reports-section" data-panel-id="reports">
+            <h2>Scheduled Reports</h2>
+            <div class="reports-toolbar">
+                <button class="reports-btn-primary" onclick="generateReport('daily')">Daily Summary</button>
+                <button class="reports-btn-primary" onclick="generateReport('weekly')">Weekly Report</button>
+                <button class="reports-btn-primary" onclick="generateReport('monthly')">Monthly Analytics</button>
+                <select id="reports-type-filter" onchange="filterReports()" style="background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:6px;color:var(--text-primary);padding:0.35rem 0.6rem;font-size:0.85rem;">
+                    <option value="">All Types</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="reports-stats">
+                <span class="reports-stat">Total: <b id="reports-total">0</b></span>
+                <span class="reports-stat">Daily: <b id="reports-daily-count">0</b></span>
+                <span class="reports-stat">Weekly: <b id="reports-weekly-count">0</b></span>
+                <span class="reports-stat">Monthly: <b id="reports-monthly-count">0</b></span>
+            </div>
+            <div id="reports-viewer" class="reports-viewer">
+                <div class="reports-viewer-header">
+                    <h3 id="reports-viewer-title">Report</h3>
+                    <button onclick="closeReportViewer()" style="background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:4px;color:var(--text-primary);font-size:0.8rem;padding:0.25rem 0.6rem;cursor:pointer;">Close</button>
+                </div>
+                <div id="reports-viewer-body" class="reports-viewer-body"></div>
+            </div>
+            <h4 style="margin:1rem 0 0.5rem 0;font-size:0.9rem;">Report History</h4>
+            <div id="reports-history-list">
+                <div class="ki-empty">No reports generated yet.</div>
+            </div>
+        </section>
+
         <section class="scout-section" data-panel-id="scout">
             <h2>Motorcycle Scout</h2>
 
@@ -7045,6 +7131,7 @@
             { id: 'service-records', name: 'Service Records' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
+            { id: 'reports', name: 'Scheduled Reports' },
             { id: 'scout', name: 'Motorcycle Scout' },
             { id: 'market-analytics', name: 'Market Analytics' },
             { id: 'webhooks', name: 'Webhooks' },
@@ -7335,6 +7422,18 @@
                     if (data.ok) console.log("Diagnostic trees reloaded:", data.trees_loaded);
                 } else if (data.type === "diag_notes_result") {
                     // Notes saved silently
+                } else if (data.type === "reports_status") {
+                    handleReportsStatus(data);
+                } else if (data.type === "reports_generate_result") {
+                    if (data.ok) {
+                        console.log("Report generated:", data.report && data.report.title);
+                    } else {
+                        console.warn("Report generation failed:", data.error);
+                    }
+                } else if (data.type === "reports_html_result") {
+                    if (data.ok) showReportContent(data);
+                } else if (data.type === "reports_delete_result") {
+                    if (!data.ok) console.warn("Report delete failed");
                 } else if (data.type === "scout_status") {
                     handleScoutStatus(data);
                 } else if (data.type === "scout_scan_result") {
@@ -10383,6 +10482,111 @@
             renderAgents = function() {
                 _origRenderAgentsForDiag.apply(this, arguments);
                 renderDiagPanel();
+            };
+        }
+
+        // ---------------------------------------------------------------
+        // Scheduled Reports
+        // ---------------------------------------------------------------
+        let reportsEntries = [];
+        let reportsStatus = {};
+        let reportsFilterType = "";
+
+        function handleReportsStatus(data) {
+            reportsEntries = data.reports || [];
+            reportsStatus = data.status || {};
+            renderReportsPanel();
+        }
+
+        function renderReportsPanel() {
+            const s = reportsStatus;
+            const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+            set("reports-total", s.total_reports || 0);
+            set("reports-daily-count", s.daily_count || 0);
+            set("reports-weekly-count", s.weekly_count || 0);
+            set("reports-monthly-count", s.monthly_count || 0);
+            renderReportsHistory();
+        }
+
+        function renderReportsHistory() {
+            const list = document.getElementById("reports-history-list");
+            if (!list) return;
+
+            let filtered = reportsEntries;
+            if (reportsFilterType) {
+                filtered = filtered.filter(r => r.report_type === reportsFilterType);
+            }
+
+            if (!filtered.length) {
+                list.innerHTML = '<div class="ki-empty">No reports generated yet.</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(r => {
+                const typeClass = "reports-type-" + r.report_type;
+                const created = r.created_at ? r.created_at.substring(0, 16).replace("T", " ") : "";
+                const hasPdf = r.pdf_path ? true : false;
+                return `
+                    <div class="reports-list-item" onclick="viewReport('${esc(r.report_id)}')">
+                        <span class="reports-type-badge ${typeClass}">${esc(r.report_type)}</span>
+                        <span class="reports-title">${esc(r.title)}</span>
+                        <span class="reports-date">${esc(created)}</span>
+                        <span class="reports-list-actions" onclick="event.stopPropagation()">
+                            ${hasPdf ? `<button onclick="downloadReportPdf('${esc(r.report_id)}')">PDF</button>` : ''}
+                            <button class="reports-del-btn" onclick="deleteReport('${esc(r.report_id)}')">Del</button>
+                        </span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function generateReport(type) {
+            if (!ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({ type: "reports_generate", report_type: type }));
+        }
+
+        function viewReport(reportId) {
+            if (!ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({ type: "reports_get_html", report_id: reportId }));
+        }
+
+        function showReportContent(data) {
+            const viewer = document.getElementById("reports-viewer");
+            const titleEl = document.getElementById("reports-viewer-title");
+            const body = document.getElementById("reports-viewer-body");
+            if (!viewer || !body) return;
+            titleEl.textContent = data.title || "Report";
+            body.innerHTML = data.html_content || "<p>No content available.</p>";
+            viewer.style.display = "block";
+        }
+
+        function closeReportViewer() {
+            const viewer = document.getElementById("reports-viewer");
+            if (viewer) viewer.style.display = "none";
+        }
+
+        function downloadReportPdf(reportId) {
+            window.open("/api/report-pdf/" + encodeURIComponent(reportId), "_blank");
+        }
+
+        function deleteReport(reportId) {
+            if (!confirm("Delete this report?")) return;
+            if (!ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({ type: "reports_delete", report_id: reportId }));
+        }
+
+        function filterReports() {
+            const sel = document.getElementById("reports-type-filter");
+            reportsFilterType = sel ? sel.value : "";
+            renderReportsHistory();
+        }
+
+        // Hook into renderAgents for panel updates
+        const _origRenderAgentsForReports = typeof renderAgents === "function" ? renderAgents : null;
+        if (_origRenderAgentsForReports) {
+            renderAgents = function() {
+                _origRenderAgentsForReports.apply(this, arguments);
+                renderReportsPanel();
             };
         }
 

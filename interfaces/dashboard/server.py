@@ -56,6 +56,7 @@ from agents.research_agent import ResearchAgent
 from agents.business_agent import BusinessAgent, BusinessStore
 from tools.doppler.service_records import ServiceRecordStore
 from tools.doppler.diagnostics import DiagnosticEngine
+from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
 from tests.integration_test import LaunchReadiness
@@ -506,6 +507,14 @@ async def broadcast_diagnostics_status():
     })
 
 
+async def broadcast_reports_status():
+    """Push current report engine state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "reports_status",
+        **report_engine.to_broadcast_dict(),
+    })
+
+
 async def broadcast_security_audit_status():
     """Push current security audit state to all connected dashboard browsers."""
     await broadcast_to_dashboards({
@@ -548,6 +557,30 @@ if not any(s.name == "Daily Backup" for s in scheduler._schedules.values()):
         description="system_backup",
         schedule_type=ScheduleType.DAILY,
         run_at_time=config.backup.daily_backup_time,
+    )
+
+# Seed report schedules — daily, weekly, and monthly
+_reports_cfg = getattr(config, "reports", None)
+if not any(s.name == "Daily Report" for s in scheduler._schedules.values()):
+    scheduler.add_schedule(
+        name="Daily Report",
+        description="generate_daily_report",
+        schedule_type=ScheduleType.DAILY,
+        run_at_time=_reports_cfg.daily_time if _reports_cfg else "06:00",
+    )
+if not any(s.name == "Weekly Report" for s in scheduler._schedules.values()):
+    scheduler.add_schedule(
+        name="Weekly Report",
+        description="generate_weekly_report",
+        schedule_type=ScheduleType.DAILY,
+        run_at_time=_reports_cfg.weekly_time if _reports_cfg else "07:00",
+    )
+if not any(s.name == "Monthly Report" for s in scheduler._schedules.values()):
+    scheduler.add_schedule(
+        name="Monthly Report",
+        description="generate_monthly_report",
+        schedule_type=ScheduleType.DAILY,
+        run_at_time=_reports_cfg.monthly_time if _reports_cfg else "08:00",
     )
 
 
@@ -744,6 +777,31 @@ async def dispatch_to_agent(task, plan):
             return f"Backup complete: {result['filename']} ({result['file_count']} files)"
         return f"Backup failed: {result.get('error', 'unknown error')}"
 
+    # --- System tasks: scheduled reports ---
+    if task.description == "generate_daily_report":
+        task.assigned_agent = "report_engine"
+        report = report_engine.generate_report("daily")
+        await broadcast_reports_status()
+        return f"Daily report generated: {report.title}"
+    if task.description == "generate_weekly_report":
+        task.assigned_agent = "report_engine"
+        # Only generate weekly on Mondays
+        from datetime import datetime as _dt, timezone as _tz
+        if _dt.now(_tz.utc).weekday() != 0:
+            return "Skipped — weekly report only runs on Mondays"
+        report = report_engine.generate_report("weekly")
+        await broadcast_reports_status()
+        return f"Weekly report generated: {report.title}"
+    if task.description == "generate_monthly_report":
+        task.assigned_agent = "report_engine"
+        # Only generate monthly on the 1st
+        from datetime import datetime as _dt, timezone as _tz
+        if _dt.now(_tz.utc).day != 1:
+            return "Skipped — monthly report only runs on the 1st"
+        report = report_engine.generate_report("monthly")
+        await broadcast_reports_status()
+        return f"Monthly report generated: {report.title}"
+
     # --- Routing: find the target agent ---
     agent_id = None
     required_caps = getattr(task, "required_capabilities", []) or []
@@ -934,6 +992,21 @@ diagnostic_engine = DiagnosticEngine(
     service_store=service_store,
     router=orchestrator.router,
     on_change=broadcast_diagnostics_status,
+)
+
+# Scheduled reporting engine — pulls from all data stores
+report_engine = ReportEngine(
+    db_path=getattr(config, "reports", None) and config.reports.db_path or "data/reports.db",
+    pdf_dir=getattr(config, "reports", None) and config.reports.pdf_dir or "data/reports",
+    analytics=analytics,
+    business_store=business_store,
+    scout_store=scout_store,
+    event_logger=event_logger,
+    content_calendar=content_calendar,
+    service_store=service_store,
+    market_analyzer=market_analyzer,
+    registry=registry,
+    on_change=broadcast_reports_status,
 )
 
 # TTS pipeline — Piper TTS with graceful fallback
@@ -1192,6 +1265,7 @@ async def lifespan(app: FastAPI):
     business_store.close()
     service_store.close()
     diagnostic_engine.close()
+    report_engine.close()
     security_audit_log.close()
     webhook_manager.close()
     analytics.close()
@@ -1230,6 +1304,7 @@ app.state.business_store = business_store
 app.state.business_agent = business_agent
 app.state.service_store = service_store
 app.state.diagnostic_engine = diagnostic_engine
+app.state.report_engine = report_engine
 app.state.security_audit_log = security_audit_log
 app.state.webhook_manager = webhook_manager
 app.state.pipeline_manager = pipeline_manager
@@ -1615,6 +1690,29 @@ async def download_service_report(record_id: str):
         str(pdf_path),
         media_type="application/pdf",
         filename=f"doppler-service-report-{safe_id[:8]}.pdf",
+    )
+
+
+@app.get("/api/report-pdf/{report_id}")
+async def download_report_pdf(report_id: str):
+    """Download a scheduled report PDF."""
+    # Path traversal protection — report_id must be a valid UUID
+    try:
+        uuid_obj = __import__("uuid").UUID(report_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid report ID"})
+
+    safe_id = str(uuid_obj)
+    pdf_dir = getattr(config, "reports", None) and config.reports.pdf_dir or "data/reports"
+    pdf_path = Path(pdf_dir) / f"{safe_id}.pdf"
+
+    if not pdf_path.exists():
+        return JSONResponse(status_code=404, content={"error": "Report PDF not found"})
+
+    return FileResponse(
+        str(pdf_path),
+        media_type="application/pdf",
+        filename=f"doppler-report-{safe_id[:8]}.pdf",
     )
 
 
@@ -2271,6 +2369,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "diagnostics_status",
         **diagnostic_engine.to_broadcast_dict(),
+    })
+
+    # Send current reports state
+    await websocket.send_json({
+        "type": "reports_status",
+        **report_engine.to_broadcast_dict(),
     })
 
     # Send current knowledge ingestion state
@@ -3831,6 +3935,53 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "diag_notes_result",
                     "ok": ok,
                 })
+
+            # --- Scheduled Reports handlers ---
+            elif msg.get("type") == "reports_generate":
+                report_type = msg.get("report_type", "daily")
+                try:
+                    report = report_engine.generate_report(report_type)
+                    await websocket.send_json({
+                        "type": "reports_generate_result",
+                        "ok": True,
+                        "report": report.to_dict(),
+                    })
+                    await broadcast_reports_status()
+                except Exception as e:
+                    logger.error("Report generation failed: %s", e)
+                    await websocket.send_json({
+                        "type": "reports_generate_result",
+                        "ok": False,
+                        "error": str(e),
+                    })
+
+            elif msg.get("type") == "reports_get_html":
+                report_id = msg.get("report_id", "")
+                report = report_engine.get_report(report_id)
+                if report:
+                    await websocket.send_json({
+                        "type": "reports_html_result",
+                        "ok": True,
+                        "report_id": report_id,
+                        "html_content": report.html_content,
+                        "title": report.title,
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "reports_html_result",
+                        "ok": False,
+                        "error": "Report not found",
+                    })
+
+            elif msg.get("type") == "reports_delete":
+                report_id = msg.get("report_id", "")
+                ok = report_engine.delete_report(report_id)
+                await websocket.send_json({
+                    "type": "reports_delete_result",
+                    "ok": ok,
+                })
+                if ok:
+                    await broadcast_reports_status()
 
             elif msg.get("type") == "knowledge_scan_inbox":
                 results = knowledge_ingest.scan_inbox()
