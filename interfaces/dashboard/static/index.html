@@ -3421,6 +3421,107 @@
             color: var(--text-tertiary); font-style: italic; padding: 1rem 0;
         }
 
+        /* --- Social Media --- */
+        .sm-stats-row {
+            display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .sm-stat-card {
+            background: var(--bg-tertiary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 0.5rem 0.75rem; text-align: center; min-width: 70px;
+        }
+        .sm-stat-card .sm-stat-value {
+            font-size: 1.25rem; font-weight: 700; color: var(--text-primary);
+        }
+        .sm-stat-card .sm-stat-label {
+            font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase;
+        }
+        .sm-filter-bar {
+            display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .sm-filter-btn {
+            padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem;
+            border: 1px solid var(--border-primary); background: var(--bg-tertiary);
+            color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+        }
+        .sm-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .sm-filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .sm-draft-form {
+            background: var(--bg-tertiary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+        }
+        .sm-draft-form label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .sm-draft-form textarea, .sm-draft-form input[type="text"] {
+            width: 100%; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem;
+            border: 1px solid var(--border-primary); background: var(--bg-secondary);
+            color: var(--text-primary); margin-bottom: 0.5rem; box-sizing: border-box;
+            font-family: inherit;
+        }
+        .sm-draft-form textarea { resize: vertical; min-height: 60px; }
+        .sm-platform-checks {
+            display: flex; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap;
+        }
+        .sm-platform-checks label {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            font-size: 0.8rem; color: var(--text-secondary); cursor: pointer;
+        }
+        .sm-generate-btn {
+            padding: 0.45rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
+            border: none; background: var(--accent); color: #fff; cursor: pointer;
+        }
+        .sm-generate-btn:hover { opacity: 0.85; }
+        .sm-generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .sm-post-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .sm-post-card {
+            background: var(--bg-tertiary); border: 1px solid var(--border-primary);
+            border-radius: 8px; padding: 0.75rem;
+        }
+        .sm-post-header {
+            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+        }
+        .sm-post-topic {
+            font-weight: 600; font-size: 0.9rem; color: var(--text-primary);
+        }
+        .sm-badge {
+            display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+        }
+        .sm-badge-youtube_community { background: #c4302b22; color: #c4302b; border: 1px solid #c4302b44; }
+        .sm-badge-instagram { background: #833ab422; color: #833ab4; border: 1px solid #833ab444; }
+        .sm-badge-facebook { background: #1877f222; color: #1877f2; border: 1px solid #1877f244; }
+        .sm-badge-x_twitter { background: #71767b22; color: #71767b; border: 1px solid #71767b44; }
+        .sm-status-draft { background: #71767b22; color: #71767b; border: 1px solid #71767b44; }
+        .sm-status-scheduled { background: #1d9bf022; color: #1d9bf0; border: 1px solid #1d9bf044; }
+        .sm-status-posted { background: #00ba7c22; color: #00ba7c; border: 1px solid #00ba7c44; }
+        .sm-status-failed { background: #f4212e22; color: #f4212e; border: 1px solid #f4212e44; }
+        .sm-post-content {
+            font-size: 0.82rem; color: var(--text-secondary); white-space: pre-wrap;
+            max-height: 120px; overflow-y: auto; margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        .sm-hashtags {
+            display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem;
+        }
+        .sm-hashtag {
+            padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.7rem;
+            background: var(--accent-alpha, rgba(99,102,241,0.1)); color: var(--accent);
+        }
+        .sm-post-meta {
+            font-size: 0.7rem; color: var(--text-tertiary); margin-bottom: 0.5rem;
+        }
+        .sm-post-actions {
+            display: flex; gap: 0.4rem; flex-wrap: wrap;
+        }
+        .sm-post-actions button {
+            padding: 0.3rem 0.6rem; border-radius: 5px; font-size: 0.75rem;
+            border: 1px solid var(--border-primary); background: var(--bg-secondary);
+            color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+        }
+        .sm-post-actions button:hover { border-color: var(--accent); color: var(--accent); }
+        .sm-post-actions .sm-copy-btn:hover { border-color: #00ba7c; color: #00ba7c; }
+        .sm-empty {
+            color: var(--text-tertiary); font-style: italic; padding: 1rem 0;
+        }
+
         /* --- Voice Synthesis (TTS) --- */
         .tts-section {
             margin-bottom: 2rem;
@@ -7360,6 +7461,44 @@
             </div>
         </section>
 
+        <section data-panel-id="social-media">
+            <h2>Social Media</h2>
+
+            <div class="sm-stats-row" id="sm-stats">
+                <div class="sm-stat-card"><div class="sm-stat-value" id="sm-total">0</div><div class="sm-stat-label">Total</div></div>
+                <div class="sm-stat-card"><div class="sm-stat-value" id="sm-drafts">0</div><div class="sm-stat-label">Drafts</div></div>
+                <div class="sm-stat-card"><div class="sm-stat-value" id="sm-scheduled">0</div><div class="sm-stat-label">Scheduled</div></div>
+                <div class="sm-stat-card"><div class="sm-stat-value" id="sm-posted">0</div><div class="sm-stat-label">Posted</div></div>
+                <div class="sm-stat-card"><div class="sm-stat-value" id="sm-failed">0</div><div class="sm-stat-label">Failed</div></div>
+            </div>
+
+            <div class="sm-filter-bar" id="sm-filter-bar">
+                <button class="sm-filter-btn active" onclick="filterSmPosts(null)">All</button>
+                <button class="sm-filter-btn" onclick="filterSmPosts('x_twitter')">X / Twitter</button>
+                <button class="sm-filter-btn" onclick="filterSmPosts('instagram')">Instagram</button>
+                <button class="sm-filter-btn" onclick="filterSmPosts('youtube_community')">YouTube</button>
+                <button class="sm-filter-btn" onclick="filterSmPosts('facebook')">Facebook</button>
+            </div>
+
+            <div class="sm-draft-form">
+                <label for="sm-topic">Topic</label>
+                <textarea id="sm-topic" placeholder="e.g. Harley M-8 valve adjustment tips"></textarea>
+                <label for="sm-context">Extra Context (optional)</label>
+                <input type="text" id="sm-context" placeholder="e.g. Just finished a barn find video on this">
+                <div class="sm-platform-checks">
+                    <label><input type="checkbox" id="sm-chk-x_twitter" checked> X / Twitter</label>
+                    <label><input type="checkbox" id="sm-chk-instagram" checked> Instagram</label>
+                    <label><input type="checkbox" id="sm-chk-youtube_community" checked> YouTube</label>
+                    <label><input type="checkbox" id="sm-chk-facebook" checked> Facebook</label>
+                </div>
+                <button class="sm-generate-btn" id="sm-generate-btn" onclick="draftSmPosts()">Generate Drafts</button>
+            </div>
+
+            <div class="sm-post-list" id="sm-post-list">
+                <div class="sm-empty">No social media posts yet. Enter a topic and generate drafts above.</div>
+            </div>
+        </section>
+
         <section class="tts-section" data-panel-id="tts">
             <h2>Voice Synthesis</h2>
 
@@ -8734,6 +8873,7 @@
             { id: 'pipeline', name: 'Content Pipeline' },
             { id: 'youtube', name: 'YouTube Publishing' },
             { id: 'media-library', name: 'Media Library' },
+            { id: 'social-media', name: 'Social Media' },
             { id: 'tts', name: 'Voice Synthesis' },
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
@@ -9054,6 +9194,24 @@
                     if (!data.ok) console.warn("YouTube link failed:", data.error);
                 } else if (data.type === "media_deleted") {
                     if (!data.ok) console.warn("Media delete failed:", data.error);
+
+                // Social Media
+                } else if (data.type === "social_media_status") {
+                    handleSmStatus(data);
+                } else if (data.type === "sm_created") {
+                    if (data.ok) handleSmStatus(null);
+                } else if (data.type === "sm_updated") {
+                    if (data.ok) handleSmStatus(null);
+                } else if (data.type === "sm_deleted") {
+                    if (data.ok) handleSmStatus(null);
+                } else if (data.type === "sm_scheduled") {
+                    if (!data.ok) console.warn("Schedule failed:", data.error);
+                } else if (data.type === "sm_marked_posted") {
+                    if (!data.ok) console.warn("Mark posted failed:", data.error);
+                } else if (data.type === "sm_drafted") {
+                    const btn = document.getElementById("sm-generate-btn");
+                    if (btn) { btn.disabled = false; btn.textContent = "Generate Drafts"; }
+                    if (!data.ok) console.warn("Draft generation failed");
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -11316,6 +11474,158 @@
             if (!confirm("Delete this media file?")) return;
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "media_delete", media_id: mediaId }));
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Social Media
+        // ---------------------------------------------------------------
+
+        let smPosts = [];
+        let smStatus = { total: 0, drafts: 0, scheduled: 0, posted: 0, failed: 0 };
+        let smFilter = null;  // null = all platforms
+
+        function handleSmStatus(data) {
+            if (data && data.posts) smPosts = data.posts;
+            if (data && data.status) smStatus = data.status;
+            renderSmStats();
+            renderSmPosts();
+        }
+
+        function renderSmStats() {
+            const ids = ["sm-total", "sm-drafts", "sm-scheduled", "sm-posted", "sm-failed"];
+            const keys = ["total", "drafts", "scheduled", "posted", "failed"];
+            ids.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = smStatus[keys[i]] || 0;
+            });
+        }
+
+        function filterSmPosts(platform) {
+            smFilter = platform;
+            // Update active button state
+            document.querySelectorAll("#sm-filter-bar .sm-filter-btn").forEach(btn => {
+                btn.classList.remove("active");
+            });
+            event.target.classList.add("active");
+            renderSmPosts();
+        }
+
+        function renderSmPosts() {
+            const container = document.getElementById("sm-post-list");
+            if (!container) return;
+
+            const filtered = smFilter ? smPosts.filter(p => p.platform === smFilter) : smPosts;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="sm-empty">No social media posts yet. Enter a topic and generate drafts above.</div>';
+                return;
+            }
+
+            const platformLabels = {
+                x_twitter: "X / Twitter",
+                instagram: "Instagram",
+                youtube_community: "YouTube",
+                facebook: "Facebook"
+            };
+
+            container.innerHTML = filtered.map(p => {
+                const platLabel = platformLabels[p.platform] || p.platform;
+                const hashtags = (p.hashtags || []).map(h => `<span class="sm-hashtag">#${h}</span>`).join("");
+                const created = p.created_at ? new Date(p.created_at).toLocaleString() : "";
+                const contentPreview = (p.content || "").substring(0, 500);
+
+                // Action buttons based on status
+                let actions = `<button class="sm-copy-btn" onclick="copySmContent('${p.post_id}')">Copy</button>`;
+                actions += `<button onclick="editSmPost('${p.post_id}')">Edit</button>`;
+                if (p.status === "draft") {
+                    actions += `<button onclick="scheduleSmPost('${p.post_id}')">Schedule</button>`;
+                }
+                if (p.status === "scheduled") {
+                    actions += `<button onclick="markSmPosted('${p.post_id}')">Mark Posted</button>`;
+                }
+                actions += `<button onclick="deleteSmPost('${p.post_id}')">Delete</button>`;
+
+                return `<div class="sm-post-card">
+                    <div class="sm-post-header">
+                        <span class="sm-post-topic">${p.topic || "Untitled"}</span>
+                        <span class="sm-badge sm-badge-${p.platform}">${platLabel}</span>
+                        <span class="sm-badge sm-status-${p.status}">${p.status}</span>
+                    </div>
+                    <div class="sm-post-content">${contentPreview}</div>
+                    ${hashtags ? `<div class="sm-hashtags">${hashtags}</div>` : ""}
+                    <div class="sm-post-meta">${created}${p.short_id ? " \u00b7 " + p.short_id : ""}</div>
+                    <div class="sm-post-actions">${actions}</div>
+                </div>`;
+            }).join("");
+        }
+
+        function draftSmPosts() {
+            const topic = (document.getElementById("sm-topic")?.value || "").trim();
+            if (!topic) { alert("Please enter a topic"); return; }
+            const extra = (document.getElementById("sm-context")?.value || "").trim();
+            const platforms = [];
+            ["x_twitter", "instagram", "youtube_community", "facebook"].forEach(p => {
+                const chk = document.getElementById("sm-chk-" + p);
+                if (chk && chk.checked) platforms.push(p);
+            });
+            if (platforms.length === 0) { alert("Select at least one platform"); return; }
+
+            const btn = document.getElementById("sm-generate-btn");
+            if (btn) { btn.disabled = true; btn.textContent = "Generating..."; }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "sm_draft",
+                    topic: topic,
+                    platforms: platforms,
+                    extra_context: extra,
+                }));
+            }
+        }
+
+        function scheduleSmPost(postId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "sm_schedule", post_id: postId }));
+            }
+        }
+
+        function markSmPosted(postId) {
+            const url = prompt("Enter the published post URL (optional):", "");
+            if (url === null) return;  // cancelled
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "sm_mark_posted", post_id: postId, post_url: url }));
+            }
+        }
+
+        function copySmContent(postId) {
+            const post = smPosts.find(p => p.post_id === postId);
+            if (!post) return;
+            const hashtags = (post.hashtags || []).map(h => "#" + h).join(" ");
+            const text = post.content + (hashtags ? "\n\n" + hashtags : "");
+            navigator.clipboard.writeText(text).then(() => {
+                // Brief visual feedback
+                const btn = event.target;
+                const orig = btn.textContent;
+                btn.textContent = "Copied!";
+                setTimeout(() => { btn.textContent = orig; }, 1500);
+            }).catch(err => console.warn("Copy failed:", err));
+        }
+
+        function editSmPost(postId) {
+            const post = smPosts.find(p => p.post_id === postId);
+            if (!post) return;
+            const newContent = prompt("Edit content:", post.content);
+            if (newContent === null) return;  // cancelled
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "sm_update", post_id: postId, content: newContent }));
+            }
+        }
+
+        function deleteSmPost(postId) {
+            if (!confirm("Delete this post?")) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "sm_delete", post_id: postId }));
             }
         }
 

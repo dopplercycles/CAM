@@ -50,6 +50,7 @@ from core.webhook_manager import WebhookManager
 from tools.content.pipeline import ContentPipelineManager
 from tools.content.youtube import YouTubeManager
 from tools.content.video_processor import VideoProcessor
+from tools.content.social_media import SocialMediaManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -404,6 +405,14 @@ async def broadcast_media_status():
     await broadcast_to_dashboards({
         "type": "media_status",
         **video_processor.to_broadcast_dict(),
+    })
+
+
+async def broadcast_social_media_status():
+    """Push current social media posts state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "social_media_status",
+        **social_media_manager.to_broadcast_dict(),
     })
 
 
@@ -1175,6 +1184,13 @@ video_processor = VideoProcessor(
     router=orchestrator.router,
 )
 
+# Social media manager — cross-platform content generator
+social_media_manager = SocialMediaManager(
+    db_path="data/social_media.db",
+    on_change=broadcast_social_media_status,
+    router=orchestrator.router,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1497,6 +1513,7 @@ async def lifespan(app: FastAPI):
     pipeline_manager.close()
     youtube_manager.close()
     video_processor.close()
+    social_media_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1554,6 +1571,7 @@ app.state.webhook_manager = webhook_manager
 app.state.pipeline_manager = pipeline_manager
 app.state.youtube_manager = youtube_manager
 app.state.video_processor = video_processor
+app.state.social_media_manager = social_media_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2619,6 +2637,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "media_status",
         **video_processor.to_broadcast_dict(),
+    })
+
+    # Send current social media posts
+    await websocket.send_json({
+        "type": "social_media_status",
+        **social_media_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -3749,6 +3773,84 @@ async def dashboard_websocket(websocket: WebSocket):
                 else:
                     await websocket.send_json({"type": "media_deleted", "ok": False, "error": "Not found"})
                 await broadcast_media_status()
+
+            # ── Social Media handlers ──────────────────────────────
+            elif msg.get("type") == "sm_create":
+                post = social_media_manager.create_post(
+                    platform=msg.get("platform", "x_twitter"),
+                    topic=msg.get("topic", ""),
+                    content=msg.get("content", ""),
+                    hashtags=msg.get("hashtags", []),
+                    media_paths=msg.get("media_paths", []),
+                    scheduled_time=msg.get("scheduled_time"),
+                    pipeline_id=msg.get("pipeline_id"),
+                    metadata=msg.get("metadata", {}),
+                )
+                await websocket.send_json({"type": "sm_created", "ok": True, "post": post.to_dict()})
+                await broadcast_social_media_status()
+
+            elif msg.get("type") == "sm_update":
+                post_id = msg.get("post_id", "")
+                kwargs = {}
+                for k in ("platform", "content", "hashtags", "media_paths",
+                          "scheduled_time", "post_url", "topic", "pipeline_id", "metadata"):
+                    if k in msg:
+                        kwargs[k] = msg[k]
+                post = social_media_manager.update_post(post_id, **kwargs)
+                if post:
+                    await websocket.send_json({"type": "sm_updated", "ok": True, "post": post.to_dict()})
+                else:
+                    await websocket.send_json({"type": "sm_updated", "ok": False, "error": "Not found"})
+                await broadcast_social_media_status()
+
+            elif msg.get("type") == "sm_delete":
+                post_id = msg.get("post_id", "")
+                deleted = social_media_manager.delete_post(post_id)
+                if deleted:
+                    await websocket.send_json({"type": "sm_deleted", "ok": True})
+                else:
+                    await websocket.send_json({"type": "sm_deleted", "ok": False, "error": "Not found"})
+                await broadcast_social_media_status()
+
+            elif msg.get("type") == "sm_schedule":
+                post_id = msg.get("post_id", "")
+                post = social_media_manager.schedule_post(post_id)
+                if post:
+                    await websocket.send_json({"type": "sm_scheduled", "ok": True, "post": post.to_dict()})
+                else:
+                    await websocket.send_json({"type": "sm_scheduled", "ok": False, "error": "Cannot schedule (empty content or wrong status)"})
+                await broadcast_social_media_status()
+
+            elif msg.get("type") == "sm_mark_posted":
+                post_id = msg.get("post_id", "")
+                post_url = msg.get("post_url", "")
+                post = social_media_manager.mark_posted(post_id, post_url)
+                if post:
+                    await websocket.send_json({"type": "sm_marked_posted", "ok": True, "post": post.to_dict()})
+                else:
+                    await websocket.send_json({"type": "sm_marked_posted", "ok": False, "error": "Cannot mark posted (wrong status)"})
+                await broadcast_social_media_status()
+
+            elif msg.get("type") == "sm_draft":
+                topic = msg.get("topic", "")
+                platforms = msg.get("platforms") or ["x_twitter", "instagram", "youtube_community", "facebook"]
+                extra_context = msg.get("extra_context", "")
+                posts = await social_media_manager.draft_batch(topic, platforms, extra_context)
+                await websocket.send_json({
+                    "type": "sm_drafted",
+                    "ok": True,
+                    "posts": [p.to_dict() for p in posts],
+                })
+                await broadcast_social_media_status()
+
+            elif msg.get("type") == "sm_generate_schedule":
+                frequency = msg.get("frequency")
+                slots = social_media_manager.generate_weekly_schedule(frequency)
+                await websocket.send_json({
+                    "type": "sm_schedule_generated",
+                    "ok": True,
+                    "slots": slots,
+                })
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")
