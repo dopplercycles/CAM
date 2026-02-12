@@ -60,6 +60,7 @@ from tools.doppler.crm import CRMStore
 from tools.doppler.scheduler_appointments import AppointmentScheduler
 from tools.doppler.invoicing import InvoiceManager
 from tools.doppler.inventory import InventoryManager
+from tools.doppler.finances import FinanceTracker
 from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
@@ -575,6 +576,23 @@ inventory_manager = InventoryManager(
     on_change=broadcast_inventory_status,
     notification_callback=notification_manager.emit,
 )
+
+# Financial dashboard — separate SQLite DB for income/expense tracking
+async def broadcast_finances_status():
+    """Push current finance state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "finances_status",
+        **finance_tracker.to_broadcast_dict(current_balance=_finance_state["balance"]),
+    })
+
+_finance_state = {"balance": 0.0}  # Manual balance input, stored in memory
+
+finance_tracker = FinanceTracker(
+    db_path="data/finances.db",
+    on_change=broadcast_finances_status,
+    invoice_manager=invoice_manager,
+)
+finance_tracker.sync_from_invoices()
 
 async def broadcast_diagnostics_status():
     """Push current diagnostic engine state to all connected dashboard browsers."""
@@ -1439,6 +1457,7 @@ async def lifespan(app: FastAPI):
     appointment_scheduler.close()
     invoice_manager.close()
     inventory_manager.close()
+    finance_tracker.close()
     diagnostic_engine.close()
     report_engine.close()
     security_audit_log.close()
@@ -2592,6 +2611,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "inventory_status",
         **inventory_manager.to_broadcast_dict(),
+    })
+
+    # Send current financial dashboard data
+    await websocket.send_json({
+        "type": "finances_status",
+        **finance_tracker.to_broadcast_dict(current_balance=_finance_state["balance"]),
     })
 
     # Send current diagnostic engine state
@@ -4440,6 +4465,9 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 if inv:
                     await broadcast_invoicing_status()
+                    # Auto-sync finances when invoice paid
+                    finance_tracker.sync_from_invoices()
+                    await broadcast_finances_status()
 
             elif msg.get("type") == "invoicing_mark_sent":
                 inv = invoice_manager.mark_sent(msg.get("invoice_id", ""))
@@ -4565,6 +4593,59 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "inventory_cost_report_result",
                     **report,
                 })
+
+            # --- Financial Dashboard handlers ---
+            elif msg.get("type") == "finances_add_transaction":
+                try:
+                    txn = finance_tracker.add_transaction(
+                        date_str=msg.get("date", ""),
+                        txn_type=msg.get("txn_type", ""),
+                        category=msg.get("category", ""),
+                        amount=float(msg.get("amount", 0)),
+                        description=msg.get("description", ""),
+                        reference_id=msg.get("reference_id", ""),
+                        metadata=msg.get("metadata"),
+                    )
+                    event_logger.info("finances", f"Added {txn.type}: ${txn.amount:.2f} ({txn.category})")
+                    await websocket.send_json({"type": "finances_txn_added", "ok": True, "transaction": txn.to_dict()})
+                    await broadcast_finances_status()
+                except (ValueError, Exception) as e:
+                    await websocket.send_json({"type": "finances_txn_added", "ok": False, "error": str(e)})
+
+            elif msg.get("type") == "finances_update_transaction":
+                kwargs = {k: v for k, v in msg.items() if k not in ("type", "txn_id")}
+                txn = finance_tracker.update_transaction(msg.get("txn_id", ""), **kwargs)
+                await websocket.send_json({
+                    "type": "finances_txn_updated",
+                    "ok": txn is not None,
+                    "transaction": txn.to_dict() if txn else None,
+                })
+                if txn:
+                    await broadcast_finances_status()
+
+            elif msg.get("type") == "finances_delete_transaction":
+                ok = finance_tracker.delete_transaction(msg.get("txn_id", ""))
+                if ok:
+                    event_logger.info("finances", f"Deleted transaction {msg.get('txn_id', '')[:8]}")
+                await websocket.send_json({"type": "finances_txn_deleted", "ok": ok})
+                if ok:
+                    await broadcast_finances_status()
+
+            elif msg.get("type") == "finances_sync_invoices":
+                count = finance_tracker.sync_from_invoices()
+                event_logger.info("finances", f"Invoice sync: {count} new transactions")
+                await websocket.send_json({"type": "finances_sync_result", "ok": True, "count": count})
+                await broadcast_finances_status()
+
+            elif msg.get("type") == "finances_set_balance":
+                _finance_state["balance"] = float(msg.get("balance", 0))
+                event_logger.info("finances", f"Balance set to ${_finance_state['balance']:.2f}")
+                await broadcast_finances_status()
+
+            elif msg.get("type") == "finances_runway":
+                balance = float(msg.get("balance", _finance_state["balance"]))
+                runway = finance_tracker.runway_calculator(balance)
+                await websocket.send_json({"type": "finances_runway_result", **runway})
 
             # --- Scheduled Reports handlers ---
             elif msg.get("type") == "reports_generate":

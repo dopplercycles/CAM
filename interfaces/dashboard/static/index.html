@@ -3800,6 +3800,146 @@
         }
         .parts-usage-chart { margin-bottom: 1.2rem; }
 
+        /* Financial Dashboard */
+        .fin-section { margin-bottom: 2rem; }
+        .fin-summary-row {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+        }
+        .fin-summary-card {
+            flex: 1; min-width: 130px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem 1rem; text-align: center;
+        }
+        .fin-card-value {
+            font-size: 1.4rem; font-weight: 700; color: var(--text-value);
+        }
+        .fin-card-value.positive { color: #34d399; }
+        .fin-card-value.negative { color: #f87171; }
+        .fin-card-label {
+            font-size: 0.72rem; color: var(--text-tertiary); margin-top: 0.25rem;
+        }
+        .fin-chart-section {
+            margin-bottom: 1.5rem;
+        }
+        .fin-chart-section h3 {
+            font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;
+        }
+        .fin-month-bar-row {
+            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;
+        }
+        .fin-month-label {
+            flex: 0 0 60px; font-size: 0.75rem; color: var(--text-secondary);
+            text-align: right;
+        }
+        .fin-bar-pair {
+            flex: 1; display: flex; flex-direction: column; gap: 2px;
+        }
+        .fin-bar-track {
+            height: 10px; background: var(--bg-primary); border-radius: 3px; overflow: hidden;
+        }
+        .fin-bar-income {
+            height: 100%; background: #34d399; border-radius: 3px; transition: width 0.4s ease;
+        }
+        .fin-bar-expense {
+            height: 100%; background: #f87171; border-radius: 3px; transition: width 0.4s ease;
+        }
+        .fin-bar-balance {
+            height: 100%; border-radius: 3px; transition: width 0.4s ease;
+        }
+        .fin-bar-amount {
+            flex: 0 0 70px; font-size: 0.72rem; font-family: monospace;
+            color: var(--text-secondary); text-align: right;
+        }
+        .fin-runway-box {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;
+            display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+        }
+        .fin-runway-months {
+            font-size: 2rem; font-weight: 700; color: var(--text-value);
+        }
+        .fin-runway-detail {
+            font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;
+        }
+        .fin-badge {
+            display: inline-block; font-size: 0.7rem; font-weight: 600;
+            padding: 0.15rem 0.5rem; border-radius: 4px;
+        }
+        .fin-badge.growing { background: rgba(52,211,153,0.15); color: #34d399; }
+        .fin-badge.stable  { background: rgba(99,102,241,0.15); color: #818cf8; }
+        .fin-badge.burning { background: rgba(248,113,113,0.15); color: #f87171; }
+        .fin-cat-bar {
+            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;
+        }
+        .fin-cat-label {
+            flex: 0 0 130px; font-size: 0.78rem; color: var(--text-secondary);
+            text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .fin-cat-track {
+            flex: 1; height: 16px; background: var(--bg-primary);
+            border-radius: 3px; overflow: hidden;
+        }
+        .fin-cat-fill {
+            height: 100%; border-radius: 3px; transition: width 0.4s ease;
+        }
+        .fin-cat-pct {
+            flex: 0 0 50px; font-size: 0.72rem; font-family: monospace;
+            color: var(--text-secondary);
+        }
+        .fin-txn-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .fin-txn-info { flex: 1; }
+        .fin-txn-info .fin-txn-desc {
+            font-size: 0.85rem; color: var(--text-value); font-weight: 500;
+        }
+        .fin-txn-info .fin-txn-meta {
+            font-size: 0.72rem; color: var(--text-tertiary); margin-top: 0.15rem;
+        }
+        .fin-txn-amount {
+            font-size: 1rem; font-weight: 700; font-family: monospace;
+        }
+        .fin-txn-amount.income { color: #34d399; }
+        .fin-txn-amount.expense { color: #f87171; }
+        .fin-txn-actions { margin-left: 0.5rem; }
+        .fin-txn-actions button {
+            background: none; border: none; color: var(--text-tertiary);
+            cursor: pointer; font-size: 0.8rem; padding: 0.2rem;
+        }
+        .fin-txn-actions button:hover { color: #f87171; }
+        .fin-form-row {
+            display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .fin-form-row input, .fin-form-row select {
+            padding: 0.35rem 0.5rem; font-size: 0.82rem;
+            background: var(--bg-primary); color: var(--text-value);
+            border: 1px solid var(--border); border-radius: 4px;
+        }
+        .fin-form-row input { flex: 1; min-width: 100px; }
+        .fin-form-row select { min-width: 120px; }
+        .fin-balance-row {
+            display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;
+        }
+        .fin-balance-row input {
+            width: 120px; padding: 0.35rem 0.5rem; font-size: 0.82rem;
+            background: var(--bg-primary); color: var(--text-value);
+            border: 1px solid var(--border); border-radius: 4px;
+        }
+        .fin-toolbar {
+            display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .fin-legend {
+            display: flex; gap: 1rem; font-size: 0.72rem; color: var(--text-tertiary);
+            margin-bottom: 0.3rem;
+        }
+        .fin-legend-dot {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            margin-right: 3px; vertical-align: middle;
+        }
+
         /* CRM */
         .crm-section { margin-bottom: 2rem; }
         .crm-stats-bar {
@@ -7050,6 +7190,119 @@
             </div>
         </section>
 
+        <section class="fin-section" data-panel-id="financial-dashboard">
+            <h2>Financial Dashboard</h2>
+
+            <!-- Summary cards -->
+            <div class="fin-summary-row" id="fin-summary-row">
+                <div class="fin-summary-card">
+                    <div class="fin-card-value positive" id="fin-month-income">$0</div>
+                    <div class="fin-card-label">This Month Income</div>
+                </div>
+                <div class="fin-summary-card">
+                    <div class="fin-card-value negative" id="fin-month-expenses">$0</div>
+                    <div class="fin-card-label">This Month Expenses</div>
+                </div>
+                <div class="fin-summary-card">
+                    <div class="fin-card-value" id="fin-month-net">$0</div>
+                    <div class="fin-card-label">Net (All Time)</div>
+                </div>
+                <div class="fin-summary-card">
+                    <div class="fin-card-value" id="fin-runway-months">--</div>
+                    <div class="fin-card-label">Runway (Months)</div>
+                </div>
+                <div class="fin-summary-card">
+                    <div class="fin-card-value" id="fin-balance-display">$0</div>
+                    <div class="fin-card-label">Current Balance</div>
+                </div>
+            </div>
+
+            <!-- Balance + toolbar -->
+            <div class="fin-toolbar">
+                <div class="fin-balance-row">
+                    <label style="font-size:0.82rem;color:var(--text-secondary)">Balance: $</label>
+                    <input type="number" id="fin-balance-input" placeholder="0.00" step="0.01" min="0">
+                    <button class="btn btn-sm" onclick="setFinBalance()">Set</button>
+                </div>
+                <button class="btn btn-sm" onclick="syncFinInvoices()">Sync Invoices</button>
+            </div>
+
+            <!-- Monthly income vs expenses chart -->
+            <div class="fin-chart-section">
+                <h3>Monthly Income vs Expenses</h3>
+                <div class="fin-legend">
+                    <span><span class="fin-legend-dot" style="background:#34d399"></span> Income</span>
+                    <span><span class="fin-legend-dot" style="background:#f87171"></span> Expenses</span>
+                </div>
+                <div id="fin-monthly-chart">
+                    <div class="biz-empty">No data yet.</div>
+                </div>
+            </div>
+
+            <!-- Running balance chart -->
+            <div class="fin-chart-section">
+                <h3>Monthly Net Balance</h3>
+                <div id="fin-balance-chart">
+                    <div class="biz-empty">No data yet.</div>
+                </div>
+            </div>
+
+            <!-- Runway projection -->
+            <div class="fin-chart-section">
+                <h3>Runway Projection</h3>
+                <div id="fin-runway-box" class="fin-runway-box">
+                    <div class="fin-runway-months">--</div>
+                    <div class="fin-runway-detail">Enter your balance to calculate runway.</div>
+                </div>
+            </div>
+
+            <!-- Category breakdowns side by side -->
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+                <div class="fin-chart-section" style="flex:1;min-width:250px;">
+                    <h3>Top Expense Categories</h3>
+                    <div id="fin-top-expenses">
+                        <div class="biz-empty">No expenses yet.</div>
+                    </div>
+                </div>
+                <div class="fin-chart-section" style="flex:1;min-width:250px;">
+                    <h3>Revenue by Service Type</h3>
+                    <div id="fin-revenue-by-type">
+                        <div class="biz-empty">No income yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add transaction form -->
+            <details style="margin-bottom:1rem;">
+                <summary style="cursor:pointer;font-size:0.85rem;color:var(--text-secondary);font-weight:600;">
+                    + Add Transaction
+                </summary>
+                <div style="margin-top:0.5rem;">
+                    <div class="fin-form-row">
+                        <input type="date" id="fin-txn-date">
+                        <select id="fin-txn-type" onchange="updateFinCategoryOptions()">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                        <select id="fin-txn-category"></select>
+                    </div>
+                    <div class="fin-form-row">
+                        <input type="number" id="fin-txn-amount" placeholder="Amount" step="0.01" min="0.01">
+                        <input type="text" id="fin-txn-desc" placeholder="Description" style="flex:2;">
+                        <button class="btn btn-sm" onclick="addFinTransaction()">Add</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Recent transactions -->
+            <div class="fin-chart-section">
+                <h3>Recent Transactions</h3>
+                <div id="fin-txn-list">
+                    <div class="biz-empty">No transactions yet.</div>
+                </div>
+            </div>
+        </section>
+
         <section class="crm-section" data-panel-id="crm">
             <h2>Customer CRM</h2>
 
@@ -7945,6 +8198,7 @@
             { id: 'business', name: 'Business Operations' },
             { id: 'invoicing', name: 'Invoicing & Billing' },
             { id: 'parts-inventory', name: 'Parts Inventory' },
+            { id: 'financial-dashboard', name: 'Financial Dashboard' },
             { id: 'crm', name: 'Customer CRM' },
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
@@ -8295,6 +8549,16 @@
                     console.log("Reorder check:", data.parts);
                 } else if (data.type === "inventory_cost_report_result") {
                     console.log("Cost report:", data);
+
+                // --- Financial Dashboard ---
+                } else if (data.type === "finances_status") {
+                    handleFinancesStatus(data);
+                } else if (data.type === "finances_txn_added" || data.type === "finances_txn_updated" || data.type === "finances_txn_deleted") {
+                    // individual confirmations — full state comes via broadcast
+                } else if (data.type === "finances_sync_result") {
+                    if (data.count > 0) addToLog('finances', `Synced ${data.count} invoices`);
+                } else if (data.type === "finances_runway_result") {
+                    console.log("Runway:", data);
 
                 } else if (data.type === "knowledge_status") {
                     handleKnowledgeStatus(data);
@@ -11320,6 +11584,212 @@
         function deletePartFromInventory(id) {
             if (!confirm('Delete this part from inventory?')) return;
             ws.send(JSON.stringify({ type: 'inventory_delete_part', part_id: id }));
+        }
+
+        // ---------------------------------------------------------------
+        // Financial Dashboard
+        // ---------------------------------------------------------------
+        let finTransactions = [];
+        let finStatus = {};
+        let finMonthlySummary = [];
+        let finRunway = {};
+        let finTopExpenses = [];
+        let finRevenueByType = [];
+        let finTrend = [];
+        let finBalance = 0;
+
+        const FIN_INCOME_CATS = ['diagnostic_service', 'repair', 'consultation', 'content_revenue', 'parts_sale'];
+        const FIN_EXPENSE_CATS = ['parts_cost', 'fuel', 'tools', 'subscriptions', 'hosting', 'insurance', 'misc'];
+
+        function handleFinancesStatus(data) {
+            finTransactions = data.transactions || [];
+            finStatus = data.status || {};
+            finMonthlySummary = data.monthly_summary || [];
+            finRunway = data.runway || {};
+            finTopExpenses = data.top_expenses || [];
+            finRevenueByType = data.revenue_by_type || [];
+            finTrend = data.trend || [];
+            finBalance = finRunway.current_balance || 0;
+            renderFinSummary();
+            renderFinMonthlyChart();
+            renderFinBalanceChart();
+            renderFinRunway();
+            renderFinTopExpenses();
+            renderFinRevenueByType();
+            renderFinTransactions();
+            // Set default date to today
+            const dateEl = document.getElementById('fin-txn-date');
+            if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+            updateFinCategoryOptions();
+        }
+
+        function renderFinSummary() {
+            const el = (id) => document.getElementById(id);
+            const s = finStatus;
+            el('fin-month-income').textContent = '$' + (s.this_month_income || 0).toFixed(2);
+            el('fin-month-expenses').textContent = '$' + (s.this_month_expenses || 0).toFixed(2);
+            const net = s.net || 0;
+            const netEl = el('fin-month-net');
+            netEl.textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+            netEl.className = 'fin-card-value ' + (net >= 0 ? 'positive' : 'negative');
+            const rm = finRunway.runway_months;
+            el('fin-runway-months').textContent = rm !== null && rm !== undefined ? rm : '--';
+            el('fin-balance-display').textContent = '$' + finBalance.toFixed(2);
+        }
+
+        function renderFinMonthlyChart() {
+            const container = document.getElementById('fin-monthly-chart');
+            if (!container) return;
+            // Show oldest-first (reverse the newest-first summary)
+            const months = finMonthlySummary.slice().reverse();
+            if (!months.length) { container.innerHTML = '<div class="biz-empty">No data yet.</div>'; return; }
+            const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expenses)), 1);
+            container.innerHTML = months.map(m => {
+                const iPct = (m.income / maxVal * 100).toFixed(1);
+                const ePct = (m.expenses / maxVal * 100).toFixed(1);
+                return `<div class="fin-month-bar-row">
+                    <span class="fin-month-label">${m.month}</span>
+                    <div class="fin-bar-pair">
+                        <div class="fin-bar-track"><div class="fin-bar-income" style="width:${iPct}%"></div></div>
+                        <div class="fin-bar-track"><div class="fin-bar-expense" style="width:${ePct}%"></div></div>
+                    </div>
+                    <span class="fin-bar-amount">$${m.income.toFixed(0)} / $${m.expenses.toFixed(0)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function renderFinBalanceChart() {
+            const container = document.getElementById('fin-balance-chart');
+            if (!container) return;
+            const months = finMonthlySummary.slice().reverse();
+            if (!months.length) { container.innerHTML = '<div class="biz-empty">No data yet.</div>'; return; }
+            const maxAbs = Math.max(...months.map(m => Math.abs(m.net)), 1);
+            container.innerHTML = months.map(m => {
+                const pct = (Math.abs(m.net) / maxAbs * 100).toFixed(1);
+                const color = m.net >= 0 ? '#34d399' : '#f87171';
+                const sign = m.net >= 0 ? '+' : '-';
+                return `<div class="fin-month-bar-row">
+                    <span class="fin-month-label">${m.month}</span>
+                    <div class="fin-bar-pair">
+                        <div class="fin-bar-track"><div class="fin-bar-balance" style="width:${pct}%;background:${color}"></div></div>
+                    </div>
+                    <span class="fin-bar-amount" style="color:${color}">${sign}$${Math.abs(m.net).toFixed(0)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function renderFinRunway() {
+            const box = document.getElementById('fin-runway-box');
+            if (!box) return;
+            const r = finRunway;
+            if (!r || (!r.avg_monthly_income && !r.avg_monthly_expenses)) {
+                box.innerHTML = '<div class="fin-runway-months">--</div><div class="fin-runway-detail">Add transactions and set your balance to calculate runway.</div>';
+                return;
+            }
+            const months = r.runway_months !== null && r.runway_months !== undefined ? r.runway_months : '∞';
+            const statusBadge = r.status ? `<span class="fin-badge ${r.status}">${r.status}</span>` : '';
+            const dateStr = r.runway_date ? ` (until ${r.runway_date})` : '';
+            box.innerHTML = `
+                <div class="fin-runway-months">${months === '∞' ? '∞' : months}</div>
+                <div class="fin-runway-detail">
+                    ${statusBadge} months of runway${dateStr}<br>
+                    Avg income: <strong>$${(r.avg_monthly_income || 0).toFixed(2)}</strong>/mo &middot;
+                    Avg expenses: <strong>$${(r.avg_monthly_expenses || 0).toFixed(2)}</strong>/mo<br>
+                    Burn rate: <strong>$${(r.monthly_burn_rate || 0).toFixed(2)}</strong>/mo &middot;
+                    Balance: <strong>$${(r.current_balance || 0).toFixed(2)}</strong>
+                </div>
+            `;
+        }
+
+        function renderFinTopExpenses() {
+            const container = document.getElementById('fin-top-expenses');
+            if (!container) return;
+            if (!finTopExpenses.length) { container.innerHTML = '<div class="biz-empty">No expenses yet.</div>'; return; }
+            container.innerHTML = finTopExpenses.map(c => `
+                <div class="fin-cat-bar">
+                    <span class="fin-cat-label">${c.category.replace(/_/g, ' ')}</span>
+                    <div class="fin-cat-track"><div class="fin-cat-fill" style="width:${c.percentage}%;background:#f87171"></div></div>
+                    <span class="fin-cat-pct">$${c.total.toFixed(0)} (${c.percentage}%)</span>
+                </div>
+            `).join('');
+        }
+
+        function renderFinRevenueByType() {
+            const container = document.getElementById('fin-revenue-by-type');
+            if (!container) return;
+            if (!finRevenueByType.length) { container.innerHTML = '<div class="biz-empty">No income yet.</div>'; return; }
+            container.innerHTML = finRevenueByType.map(c => `
+                <div class="fin-cat-bar">
+                    <span class="fin-cat-label">${c.category.replace(/_/g, ' ')}</span>
+                    <div class="fin-cat-track"><div class="fin-cat-fill" style="width:${c.percentage}%;background:#34d399"></div></div>
+                    <span class="fin-cat-pct">$${c.total.toFixed(0)} (${c.percentage}%)</span>
+                </div>
+            `).join('');
+        }
+
+        function renderFinTransactions() {
+            const container = document.getElementById('fin-txn-list');
+            if (!container) return;
+            if (!finTransactions.length) { container.innerHTML = '<div class="biz-empty">No transactions yet.</div>'; return; }
+            container.innerHTML = finTransactions.slice(0, 50).map(t => {
+                const cls = t.type === 'income' ? 'income' : 'expense';
+                const sign = t.type === 'income' ? '+' : '-';
+                return `<div class="fin-txn-card">
+                    <div class="fin-txn-info">
+                        <div class="fin-txn-desc">${t.description || t.category.replace(/_/g, ' ')}</div>
+                        <div class="fin-txn-meta">${t.date} &middot; ${t.category.replace(/_/g, ' ')} &middot; ${t.txn_id.slice(0, 8)}</div>
+                    </div>
+                    <div class="fin-txn-amount ${cls}">${sign}$${t.amount.toFixed(2)}</div>
+                    <div class="fin-txn-actions">
+                        <button onclick="deleteFinTransaction('${t.txn_id}')" title="Delete">&#x2715;</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addFinTransaction() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const dateVal = document.getElementById('fin-txn-date').value;
+            const txnType = document.getElementById('fin-txn-type').value;
+            const category = document.getElementById('fin-txn-category').value;
+            const amount = parseFloat(document.getElementById('fin-txn-amount').value);
+            const desc = document.getElementById('fin-txn-desc').value.trim();
+            if (!dateVal || !category || !amount || amount <= 0) { alert('Fill in date, category, and a positive amount.'); return; }
+            ws.send(JSON.stringify({
+                type: 'finances_add_transaction',
+                date: dateVal,
+                txn_type: txnType,
+                category: category,
+                amount: amount,
+                description: desc,
+            }));
+            document.getElementById('fin-txn-amount').value = '';
+            document.getElementById('fin-txn-desc').value = '';
+        }
+
+        function deleteFinTransaction(txnId) {
+            if (!confirm('Delete this transaction?')) return;
+            ws.send(JSON.stringify({ type: 'finances_delete_transaction', txn_id: txnId }));
+        }
+
+        function syncFinInvoices() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'finances_sync_invoices' }));
+        }
+
+        function setFinBalance() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const val = parseFloat(document.getElementById('fin-balance-input').value);
+            if (isNaN(val)) { alert('Enter a valid number.'); return; }
+            ws.send(JSON.stringify({ type: 'finances_set_balance', balance: val }));
+        }
+
+        function updateFinCategoryOptions() {
+            const typeEl = document.getElementById('fin-txn-type');
+            const catEl = document.getElementById('fin-txn-category');
+            if (!typeEl || !catEl) return;
+            const cats = typeEl.value === 'income' ? FIN_INCOME_CATS : FIN_EXPENSE_CATS;
+            catEl.innerHTML = cats.map(c => `<option value="${c}">${c.replace(/_/g, ' ')}</option>`).join('');
         }
 
         // ---------------------------------------------------------------
