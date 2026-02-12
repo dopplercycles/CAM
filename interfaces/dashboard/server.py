@@ -59,6 +59,7 @@ from tools.doppler.diagnostics import DiagnosticEngine
 from tools.doppler.crm import CRMStore
 from tools.doppler.scheduler_appointments import AppointmentScheduler
 from tools.doppler.invoicing import InvoiceManager
+from tools.doppler.inventory import InventoryManager
 from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
@@ -559,6 +560,20 @@ invoice_manager = InvoiceManager(
     service_store=service_store,
     default_labor_rate=getattr(_biz_cfg, "default_labor_rate", 75.0),
     invoice_prefix=getattr(_biz_cfg, "invoice_prefix", "DC"),
+)
+
+# Parts inventory — separate SQLite DB for parts/supplies tracking
+async def broadcast_inventory_status():
+    """Push current inventory state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "inventory_status",
+        **inventory_manager.to_broadcast_dict(),
+    })
+
+inventory_manager = InventoryManager(
+    db_path="data/inventory.db",
+    on_change=broadcast_inventory_status,
+    notification_callback=notification_manager.emit,
 )
 
 async def broadcast_diagnostics_status():
@@ -1423,6 +1438,7 @@ async def lifespan(app: FastAPI):
     crm_store.close()
     appointment_scheduler.close()
     invoice_manager.close()
+    inventory_manager.close()
     diagnostic_engine.close()
     report_engine.close()
     security_audit_log.close()
@@ -2570,6 +2586,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "invoicing_status",
         **invoice_manager.to_broadcast_dict(),
+    })
+
+    # Send current parts inventory data
+    await websocket.send_json({
+        "type": "inventory_status",
+        **inventory_manager.to_broadcast_dict(),
     })
 
     # Send current diagnostic engine state
@@ -3974,6 +3996,19 @@ async def dashboard_websocket(websocket: WebSocket):
                 )
                 await broadcast_service_records_status()
 
+                # Auto-decrement inventory for parts used in this service record
+                if parts:
+                    for p in parts:
+                        pn = p.get("part_number", "") if isinstance(p, dict) else ""
+                        qty = int(p.get("quantity", 1)) if isinstance(p, dict) else 1
+                        if pn:
+                            inventory_manager.use_part_by_number(
+                                pn, quantity=qty,
+                                service_record_id=rec.record_id,
+                                reason="service_record",
+                            )
+                    await broadcast_inventory_status()
+
             elif msg.get("type") == "service_record_update":
                 rec_id = msg.get("record_id", "")
                 updates = {k: v for k, v in msg.items()
@@ -4449,6 +4484,87 @@ async def dashboard_websocket(websocket: WebSocket):
                     **result,
                 })
                 await broadcast_invoicing_status()
+
+            # --- Parts Inventory handlers ---
+            elif msg.get("type") == "inventory_add_part":
+                part = inventory_manager.add_part(
+                    name=msg.get("name", ""),
+                    part_number=msg.get("part_number", ""),
+                    description=msg.get("description", ""),
+                    category=msg.get("category", ""),
+                    quantity_on_hand=int(msg.get("quantity_on_hand", 0)),
+                    reorder_point=int(msg.get("reorder_point", 0)),
+                    cost=float(msg.get("cost", 0)),
+                    retail_price=float(msg.get("retail_price", 0)),
+                    supplier=msg.get("supplier", ""),
+                    location=msg.get("location", ""),
+                    notes=msg.get("notes", ""),
+                )
+                event_logger.info(
+                    "inventory",
+                    f"Part added: {part.name} (P/N: {part.part_number or 'N/A'}) — qty {part.quantity_on_hand}",
+                    part_id=part.short_id,
+                )
+                await websocket.send_json({"type": "inventory_part_added", "ok": True, "part": part.to_dict()})
+                await broadcast_inventory_status()
+
+            elif msg.get("type") == "inventory_update_part":
+                pid = msg.get("part_id", "")
+                updates = {k: v for k, v in msg.items() if k not in ("type", "part_id")}
+                # Type coercion for numeric fields
+                for int_field in ("quantity_on_hand", "reorder_point"):
+                    if int_field in updates:
+                        updates[int_field] = int(updates[int_field])
+                for float_field in ("cost", "retail_price"):
+                    if float_field in updates:
+                        updates[float_field] = float(updates[float_field])
+                updated = inventory_manager.update_part(pid, **updates)
+                await websocket.send_json({
+                    "type": "inventory_part_updated", "ok": updated is not None,
+                    "part": updated.to_dict() if updated else None,
+                })
+                if updated:
+                    await broadcast_inventory_status()
+
+            elif msg.get("type") == "inventory_use_part":
+                pid = msg.get("part_id", "")
+                qty = int(msg.get("quantity", 1))
+                reason = msg.get("reason", "manual")
+                entry = inventory_manager.use_part(pid, quantity=qty, reason=reason)
+                if entry:
+                    event_logger.info(
+                        "inventory",
+                        f"Part used: {entry.part_name} x{entry.quantity_used} ({reason})",
+                        part_id=entry.part_id[:8],
+                    )
+                await websocket.send_json({
+                    "type": "inventory_part_used", "ok": entry is not None,
+                    "usage": entry.to_dict() if entry else None,
+                })
+                if entry:
+                    await broadcast_inventory_status()
+
+            elif msg.get("type") == "inventory_delete_part":
+                pid = msg.get("part_id", "")
+                removed = inventory_manager.delete_part(pid)
+                event_logger.info("inventory", f"Part deleted: {pid[:8]}", part_id=pid[:8])
+                await websocket.send_json({"type": "inventory_part_deleted", "ok": removed})
+                if removed:
+                    await broadcast_inventory_status()
+
+            elif msg.get("type") == "inventory_reorder_check":
+                low = inventory_manager.reorder_check()
+                await websocket.send_json({
+                    "type": "inventory_reorder_result",
+                    "parts": [p.to_dict() for p in low],
+                })
+
+            elif msg.get("type") == "inventory_cost_report":
+                report = inventory_manager.cost_report()
+                await websocket.send_json({
+                    "type": "inventory_cost_report_result",
+                    **report,
+                })
 
             # --- Scheduled Reports handlers ---
             elif msg.get("type") == "reports_generate":

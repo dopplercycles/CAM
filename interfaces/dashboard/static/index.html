@@ -3736,6 +3736,70 @@
             background: var(--bg-primary); color: var(--text-tertiary); cursor: pointer;
         }
 
+        /* Parts Inventory */
+        .parts-inventory-section { margin-bottom: 2rem; }
+        .parts-summary-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.8rem; margin-bottom: 1.2rem;
+        }
+        .parts-summary-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.8rem; text-align: center;
+        }
+        .parts-summary-card .parts-card-value {
+            font-size: 1.4rem; font-weight: 700; color: var(--text-primary);
+        }
+        .parts-summary-card .parts-card-label {
+            font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.2rem;
+        }
+        .parts-filter-bar {
+            display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;
+        }
+        .parts-filter-bar input,
+        .parts-filter-bar select {
+            padding: 0.35rem 0.5rem; font-size: 0.82rem;
+            border: 1px solid var(--border); border-radius: 4px;
+            background: var(--bg-primary); color: var(--text-primary);
+        }
+        .parts-filter-bar input { flex: 1; min-width: 160px; }
+        .parts-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.8rem; margin-bottom: 0.6rem;
+            border-left: 3px solid var(--border);
+        }
+        .parts-card.low-stock {
+            border-left-color: #f59e0b;
+        }
+        .parts-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .parts-card-header strong { font-size: 0.92rem; color: var(--text-primary); }
+        .parts-card-details {
+            font-size: 0.78rem; color: var(--text-secondary);
+            display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.4rem;
+        }
+        .parts-card-actions {
+            display: flex; gap: 0.4rem; flex-wrap: wrap;
+        }
+        .parts-card-actions button {
+            font-size: 0.72rem; padding: 0.2rem 0.5rem;
+            border: 1px solid var(--border); border-radius: 3px;
+            background: var(--bg-primary); color: var(--text-tertiary); cursor: pointer;
+        }
+        .parts-card-actions button:hover { color: var(--text-primary); }
+        .parts-reorder-badge {
+            display: inline-block; font-size: 0.65rem; font-weight: 600;
+            padding: 0.1rem 0.4rem; border-radius: 3px;
+            background: rgba(245, 158, 11, 0.15); color: #f59e0b;
+        }
+        .parts-category-badge {
+            display: inline-block; font-size: 0.65rem; font-weight: 600;
+            padding: 0.1rem 0.4rem; border-radius: 3px;
+            background: rgba(99, 102, 241, 0.12); color: #818cf8;
+        }
+        .parts-usage-chart { margin-bottom: 1.2rem; }
+
         /* CRM */
         .crm-section { margin-bottom: 2rem; }
         .crm-stats-bar {
@@ -6904,6 +6968,88 @@
             </div>
         </section>
 
+        <section class="parts-inventory-section" data-panel-id="parts-inventory">
+            <h2>Parts Inventory</h2>
+
+            <!-- Summary cards -->
+            <div class="parts-summary-row">
+                <div class="parts-summary-card">
+                    <div class="parts-card-value" id="parts-total-count">0</div>
+                    <div class="parts-card-label">Total Parts</div>
+                </div>
+                <div class="parts-summary-card">
+                    <div class="parts-card-value" id="parts-inv-value">$0</div>
+                    <div class="parts-card-label">Inventory Value</div>
+                </div>
+                <div class="parts-summary-card">
+                    <div class="parts-card-value" id="parts-retail-value">$0</div>
+                    <div class="parts-card-label">Retail Value</div>
+                </div>
+                <div class="parts-summary-card">
+                    <div class="parts-card-value" id="parts-low-stock">0</div>
+                    <div class="parts-card-label">Low Stock</div>
+                </div>
+            </div>
+
+            <!-- Top used parts chart -->
+            <div class="parts-usage-chart">
+                <h3 style="font-size:0.9rem; margin-bottom:0.5rem;">Top Used Parts</h3>
+                <div id="parts-usage-bars">
+                    <div class="biz-empty">No usage data yet.</div>
+                </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="parts-filter-bar">
+                <input type="text" id="parts-search" placeholder="Search parts..." oninput="filterPartsInventory()">
+                <select id="parts-category-filter" onchange="filterPartsInventory()">
+                    <option value="">All Categories</option>
+                    <option value="filters">Filters</option>
+                    <option value="fluids">Fluids</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="brakes">Brakes</option>
+                    <option value="drivetrain">Drivetrain</option>
+                    <option value="fasteners">Fasteners</option>
+                    <option value="consumables">Consumables</option>
+                    <option value="tools">Tools</option>
+                </select>
+            </div>
+
+            <!-- Add Part form -->
+            <details style="margin-bottom: 1rem;">
+                <summary style="cursor:pointer; font-size:0.85rem; color:var(--text-secondary);">+ Add Part</summary>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.6rem; font-size:0.82rem;">
+                    <input id="parts-add-name" placeholder="Name *" style="grid-column:1/3; padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-pn" placeholder="Part Number" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <select id="parts-add-category" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                        <option value="">Category</option>
+                        <option value="filters">Filters</option>
+                        <option value="fluids">Fluids</option>
+                        <option value="electrical">Electrical</option>
+                        <option value="brakes">Brakes</option>
+                        <option value="drivetrain">Drivetrain</option>
+                        <option value="fasteners">Fasteners</option>
+                        <option value="consumables">Consumables</option>
+                        <option value="tools">Tools</option>
+                    </select>
+                    <input id="parts-add-desc" placeholder="Description" style="grid-column:1/3; padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-qty" type="number" placeholder="Qty on Hand" min="0" value="0" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-reorder" type="number" placeholder="Reorder Point" min="0" value="0" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-cost" type="number" step="0.01" placeholder="Cost ($)" min="0" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-retail" type="number" step="0.01" placeholder="Retail ($)" min="0" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-supplier" placeholder="Supplier" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-location" placeholder="Location" style="padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <input id="parts-add-notes" placeholder="Notes" style="grid-column:1/3; padding:0.35rem 0.5rem; border:1px solid var(--border); border-radius:4px; background:var(--bg-primary); color:var(--text-primary);">
+                    <button onclick="addPartToInventory()" style="grid-column:1/3; padding:0.4rem; border:1px solid var(--accent); border-radius:4px; background:var(--accent); color:#fff; cursor:pointer; font-size:0.82rem;">Add Part</button>
+                </div>
+            </details>
+
+            <!-- Parts list -->
+            <div id="parts-list">
+                <div class="biz-empty">No parts in inventory yet.</div>
+            </div>
+        </section>
+
         <section class="crm-section" data-panel-id="crm">
             <h2>Customer CRM</h2>
 
@@ -7798,6 +7944,7 @@
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
             { id: 'invoicing', name: 'Invoicing & Billing' },
+            { id: 'parts-inventory', name: 'Parts Inventory' },
             { id: 'crm', name: 'Customer CRM' },
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
@@ -8138,6 +8285,16 @@
                     if (data.ok && data.url) window.open(data.url, '_blank');
                 } else if (data.type === "invoicing_send_result") {
                     if (data.message) addToLog('invoicing', data.message);
+
+                // --- Parts Inventory ---
+                } else if (data.type === "inventory_status") {
+                    handleInventoryStatus(data);
+                } else if (data.type === "inventory_part_added" || data.type === "inventory_part_updated" || data.type === "inventory_part_used" || data.type === "inventory_part_deleted") {
+                    // individual confirmations — full state comes via broadcast
+                } else if (data.type === "inventory_reorder_result") {
+                    console.log("Reorder check:", data.parts);
+                } else if (data.type === "inventory_cost_report_result") {
+                    console.log("Cost report:", data);
 
                 } else if (data.type === "knowledge_status") {
                     handleKnowledgeStatus(data);
@@ -10994,6 +11151,175 @@
         function deleteEnhancedInvoice(id) {
             if (!confirm('Delete this invoice?')) return;
             ws.send(JSON.stringify({ type: 'invoicing_delete', invoice_id: id }));
+        }
+
+        // ---------------------------------------------------------------
+        // Parts Inventory
+        // ---------------------------------------------------------------
+        let partsItems = [];
+        let partsUsageHistory = [];
+        let partsTopUsed = [];
+        let partsStatus = {};
+        let partsCostReport = {};
+
+        function handleInventoryStatus(data) {
+            partsItems = data.parts || [];
+            partsUsageHistory = data.usage_history || [];
+            partsTopUsed = data.top_used || [];
+            partsStatus = data.status || {};
+            partsCostReport = data.cost_report || {};
+            renderPartsSummary();
+            renderPartsUsageChart();
+            renderPartsList();
+        }
+
+        function renderPartsSummary() {
+            const el = (id) => document.getElementById(id);
+            el('parts-total-count').textContent = partsStatus.total_parts || 0;
+            el('parts-inv-value').textContent = '$' + (partsStatus.total_value || 0).toFixed(2);
+            el('parts-retail-value').textContent = '$' + (partsStatus.total_retail || 0).toFixed(2);
+            const lowEl = el('parts-low-stock');
+            lowEl.textContent = partsStatus.low_stock_count || 0;
+            lowEl.style.color = (partsStatus.low_stock_count > 0) ? '#f59e0b' : '';
+        }
+
+        function renderPartsUsageChart() {
+            const container = document.getElementById('parts-usage-bars');
+            if (!container) return;
+            if (!partsTopUsed.length) {
+                container.innerHTML = '<div class="biz-empty">No usage data yet.</div>';
+                return;
+            }
+            const maxUsed = Math.max(...partsTopUsed.map(p => p.total_used), 1);
+            container.innerHTML = partsTopUsed.map(p => {
+                const pct = (p.total_used / maxUsed * 100).toFixed(1);
+                const label = p.part_name + (p.part_number ? ' (' + p.part_number + ')' : '');
+                return `<div class="bar-row">
+                    <span class="bar-label">${label}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:${pct}%"></div>
+                    </div>
+                    <span class="bar-count">${p.total_used}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function filterPartsInventory() {
+            renderPartsList();
+        }
+
+        function renderPartsList() {
+            const container = document.getElementById('parts-list');
+            if (!container) return;
+
+            const searchVal = (document.getElementById('parts-search')?.value || '').toLowerCase();
+            const catVal = document.getElementById('parts-category-filter')?.value || '';
+
+            let filtered = partsItems;
+            if (catVal) {
+                filtered = filtered.filter(p => p.category === catVal);
+            }
+            if (searchVal) {
+                filtered = filtered.filter(p =>
+                    (p.name || '').toLowerCase().includes(searchVal) ||
+                    (p.part_number || '').toLowerCase().includes(searchVal) ||
+                    (p.description || '').toLowerCase().includes(searchVal)
+                );
+            }
+
+            if (!filtered.length) {
+                container.innerHTML = '<div class="biz-empty">No parts match your filter.</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => {
+                const lowClass = p.needs_reorder ? ' low-stock' : '';
+                const lowBadge = p.needs_reorder
+                    ? '<span class="parts-reorder-badge">LOW STOCK</span> '
+                    : '';
+                const catBadge = p.category
+                    ? `<span class="parts-category-badge">${p.category}</span> `
+                    : '';
+                const pn = p.part_number ? `P/N: ${p.part_number}` : '';
+                const margin = p.cost > 0 ? `Margin: ${p.margin}%` : '';
+                const supplier = p.supplier ? `Supplier: ${p.supplier}` : '';
+                const location = p.location ? `Loc: ${p.location}` : '';
+                const details = [pn, `Qty: ${p.quantity_on_hand}`,
+                    `Cost: $${(p.cost || 0).toFixed(2)}`,
+                    `Retail: $${(p.retail_price || 0).toFixed(2)}`,
+                    margin, supplier, location].filter(Boolean).join(' &middot; ');
+
+                return `<div class="parts-card${lowClass}">
+                    <div class="parts-card-header">
+                        <strong>${lowBadge}${catBadge}${p.name}</strong>
+                        <span style="font-size:0.7rem;color:var(--text-tertiary);">${p.short_id}</span>
+                    </div>
+                    <div class="parts-card-details">${details}</div>
+                    ${p.description ? `<div style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:0.3rem;">${p.description}</div>` : ''}
+                    <div class="parts-card-actions">
+                        <button onclick="usePartFromInventory('${p.part_id}', 1)">Use 1</button>
+                        <button onclick="adjustPartQty('${p.part_id}')">Adjust Qty</button>
+                        <button onclick="deletePartFromInventory('${p.part_id}')">Delete</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function addPartToInventory() {
+            const name = document.getElementById('parts-add-name')?.value?.trim();
+            if (!name) { alert('Part name is required.'); return; }
+
+            ws.send(JSON.stringify({
+                type: 'inventory_add_part',
+                name: name,
+                part_number: document.getElementById('parts-add-pn')?.value?.trim() || '',
+                description: document.getElementById('parts-add-desc')?.value?.trim() || '',
+                category: document.getElementById('parts-add-category')?.value || '',
+                quantity_on_hand: parseInt(document.getElementById('parts-add-qty')?.value || '0', 10),
+                reorder_point: parseInt(document.getElementById('parts-add-reorder')?.value || '0', 10),
+                cost: parseFloat(document.getElementById('parts-add-cost')?.value || '0'),
+                retail_price: parseFloat(document.getElementById('parts-add-retail')?.value || '0'),
+                supplier: document.getElementById('parts-add-supplier')?.value?.trim() || '',
+                location: document.getElementById('parts-add-location')?.value?.trim() || '',
+                notes: document.getElementById('parts-add-notes')?.value?.trim() || '',
+            }));
+
+            // Clear form
+            ['parts-add-name', 'parts-add-pn', 'parts-add-desc', 'parts-add-qty',
+             'parts-add-reorder', 'parts-add-cost', 'parts-add-retail',
+             'parts-add-supplier', 'parts-add-location', 'parts-add-notes'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = el.type === 'number' ? '0' : '';
+            });
+            document.getElementById('parts-add-category').value = '';
+        }
+
+        function usePartFromInventory(id, qty) {
+            ws.send(JSON.stringify({
+                type: 'inventory_use_part',
+                part_id: id,
+                quantity: qty,
+                reason: 'manual',
+            }));
+        }
+
+        function adjustPartQty(id) {
+            const part = partsItems.find(p => p.part_id === id);
+            if (!part) return;
+            const newQty = prompt(`Adjust quantity for "${part.name}" (current: ${part.quantity_on_hand}):`, part.quantity_on_hand);
+            if (newQty === null) return;
+            const parsed = parseInt(newQty, 10);
+            if (isNaN(parsed) || parsed < 0) { alert('Invalid quantity.'); return; }
+            ws.send(JSON.stringify({
+                type: 'inventory_update_part',
+                part_id: id,
+                quantity_on_hand: parsed,
+            }));
+        }
+
+        function deletePartFromInventory(id) {
+            if (!confirm('Delete this part from inventory?')) return;
+            ws.send(JSON.stringify({ type: 'inventory_delete_part', part_id: id }));
         }
 
         // ---------------------------------------------------------------
