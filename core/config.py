@@ -184,6 +184,21 @@ _DEFAULTS: dict[str, Any] = {
     "message_bus": {
         "max_messages": 500,
     },
+    "context": {
+        "rotation_threshold": 0.9,
+        "ltm_top_k": 3,
+        "ltm_min_score": 0.3,
+        "episodic_recent_count": 5,
+        "max_working_memory_tasks": 10,
+        "token_estimate_divisor": 4,
+        "limits": {
+            "glm-4.7-flash": 128000,
+            "gpt-oss:20b": 32000,
+            "phi4-mini:3.8b": 8000,
+            "claude": 200000,
+            "kimi-k2.5": 128000,
+        },
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

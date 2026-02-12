@@ -37,6 +37,7 @@ from core.persona import Persona
 from interfaces.telegram.bot import TelegramBot
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.orchestrator import Orchestrator
+from core.context_manager import ContextManager
 from core.analytics import Analytics
 from core.commands import CommandLibrary
 from core.scheduler import Scheduler, ScheduleType
@@ -758,6 +759,15 @@ async def on_approval_request(task, perm_result):
     )
 
 
+# Context window manager — shares memory instances with orchestrator
+context_manager = ContextManager(
+    short_term=short_term_memory,
+    long_term=long_term_memory,
+    episodic=episodic_memory,
+    working=working_memory,
+    persona=persona,
+)
+
 orchestrator = Orchestrator(
     queue=task_queue,
     short_term_memory=short_term_memory,
@@ -772,6 +782,7 @@ orchestrator = Orchestrator(
     on_chain_update=on_chain_update,
     on_approval_request=on_approval_request,
     audit_log=security_audit_log,
+    context_manager=context_manager,
 )
 
 # TTS pipeline — Piper TTS with graceful fallback

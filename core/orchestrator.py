@@ -28,6 +28,7 @@ from core.memory.long_term import LongTermMemory
 from core.memory.episodic import EpisodicMemory
 from core.persona import Persona
 from core.task_classifier import classify as classify_task
+from core.context_manager import ContextManager
 from security.permissions import classify as classify_permission
 
 
@@ -93,6 +94,7 @@ class Orchestrator:
         on_chain_update=None,
         on_approval_request=None,
         audit_log=None,
+        context_manager: ContextManager | None = None,
     ):
         # Task queue — shared with other components (dashboard, CLI, etc.)
         # Note: can't use `queue or TaskQueue()` because an empty queue is falsy
@@ -119,6 +121,18 @@ class Orchestrator:
             else EpisodicMemory()
         )
         self.persona = persona if persona is not None else Persona()
+
+        # Context window manager — tracks tokens, assembles context, handles rotation
+        if context_manager is not None:
+            self.context_manager = context_manager
+        else:
+            self.context_manager = ContextManager(
+                short_term=self.short_term,
+                long_term=self.long_term,
+                episodic=self.episodic,
+                working=self.working,
+                persona=self.persona,
+            )
 
         # Optional callbacks for real-time dashboard updates.
         # on_phase_change(task, phase, detail) — called at each OATI boundary
@@ -311,35 +325,27 @@ class Orchestrator:
             task.description,
         )
 
-        # --- Retrieve relevant long-term memories ---
-        ltm_context = ""
-        try:
-            ltm_results = self.long_term.query(task.description, top_k=3)
-            # Only include reasonably relevant results (score > 0.3)
-            relevant = [r for r in ltm_results if r.score > 0.3]
-            if relevant:
-                ltm_lines = [f"- [{r.category}] {r.content}" for r in relevant]
-                ltm_context = (
-                    "\n\nRelevant knowledge from memory:\n"
-                    + "\n".join(ltm_lines)
-                )
-                logger.info(
-                    "[THINK] Retrieved %d relevant memories for task %s",
-                    len(relevant), task.short_id,
-                )
-        except Exception:
-            logger.debug("LTM retrieval failed (non-fatal)", exc_info=True)
+        # --- Check if context rotation is needed ---
+        if self.context_manager.should_rotate():
+            logger.info("[THINK] Context rotation triggered for task %s", task.short_id)
+            await self.context_manager.rotate(
+                router=self.router,
+                reason=f"session approaching limit during task {task.short_id}",
+            )
 
-        # Build the prompt — persona system prompt from YAML config
-        system_prompt = self.persona.build_system_prompt()
-
-        prompt = task.description + ltm_context
+        # --- Build context from all memory systems ---
+        # Resolve target model name from the router's model mapping
+        target_model = getattr(self.router, '_models', {}).get(router_complexity, "glm-4.7-flash")
+        ctx = self.context_manager.build_context(task, model=target_model)
 
         response: ModelResponse = await self.router.route(
-            prompt=prompt,
+            prompt=ctx.prompt,
             task_complexity=router_complexity,
-            system_prompt=system_prompt,
+            system_prompt=ctx.system_prompt,
         )
+
+        # Track token usage for rotation decisions
+        self.context_manager.record_usage(response)
 
         plan = {
             "task_id": task.task_id,
@@ -934,6 +940,7 @@ class Orchestrator:
             **queue_status,
             "session_costs": cost_status,
             "persona": self.persona.get_status(),
+            "context": self.context_manager.get_status(),
             "memory": {
                 "short_term": self.short_term.get_status(),
                 "working": self.working.get_status(),

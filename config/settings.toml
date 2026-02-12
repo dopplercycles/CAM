@@ -160,3 +160,18 @@ daily_backup_time = "03:00"               # time for scheduled daily backup (HH:
 
 [message_bus]
 max_messages = 500                         # per-channel ring buffer capacity
+
+[context]
+rotation_threshold = 0.9                   # rotate at 90% of context limit
+ltm_top_k = 3                             # max long-term memory results per query
+ltm_min_score = 0.3                       # minimum relevance score for LTM results
+episodic_recent_count = 5                 # recent episodes to include in context
+max_working_memory_tasks = 10             # max active tasks shown in context
+token_estimate_divisor = 4                # chars-per-token heuristic (len // this)
+
+[context.limits]
+"glm-4.7-flash" = 128000
+"gpt-oss:20b" = 32000
+"phi4-mini:3.8b" = 8000
+"claude" = 200000
+"kimi-k2.5" = 128000
