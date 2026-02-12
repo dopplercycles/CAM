@@ -184,7 +184,7 @@ class SelfTest:
                     "self_test",
                     f"{'PASS' if result.passed else 'FAIL'}: {result.name} — {result.message}",
                     test=result.name,
-                    category=result.category,
+                    test_category=result.category,
                     duration_ms=result.duration_ms,
                 )
 
