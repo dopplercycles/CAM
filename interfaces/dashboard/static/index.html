@@ -136,6 +136,14 @@
             color: #888;
         }
 
+        .uptime-display {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
         .status-dot {
             width: 10px;
             height: 10px;
@@ -6155,6 +6163,12 @@
                 <div class="status-dot" id="ws-status-dot"></div>
                 <span id="ws-status-text">Connecting...</span>
             </div>
+            <div class="uptime-display" id="uptime-display" title="System uptime">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span id="uptime-text">--</span>
+            </div>
         </div>
     </header>
 
@@ -7196,6 +7210,10 @@
         let ws = null;
         let reconnectTimer = null;
 
+        // Boot/uptime tracking
+        let bootTime = null;
+        let bootDuration = 0;
+
         // Per-agent chat logs: { agent_id: [{type, text}, ...] }
         const chatLogs = {};
 
@@ -7378,6 +7396,32 @@
             } catch (e) {
                 return true; // network error — don't force logout
             }
+        }
+
+        // ---------------------------------------------------------------
+        // Uptime display
+        // ---------------------------------------------------------------
+        function formatUptime(seconds) {
+            const d = Math.floor(seconds / 86400);
+            const h = Math.floor((seconds % 86400) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (d > 0) return `${d}d ${h}h`;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        let uptimeInterval = null;
+        function startUptimeTimer() {
+            if (uptimeInterval) clearInterval(uptimeInterval);
+            const el = document.getElementById('uptime-text');
+            function update() {
+                if (!bootTime) return;
+                const secs = Math.floor((Date.now() - bootTime.getTime()) / 1000);
+                el.textContent = formatUptime(secs);
+                el.parentElement.title = `Booted: ${bootTime.toLocaleString()} (${bootDuration}s startup)`;
+            }
+            update();
+            uptimeInterval = setInterval(update, 60000);
         }
 
         // ---------------------------------------------------------------
@@ -7646,6 +7690,10 @@
                     if (dot) {
                         data.connected ? dot.classList.add("connected") : dot.classList.remove("connected");
                     }
+                } else if (data.type === "boot_info") {
+                    bootTime = new Date(data.boot_time);
+                    bootDuration = data.boot_duration;
+                    startUptimeTimer();
                 }
             };
 

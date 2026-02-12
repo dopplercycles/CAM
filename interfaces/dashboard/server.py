@@ -183,6 +183,11 @@ pending_task_responses: dict[str, asyncio.Future] = {}
 # Kill switch state — when True, all autonomous action is halted
 kill_switch_active: bool = False
 
+# Boot time — set by cam_launcher.py before uvicorn starts.
+# Falls back to module load time if run directly (not via launcher).
+boot_time: str = datetime.now(timezone.utc).isoformat()
+boot_duration: float = 0.0
+
 # Last self-test results cache — populated when dashboard runs self-test
 last_self_test_results: dict | None = None
 
@@ -1244,13 +1249,45 @@ async def lifespan(app: FastAPI):
     await telegram_bot.start()
     app.state.telegram_bot = telegram_bot
 
+    # Boot complete — log and notify
+    event_logger.info("system", f"CAM Online (boot: {boot_duration}s)")
+    logger.info("CAM Online — boot completed in %.2fs", boot_duration)
+
     yield
 
-    # Shutdown — stop Telegram before orchestrator so in-flight polls end cleanly
+    # --- Graceful shutdown ---
+    logger.info("CAM shutdown initiated")
+    event_logger.info("system", "CAM shutting down")
+
+    # 1. Notify connected agents
+    shutdown_msg = {"type": "shutdown", "reason": "cam_shutdown"}
+    for agent_id, ws in agent_websockets.items():
+        try:
+            await ws.send_json(shutdown_msg)
+            logger.info("Shutdown notification sent to agent '%s'", agent_id)
+        except Exception:
+            pass
+
+    # 2. Save working memory
+    working_memory._save()
+    logger.info("Working memory saved (%d active tasks)", len(working_memory))
+
+    # 3. Stop Telegram before orchestrator so in-flight polls end cleanly
     if telegram_bot:
         await telegram_bot.stop()
+
+    # 4. Stop orchestrator and scheduler
     orchestrator.stop()
     scheduler.stop()
+
+    # 5. Create emergency backup
+    try:
+        result = backup_manager.backup()
+        logger.info("Shutdown backup created: %s", result.get("filename", "unknown"))
+    except Exception as e:
+        logger.warning("Shutdown backup failed: %s", e)
+
+    # 6. Cancel background tasks
     orchestrator_task.cancel()
     heartbeat_task.cancel()
     session_cleanup_task.cancel()
@@ -1258,6 +1295,8 @@ async def lifespan(app: FastAPI):
     webhook_retry_task.cancel()
     pipeline_check_task.cancel()
     knowledge_inbox_task.cancel()
+
+    # 7. Close all databases
     knowledge_ingest.close()
     episodic_memory.close()
     content_calendar.close()
@@ -1272,7 +1311,7 @@ async def lifespan(app: FastAPI):
     security_audit_log.close()
     webhook_manager.close()
     analytics.close()
-    logger.info("CAM Dashboard shutting down")
+    logger.info("CAM shutdown complete")
 
 
 # ---------------------------------------------------------------------------
@@ -2264,6 +2303,13 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "config",
         "config": config.to_dict(),
         "last_loaded": config.last_loaded,
+    })
+
+    # Send boot time so the header can show uptime
+    await websocket.send_json({
+        "type": "boot_info",
+        "boot_time": boot_time,
+        "boot_duration": boot_duration,
     })
 
     # Send current analytics summary

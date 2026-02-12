@@ -1,0 +1,24 @@
+[Unit]
+Description=CAM — Cycles Autonomous Manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=george
+Group=george
+WorkingDirectory=/home/george/CAM
+ExecStart=/home/george/CAM/.venv/bin/python3 /home/george/CAM/cam_launcher.py
+Restart=on-failure
+RestartSec=10
+# Give graceful shutdown 30s before SIGKILL
+TimeoutStopSec=30
+# Environment
+Environment=PYTHONUNBUFFERED=1
+# Logging goes to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cam
+
+[Install]
+WantedBy=multi-user.target
