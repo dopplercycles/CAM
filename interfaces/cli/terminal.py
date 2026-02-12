@@ -67,6 +67,9 @@ class CAMTerminal:
     """
 
     def __init__(self):
+        # Suppress subsystem log noise — Rich output is the CLI's interface
+        logging.getLogger().setLevel(logging.WARNING)
+
         # ---- Configuration ------------------------------------------------
         self.config = get_config()
         self.console = Console()
