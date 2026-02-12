@@ -175,3 +175,11 @@ token_estimate_divisor = 4                # chars-per-token heuristic (len // th
 "phi4-mini:3.8b" = 8000
 "claude" = 200000
 "kimi-k2.5" = 128000
+
+[webhooks]
+enabled = true
+db_path = "data/webhooks.db"
+max_retries = 5
+retry_base_seconds = 10
+retry_max_seconds = 3600
+inbound_secret = ""

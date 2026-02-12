@@ -184,6 +184,16 @@ _DEFAULTS: dict[str, Any] = {
     "message_bus": {
         "max_messages": 500,
     },
+    "webhooks": {
+        "enabled": True,
+        "db_path": "data/webhooks.db",
+        "max_retries": 5,
+        "retry_base_seconds": 10,
+        "retry_max_seconds": 3600,
+        "retry_check_interval": 15,
+        "max_delivery_history": 500,
+        "inbound_secret": "",
+    },
     "context": {
         "rotation_threshold": 0.9,
         "ltm_top_k": 3,
@@ -217,6 +227,7 @@ _ENV_OVERRIDES: list[tuple[str, str, type]] = [
     ("CAM_OLLAMA_URL",                   "models.ollama_url",            str),
     ("CAM_API_KEY",                      "api.api_key",                  str),
     ("CAM_TELEGRAM_BOT_TOKEN",           "telegram.bot_token",           str),
+    ("CAM_WEBHOOKS_ENABLED",             "webhooks.enabled",             lambda v: v.lower() in ("true", "1")),
 ]
 
 

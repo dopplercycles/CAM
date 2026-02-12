@@ -3715,6 +3715,150 @@
             font-size: 0.85rem;
         }
 
+        /* --- Webhook Panel --- */
+        .webhook-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .webhook-stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            min-width: 100px;
+            text-align: center;
+        }
+        .webhook-stat-card .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        .webhook-stat-card .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+        }
+        .webhook-register-form {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        .webhook-register-form.active { display: block; }
+        .webhook-register-form .form-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .webhook-register-form input,
+        .webhook-register-form select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            flex: 1;
+            min-width: 120px;
+        }
+        .webhook-endpoint-row {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .webhook-endpoint-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .webhook-endpoint-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .webhook-endpoint-url {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            word-break: break-all;
+            margin-top: 0.25rem;
+        }
+        .webhook-endpoint-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        .webhook-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .webhook-badge.outbound { background: #1a3a5c; color: #4db8ff; }
+        .webhook-badge.inbound { background: #1a4a3a; color: #4dffc0; }
+        .webhook-badge.enabled { background: #1a4a2a; color: #4dff7c; }
+        .webhook-badge.disabled { background: #4a3a1a; color: #ffaa4d; }
+        .webhook-endpoint-actions {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .webhook-endpoint-actions button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .webhook-endpoint-actions button:hover { background: var(--bg-tertiary); }
+        .webhook-endpoint-actions button.danger { color: var(--status-error); }
+        .webhook-delivery-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border-primary);
+            font-size: 0.85rem;
+        }
+        .webhook-delivery-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .webhook-delivery-dot.success { background: var(--status-healthy); }
+        .webhook-delivery-dot.failed { background: var(--status-error); }
+        .webhook-delivery-dot.retrying { background: var(--status-warning); }
+        .webhook-delivery-dot.pending { background: var(--text-tertiary); }
+        .webhook-delivery-category {
+            font-weight: 600;
+            color: var(--accent-primary);
+            min-width: 60px;
+        }
+        .webhook-delivery-message {
+            flex: 1;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .webhook-delivery-status {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+        }
+
         /* --- Self-Test Panel --- */
         .self-test-section {
             margin-bottom: 2rem;
@@ -5462,6 +5606,51 @@
             </div>
         </section>
 
+        <section data-panel-id="webhooks" style="display:none;">
+            <h2>Webhooks</h2>
+
+            <div class="webhook-stats" id="webhook-stats"></div>
+
+            <button class="btn" onclick="toggleWebhookForm()" style="margin-bottom:1rem;">+ Register Endpoint</button>
+
+            <div class="webhook-register-form" id="webhook-register-form">
+                <div class="form-row">
+                    <input type="text" id="wh-name" placeholder="Endpoint name" />
+                    <input type="text" id="wh-url" placeholder="https://hooks.example.com/..." />
+                </div>
+                <div class="form-row">
+                    <select id="wh-direction">
+                        <option value="outbound">Outbound</option>
+                        <option value="inbound">Inbound</option>
+                    </select>
+                    <input type="text" id="wh-secret" placeholder="HMAC secret (optional)" />
+                </div>
+                <div class="form-row">
+                    <select id="wh-severity">
+                        <option value="all">All severities</option>
+                        <option value="info">Info only</option>
+                        <option value="warn">Warn only</option>
+                        <option value="error">Error only</option>
+                    </select>
+                    <input type="text" id="wh-filters" placeholder="Event filters (comma-separated, e.g. task,agent)" />
+                </div>
+                <div class="form-row">
+                    <button class="btn" onclick="registerWebhook()">Register</button>
+                    <button class="btn" onclick="toggleWebhookForm()" style="background:var(--bg-primary);">Cancel</button>
+                </div>
+            </div>
+
+            <h3 style="margin-top:1rem;">Registered Endpoints</h3>
+            <div id="webhook-endpoints-list">
+                <div class="empty-state">No webhook endpoints registered</div>
+            </div>
+
+            <h3 style="margin-top:1.5rem;">Recent Deliveries</h3>
+            <div id="webhook-deliveries-list">
+                <div class="empty-state">No deliveries yet</div>
+            </div>
+        </section>
+
         <section class="command-palette-section" data-panel-id="command-palette">
             <h2>Command Palette</h2>
 
@@ -5902,6 +6091,7 @@
             { id: 'business', name: 'Business Operations' },
             { id: 'scout', name: 'Motorcycle Scout' },
             { id: 'market-analytics', name: 'Market Analytics' },
+            { id: 'webhooks', name: 'Webhooks' },
             { id: 'command-palette', name: 'Command Palette' },
             { id: 'file-transfer', name: 'File Transfer' },
             { id: 'deploy', name: 'Connector Deploy' },
@@ -6170,6 +6360,23 @@
                     if (!data.ok) console.warn("Market report failed:", data.error);
                 } else if (data.type === "market_history_result") {
                     handleMarketHistoryResult(data);
+                } else if (data.type === "webhook_status") {
+                    handleWebhookStatus(data);
+                } else if (data.type === "webhook_registered") {
+                    if (data.ok) handleWebhookStatus(); // refresh via stored state
+                } else if (data.type === "webhook_updated") {
+                    if (data.ok) handleWebhookStatus();
+                } else if (data.type === "webhook_deleted") {
+                    if (data.ok) handleWebhookStatus();
+                } else if (data.type === "webhook_toggled") {
+                    if (data.ok) handleWebhookStatus();
+                } else if (data.type === "webhook_test_result") {
+                    if (!data.ok) console.warn("Webhook test failed:", data.error);
+                } else if (data.type === "webhook_delivery_history_result") {
+                    if (data.deliveries) {
+                        webhookData.recent_deliveries = data.deliveries;
+                        renderWebhookDeliveries();
+                    }
                 } else if (data.type === "approval_request") {
                     handleApprovalRequest(data);
                 } else if (data.type === "security_audit_status") {
@@ -8499,6 +8706,166 @@
             if (event && event.target !== event.currentTarget) return;
             const overlay = document.getElementById("market-detail-overlay");
             if (overlay) overlay.classList.remove("active");
+        }
+
+        // ---------------------------------------------------------------
+        // Webhooks
+        // ---------------------------------------------------------------
+        let webhookData = { endpoints: [], status: {}, recent_deliveries: [] };
+
+        function handleWebhookStatus(data) {
+            if (data && data.endpoints) webhookData.endpoints = data.endpoints;
+            if (data && data.status) webhookData.status = data.status;
+            if (data && data.recent_deliveries) webhookData.recent_deliveries = data.recent_deliveries;
+            renderWebhookStats();
+            renderWebhookEndpoints();
+            renderWebhookDeliveries();
+        }
+
+        function renderWebhookStats() {
+            const s = webhookData.status || {};
+            const el = document.getElementById("webhook-stats");
+            if (!el) return;
+            el.innerHTML = `
+                <div class="webhook-stat-card">
+                    <div class="stat-value">${s.endpoints_total || 0}</div>
+                    <div class="stat-label">Endpoints</div>
+                </div>
+                <div class="webhook-stat-card">
+                    <div class="stat-value">${s.endpoints_enabled || 0}</div>
+                    <div class="stat-label">Enabled</div>
+                </div>
+                <div class="webhook-stat-card">
+                    <div class="stat-value">${s.success_rate != null ? s.success_rate + '%' : '—'}</div>
+                    <div class="stat-label">Success</div>
+                </div>
+                <div class="webhook-stat-card">
+                    <div class="stat-value">${s.deliveries_success || 0}</div>
+                    <div class="stat-label">Delivered</div>
+                </div>
+                <div class="webhook-stat-card">
+                    <div class="stat-value">${s.deliveries_retrying || 0}</div>
+                    <div class="stat-label">Retrying</div>
+                </div>
+                <div class="webhook-stat-card">
+                    <div class="stat-value">${s.inbound_count || 0}</div>
+                    <div class="stat-label">Inbound</div>
+                </div>
+            `;
+        }
+
+        function renderWebhookEndpoints() {
+            const el = document.getElementById("webhook-endpoints-list");
+            if (!el) return;
+            const eps = webhookData.endpoints || [];
+            if (eps.length === 0) {
+                el.innerHTML = '<div class="empty-state">No webhook endpoints registered</div>';
+                return;
+            }
+            el.innerHTML = eps.map(ep => {
+                const dirBadge = `<span class="webhook-badge ${ep.direction}">${ep.direction}</span>`;
+                const enabledBadge = ep.enabled
+                    ? '<span class="webhook-badge enabled">enabled</span>'
+                    : '<span class="webhook-badge disabled">disabled</span>';
+                const filters = (ep.event_filters || []).join(", ") || "all";
+                const sev = ep.severity_filter || "all";
+                return `
+                    <div class="webhook-endpoint-row">
+                        <div class="webhook-endpoint-header">
+                            <div>
+                                <span class="webhook-endpoint-name">${esc(ep.name)}</span>
+                                ${dirBadge} ${enabledBadge}
+                            </div>
+                            <div class="webhook-endpoint-actions">
+                                <button onclick="toggleWebhookEnabled('${ep.endpoint_id}', ${!ep.enabled})"
+                                    title="${ep.enabled ? 'Disable' : 'Enable'}">${ep.enabled ? '⏸' : '▶'}</button>
+                                <button onclick="testWebhook('${ep.endpoint_id}')" title="Test delivery">Test</button>
+                                <button class="danger" onclick="deleteWebhook('${ep.endpoint_id}')" title="Delete">✕</button>
+                            </div>
+                        </div>
+                        ${ep.url ? `<div class="webhook-endpoint-url">${esc(ep.url)}</div>` : ''}
+                        <div class="webhook-endpoint-meta">Events: ${esc(filters)} | Severity: ${esc(sev)}</div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderWebhookDeliveries() {
+            const el = document.getElementById("webhook-deliveries-list");
+            if (!el) return;
+            const dels = webhookData.recent_deliveries || [];
+            if (dels.length === 0) {
+                el.innerHTML = '<div class="empty-state">No deliveries yet</div>';
+                return;
+            }
+            el.innerHTML = dels.slice(0, 30).map(d => {
+                const statusInfo = d.http_status ? `(${d.http_status})` : '';
+                return `
+                    <div class="webhook-delivery-row">
+                        <div class="webhook-delivery-dot ${d.status}"></div>
+                        <div class="webhook-delivery-category">${esc(d.event_category)}</div>
+                        <div class="webhook-delivery-message">${esc(d.event_message)}</div>
+                        <div class="webhook-delivery-status">
+                            ${d.status}${statusInfo} ${d.attempt_count}/${d.max_attempts}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function toggleWebhookForm() {
+            const form = document.getElementById("webhook-register-form");
+            if (form) form.classList.toggle("active");
+        }
+
+        function registerWebhook() {
+            const name = document.getElementById("wh-name")?.value?.trim();
+            const url = document.getElementById("wh-url")?.value?.trim();
+            const direction = document.getElementById("wh-direction")?.value || "outbound";
+            const secret = document.getElementById("wh-secret")?.value?.trim() || "";
+            const severity = document.getElementById("wh-severity")?.value || "all";
+            const filtersRaw = document.getElementById("wh-filters")?.value?.trim() || "";
+            const filters = filtersRaw ? filtersRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+            if (!name) { alert("Endpoint name is required"); return; }
+
+            ws.send(JSON.stringify({
+                type: "webhook_register",
+                name, url, direction, secret,
+                event_filters: filters,
+                severity_filter: severity,
+                enabled: true,
+            }));
+
+            // Reset form
+            ["wh-name", "wh-url", "wh-secret", "wh-filters"].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = "";
+            });
+            toggleWebhookForm();
+        }
+
+        function toggleWebhookEnabled(endpointId, enabled) {
+            ws.send(JSON.stringify({
+                type: "webhook_toggle",
+                endpoint_id: endpointId,
+                enabled: enabled,
+            }));
+        }
+
+        function testWebhook(endpointId) {
+            ws.send(JSON.stringify({
+                type: "webhook_test",
+                endpoint_id: endpointId,
+            }));
+        }
+
+        function deleteWebhook(endpointId) {
+            if (!confirm("Delete this webhook endpoint?")) return;
+            ws.send(JSON.stringify({
+                type: "webhook_delete",
+                endpoint_id: endpointId,
+            }));
         }
 
         // ---------------------------------------------------------------

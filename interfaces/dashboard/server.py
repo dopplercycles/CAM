@@ -45,6 +45,7 @@ from core.content_calendar import ContentCalendar, ContentType, ContentStatus
 from core.research_store import ResearchStore, ResearchStatus
 from tools.doppler.scout import ScoutStore, DopplerScout, SearchCriteria, ListingStatus
 from tools.doppler.market_analyzer import MarketAnalyzer
+from core.webhook_manager import WebhookManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -254,7 +255,6 @@ async def broadcast_event_and_evaluate(event_dict: dict):
 
 event_logger.set_broadcast_callback(broadcast_event_and_evaluate)
 
-
 # Wire the message bus broadcast callback — pushes bus messages to dashboards
 async def broadcast_bus_message(message_dict):
     """Push a bus message + stats to all connected dashboard browsers."""
@@ -388,6 +388,42 @@ market_analyzer = MarketAnalyzer(
     scout_store=scout_store,
     on_change=broadcast_market_analytics,
 )
+
+
+async def broadcast_webhook_status():
+    """Push current webhook state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "webhook_status",
+        **webhook_manager.to_broadcast_dict(),
+    })
+
+
+# Webhook manager — outbound/inbound webhooks with HMAC and retry
+_wh_cfg = getattr(config, 'webhooks', None)
+webhook_manager = WebhookManager(
+    db_path=getattr(_wh_cfg, 'db_path', 'data/webhooks.db'),
+    task_queue=task_queue,
+    event_logger=event_logger,
+    on_change=broadcast_webhook_status,
+    max_retries=getattr(_wh_cfg, 'max_retries', 5),
+    retry_base_seconds=getattr(_wh_cfg, 'retry_base_seconds', 10),
+    retry_max_seconds=getattr(_wh_cfg, 'retry_max_seconds', 3600),
+    retry_check_interval=getattr(_wh_cfg, 'retry_check_interval', 15),
+    max_delivery_history=getattr(_wh_cfg, 'max_delivery_history', 500),
+    inbound_secret=getattr(_wh_cfg, 'inbound_secret', ''),
+)
+
+# Re-wire event callback to also evaluate webhooks for outbound delivery
+_original_event_broadcast = broadcast_event_and_evaluate
+
+async def _event_broadcast_with_webhooks(event_dict):
+    await _original_event_broadcast(event_dict)
+    try:
+        await webhook_manager.evaluate_event(event_dict)
+    except Exception:
+        pass
+
+event_logger.set_broadcast_callback(_event_broadcast_with_webhooks)
 
 
 async def broadcast_business_status():
@@ -980,8 +1016,10 @@ async def lifespan(app: FastAPI):
     session_cleanup_task = asyncio.create_task(cleanup_sessions())
     orchestrator_task = asyncio.create_task(orchestrator.run())
     scheduler_task = asyncio.create_task(scheduler.run())
+    webhook_retry_task = asyncio.create_task(webhook_manager.process_retries())
     logger.info("Orchestrator loop started as background task")
     logger.info("Scheduler loop started as background task")
+    logger.info("Webhook retry loop started as background task")
     if session_manager.auth_enabled:
         logger.info("Dashboard authentication ENABLED (user: %s)", session_manager.username)
     else:
@@ -1015,6 +1053,7 @@ async def lifespan(app: FastAPI):
     heartbeat_task.cancel()
     session_cleanup_task.cancel()
     scheduler_task.cancel()
+    webhook_retry_task.cancel()
     episodic_memory.close()
     content_calendar.close()
     research_store.close()
@@ -1022,6 +1061,7 @@ async def lifespan(app: FastAPI):
     market_analyzer.close()
     business_store.close()
     security_audit_log.close()
+    webhook_manager.close()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
 
@@ -1057,6 +1097,7 @@ app.state.market_analyzer = market_analyzer
 app.state.business_store = business_store
 app.state.business_agent = business_agent
 app.state.security_audit_log = security_audit_log
+app.state.webhook_manager = webhook_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -1411,6 +1452,86 @@ async def get_market_trends():
 async def get_market_undervalued():
     """Return listings priced significantly below historical averages."""
     return {"undervalued": market_analyzer.detect_undervalued()}
+
+
+# ---------------------------------------------------------------------------
+# Webhook REST endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/webhooks")
+async def get_webhooks():
+    """Return webhook status and endpoints."""
+    return webhook_manager.to_broadcast_dict()
+
+
+@app.get("/api/webhooks/endpoints")
+async def list_webhook_endpoints(direction: str | None = None):
+    """List registered webhook endpoints."""
+    return {"endpoints": webhook_manager.list_endpoints(direction=direction)}
+
+
+@app.post("/api/webhooks/endpoints")
+async def create_webhook_endpoint(request: Request):
+    """Register a new webhook endpoint."""
+    try:
+        body = await request.json()
+        ep = webhook_manager.register_endpoint(
+            name=body.get("name", "Unnamed"),
+            url=body.get("url", ""),
+            direction=body.get("direction", "outbound"),
+            secret=body.get("secret", ""),
+            event_filters=body.get("event_filters", []),
+            severity_filter=body.get("severity_filter", "all"),
+            enabled=body.get("enabled", True),
+        )
+        await broadcast_webhook_status()
+        return {"ok": True, "endpoint": ep}
+    except Exception as e:
+        logger.warning("Webhook endpoint create failed: %s", e)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.delete("/api/webhooks/endpoints/{endpoint_id}")
+async def delete_webhook_endpoint(endpoint_id: str):
+    """Delete a webhook endpoint."""
+    deleted = webhook_manager.delete_endpoint(endpoint_id)
+    if deleted:
+        await broadcast_webhook_status()
+        return {"ok": True}
+    return JSONResponse({"ok": False, "error": "Not found"}, status_code=404)
+
+
+@app.get("/api/webhooks/deliveries")
+async def get_webhook_deliveries(limit: int = 30, endpoint_id: str | None = None):
+    """Return recent webhook delivery history."""
+    return {
+        "deliveries": webhook_manager.get_recent_deliveries(
+            limit=limit, endpoint_id=endpoint_id
+        )
+    }
+
+
+@app.post("/api/webhooks/incoming")
+async def webhook_incoming(request: Request):
+    """Inbound webhook endpoint — no API key required.
+
+    External services POST here to create tasks in CAM.
+    Validates X-Webhook-Signature if inbound_secret is configured.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+
+    source_ip = request.client.host if request.client else ""
+    signature = request.headers.get("X-Webhook-Signature", "")
+
+    result = await webhook_manager.process_inbound(
+        payload=body, source_ip=source_ip, provided_signature=signature
+    )
+    if not result.get("ok"):
+        return JSONResponse(result, status_code=401)
+    return result
 
 
 @app.get("/api/business")
@@ -1943,6 +2064,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "security_audit_status",
         "entries": security_audit_log.to_broadcast_list(),
         "status": security_audit_log.get_status(),
+    })
+
+    # Send current webhook state
+    await websocket.send_json({
+        "type": "webhook_status",
+        **webhook_manager.to_broadcast_dict(),
     })
 
     # Send current memory system status
@@ -2828,6 +2955,85 @@ async def dashboard_websocket(websocket: WebSocket):
                         "ok": False,
                         "error": str(e),
                     })
+
+            # -----------------------------------------------------------
+            # Webhook handlers
+            # -----------------------------------------------------------
+            elif msg.get("type") == "webhook_register":
+                try:
+                    ep = webhook_manager.register_endpoint(
+                        name=msg.get("name", "Unnamed"),
+                        url=msg.get("url", ""),
+                        direction=msg.get("direction", "outbound"),
+                        secret=msg.get("secret", ""),
+                        event_filters=msg.get("event_filters", []),
+                        severity_filter=msg.get("severity_filter", "all"),
+                        enabled=msg.get("enabled", True),
+                    )
+                    event_logger.info("webhook", f"Webhook endpoint registered: {ep['name']}")
+                    await websocket.send_json({"type": "webhook_registered", "ok": True, "endpoint": ep})
+                    await broadcast_webhook_status()
+                except Exception as e:
+                    await websocket.send_json({"type": "webhook_registered", "ok": False, "error": str(e)})
+
+            elif msg.get("type") == "webhook_update":
+                eid = msg.get("endpoint_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("name", "url", "secret", "event_filters",
+                                    "severity_filter", "enabled", "direction")}
+                updated = webhook_manager.update_endpoint(eid, **updates)
+                if updated:
+                    event_logger.info("webhook", f"Webhook endpoint updated: {updated['name']}")
+                    await websocket.send_json({"type": "webhook_updated", "ok": True, "endpoint": updated})
+                    await broadcast_webhook_status()
+                else:
+                    await websocket.send_json({"type": "webhook_updated", "ok": False, "error": "Not found"})
+
+            elif msg.get("type") == "webhook_delete":
+                eid = msg.get("endpoint_id", "")
+                deleted = webhook_manager.delete_endpoint(eid)
+                if deleted:
+                    event_logger.info("webhook", f"Webhook endpoint deleted: {eid[:8]}")
+                    await websocket.send_json({"type": "webhook_deleted", "ok": True, "endpoint_id": eid})
+                    await broadcast_webhook_status()
+                else:
+                    await websocket.send_json({"type": "webhook_deleted", "ok": False, "error": "Not found"})
+
+            elif msg.get("type") == "webhook_toggle":
+                eid = msg.get("endpoint_id", "")
+                enabled = msg.get("enabled", True)
+                updated = webhook_manager.update_endpoint(eid, enabled=enabled)
+                if updated:
+                    state = "enabled" if enabled else "disabled"
+                    event_logger.info("webhook", f"Webhook endpoint {state}: {updated['name']}")
+                    await websocket.send_json({"type": "webhook_toggled", "ok": True, "endpoint": updated})
+                    await broadcast_webhook_status()
+                else:
+                    await websocket.send_json({"type": "webhook_toggled", "ok": False, "error": "Not found"})
+
+            elif msg.get("type") == "webhook_test":
+                eid = msg.get("endpoint_id", "")
+                try:
+                    test_event = {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "severity": "info",
+                        "category": "test",
+                        "message": "Webhook test delivery from CAM dashboard",
+                        "details": {"test": True},
+                    }
+                    await webhook_manager._deliver_to_endpoint(eid, test_event)
+                    await websocket.send_json({"type": "webhook_test_result", "ok": True, "endpoint_id": eid})
+                except Exception as e:
+                    await websocket.send_json({"type": "webhook_test_result", "ok": False, "error": str(e)})
+
+            elif msg.get("type") == "webhook_delivery_history":
+                eid = msg.get("endpoint_id")
+                limit = msg.get("limit", 30)
+                deliveries = webhook_manager.get_recent_deliveries(limit=limit, endpoint_id=eid)
+                await websocket.send_json({
+                    "type": "webhook_delivery_history_result",
+                    "deliveries": deliveries,
+                })
 
             # -----------------------------------------------------------
             # Business CRUD handlers
