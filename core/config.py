@@ -158,6 +158,12 @@ _DEFAULTS: dict[str, Any] = {
         "keywords": [],
         "exclude_keywords": ["parts only"],
     },
+    "business": {
+        "db_path": "data/business.db",
+        "seed_sample_data": True,
+        "default_labor_rate": 75.0,
+        "invoice_prefix": "DC",
+    },
     "auth": {
         "username": "george",
         "password_hash": "",

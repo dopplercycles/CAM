@@ -135,6 +135,12 @@ radius_miles = 50
 keywords = []
 exclude_keywords = ["parts only"]
 
+[business]
+db_path = "data/business.db"
+seed_sample_data = true
+default_labor_rate = 75.0
+invoice_prefix = "DC"
+
 [auth]
 username = "george"
 password_hash = ""                         # empty = auth disabled (open access). Run: python -m security.set_password

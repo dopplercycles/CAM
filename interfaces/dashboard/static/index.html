@@ -2693,6 +2693,204 @@
         }
 
         /* --- Scout Panel --- */
+        /* ---- Business Operations ---- */
+        .business-section {
+            margin-bottom: 2rem;
+        }
+
+        .biz-filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .biz-filter-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .biz-filter-btn:hover {
+            background: #3a5a7a;
+        }
+
+        .biz-filter-btn.active {
+            background: #3a5a7a;
+            color: #ffffff;
+        }
+
+        .biz-stats {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            margin-left: auto;
+        }
+
+        .biz-tab-content {
+            display: none;
+        }
+
+        .biz-tab-content.active {
+            display: block;
+        }
+
+        .biz-add-form {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .biz-form-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.4rem;
+        }
+
+        .biz-form-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .biz-form-row input,
+        .biz-form-row select {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.82rem;
+            padding: 0.35rem 0.5rem;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .biz-form-row input:focus,
+        .biz-form-row select:focus {
+            border-color: #5b9bd5;
+        }
+
+        .biz-form-row button {
+            background: #2563eb;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            cursor: pointer;
+        }
+
+        .biz-form-row button:hover {
+            background: #1d4ed8;
+        }
+
+        .biz-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            margin-bottom: 0.4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .biz-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .biz-card-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #e0e0e0;
+        }
+
+        .biz-card-meta {
+            font-size: 0.78rem;
+            color: #5a6a7a;
+            margin-top: 0.15rem;
+        }
+
+        .biz-card-actions {
+            display: flex;
+            gap: 0.3rem;
+            flex-shrink: 0;
+        }
+
+        .biz-card-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a5a7a;
+            border-radius: 4px;
+            color: #8ab4d6;
+            font-family: inherit;
+            font-size: 0.72rem;
+            padding: 0.2rem 0.45rem;
+            cursor: pointer;
+        }
+
+        .biz-card-btn:hover {
+            background: #3a5a7a;
+            color: #fff;
+        }
+
+        .biz-card-btn.danger {
+            border-color: #7f1d1d;
+            color: #f87171;
+        }
+
+        .biz-card-btn.danger:hover {
+            background: #7f1d1d;
+            color: #fff;
+        }
+
+        .biz-status-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .biz-status-badge.scheduled   { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .biz-status-badge.confirmed   { background: rgba(16,185,129,0.2); color: #34d399; }
+        .biz-status-badge.in_progress { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .biz-status-badge.completed   { background: rgba(0,214,114,0.2);  color: #00d672; }
+        .biz-status-badge.cancelled   { background: rgba(107,114,128,0.2); color: #9ca3af; }
+        .biz-status-badge.no_show     { background: rgba(239,68,68,0.2);  color: #f87171; }
+        .biz-status-badge.draft       { background: rgba(107,114,128,0.2); color: #9ca3af; }
+        .biz-status-badge.sent        { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .biz-status-badge.paid        { background: rgba(0,214,114,0.2);  color: #00d672; }
+        .biz-status-badge.overdue     { background: rgba(239,68,68,0.2);  color: #f87171; }
+
+        .biz-reorder-alert {
+            color: #f59e0b;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .biz-empty {
+            color: #4a5a6a;
+            font-size: 0.85rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
         .scout-section {
             margin-bottom: 2rem;
         }
@@ -3916,6 +4114,99 @@
             </div>
         </section>
 
+        <section class="business-section">
+            <h2>Business Operations</h2>
+
+            <div class="biz-filter-bar">
+                <button class="biz-filter-btn active" onclick="switchBizTab('appointments', this)">Appointments</button>
+                <button class="biz-filter-btn" onclick="switchBizTab('customers', this)">Customers</button>
+                <button class="biz-filter-btn" onclick="switchBizTab('invoices', this)">Invoices</button>
+                <button class="biz-filter-btn" onclick="switchBizTab('inventory', this)">Inventory</button>
+                <span class="biz-stats" id="biz-stats"></span>
+            </div>
+
+            <!-- Appointments Tab -->
+            <div class="biz-tab-content active" id="biz-tab-appointments">
+                <div class="biz-add-form">
+                    <div class="biz-form-row">
+                        <select id="biz-appt-customer">
+                            <option value="">-- Customer --</option>
+                        </select>
+                        <input type="date" id="biz-appt-date">
+                        <input type="time" id="biz-appt-time">
+                    </div>
+                    <div class="biz-form-row">
+                        <input type="text" id="biz-appt-bike" placeholder="Bike">
+                        <input type="text" id="biz-appt-service" placeholder="Service type">
+                        <input type="text" id="biz-appt-location" placeholder="Location">
+                        <input type="number" id="biz-appt-cost" placeholder="Est. cost" step="0.01">
+                        <button onclick="createAppointment()">Add</button>
+                    </div>
+                </div>
+                <div id="biz-appointment-list">
+                    <div class="biz-empty">No appointments yet.</div>
+                </div>
+            </div>
+
+            <!-- Customers Tab -->
+            <div class="biz-tab-content" id="biz-tab-customers">
+                <div class="biz-add-form">
+                    <div class="biz-form-row">
+                        <input type="text" id="biz-cust-name" placeholder="Name">
+                        <input type="text" id="biz-cust-phone" placeholder="Phone">
+                        <input type="text" id="biz-cust-email" placeholder="Email">
+                    </div>
+                    <div class="biz-form-row">
+                        <input type="text" id="biz-cust-bike" placeholder="Bike info">
+                        <input type="text" id="biz-cust-notes" placeholder="Notes">
+                        <button onclick="createCustomer()">Add</button>
+                    </div>
+                </div>
+                <div id="biz-customer-list">
+                    <div class="biz-empty">No customers yet.</div>
+                </div>
+            </div>
+
+            <!-- Invoices Tab -->
+            <div class="biz-tab-content" id="biz-tab-invoices">
+                <div class="biz-add-form">
+                    <div class="biz-form-row">
+                        <select id="biz-inv-customer">
+                            <option value="">-- Customer --</option>
+                        </select>
+                        <input type="number" id="biz-inv-labor-hours" placeholder="Labor hrs" step="0.5" style="max-width:100px;">
+                        <input type="number" id="biz-inv-labor-rate" placeholder="Rate" value="75" step="0.01" style="max-width:80px;">
+                        <input type="text" id="biz-inv-notes" placeholder="Notes">
+                        <button onclick="createInvoice()">Add</button>
+                    </div>
+                </div>
+                <div id="biz-invoice-list">
+                    <div class="biz-empty">No invoices yet.</div>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div class="biz-tab-content" id="biz-tab-inventory">
+                <div class="biz-add-form">
+                    <div class="biz-form-row">
+                        <input type="text" id="biz-inv-item-name" placeholder="Item name">
+                        <select id="biz-inv-item-category">
+                            <option value="parts">Parts</option>
+                            <option value="tools">Tools</option>
+                            <option value="consumables">Consumables</option>
+                        </select>
+                        <input type="number" id="biz-inv-item-qty" placeholder="Qty" style="max-width:60px;">
+                        <input type="number" id="biz-inv-item-cost" placeholder="Unit cost" step="0.01" style="max-width:90px;">
+                        <input type="number" id="biz-inv-item-reorder" placeholder="Reorder at" style="max-width:80px;">
+                        <button onclick="createInventoryItem()">Add</button>
+                    </div>
+                </div>
+                <div id="biz-inventory-list">
+                    <div class="biz-empty">No inventory items yet.</div>
+                </div>
+            </div>
+        </section>
+
         <section class="scout-section">
             <h2>Motorcycle Scout</h2>
 
@@ -4340,6 +4631,16 @@
                     if (!data.ok) console.warn("Research entry delete failed:", data.error);
                 } else if (data.type === "research_search_results") {
                     handleResearchSearchResults(data);
+                } else if (data.type === "business_status") {
+                    handleBusinessStatus(data);
+                } else if (data.type === "business_customer_deleted") {
+                    if (!data.ok) console.warn("Business customer delete failed");
+                } else if (data.type === "business_appointment_deleted") {
+                    if (!data.ok) console.warn("Business appointment delete failed");
+                } else if (data.type === "business_invoice_deleted") {
+                    if (!data.ok) console.warn("Business invoice delete failed");
+                } else if (data.type === "business_inventory_deleted") {
+                    if (!data.ok) console.warn("Business inventory delete failed");
                 } else if (data.type === "scout_status") {
                     handleScoutStatus(data);
                 } else if (data.type === "scout_scan_result") {
@@ -5938,6 +6239,342 @@
                         </div>
                         <div class="research-card-summary">${summaryPreview}</div>
                     </div>
+                `;
+            }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Business Operations
+        // ---------------------------------------------------------------
+        let bizCustomers = [];
+        let bizAppointments = [];
+        let bizInvoices = [];
+        let bizInventory = [];
+        let bizStatus = {};
+        let activeBizTab = "appointments";
+
+        function switchBizTab(tab, btn) {
+            activeBizTab = tab;
+            document.querySelectorAll(".biz-filter-btn").forEach(b => b.classList.remove("active"));
+            if (btn) btn.classList.add("active");
+            document.querySelectorAll(".biz-tab-content").forEach(el => el.classList.remove("active"));
+            const target = document.getElementById("biz-tab-" + tab);
+            if (target) target.classList.add("active");
+        }
+
+        function handleBusinessStatus(data) {
+            bizCustomers = data.customers || [];
+            bizAppointments = data.appointments || [];
+            bizInvoices = data.invoices || [];
+            bizInventory = data.inventory || [];
+            bizStatus = data.status || {};
+            renderBizAppointments();
+            renderBizCustomers();
+            renderBizInvoices();
+            renderBizInventory();
+            updateBizStats();
+            populateBizCustomerDropdowns();
+        }
+
+        function updateBizStats() {
+            const el = document.getElementById("biz-stats");
+            if (!el) return;
+            const s = bizStatus;
+            el.innerHTML = `${s.customer_count || 0} customers &middot; `
+                + `${s.upcoming_appointments || 0} upcoming &middot; `
+                + `$${(s.total_revenue || 0).toFixed(0)} revenue &middot; `
+                + (s.low_stock_count > 0 ? `<span style="color:#f59e0b">${s.low_stock_count} low stock</span>` : "0 low stock");
+        }
+
+        function populateBizCustomerDropdowns() {
+            const selectors = ["biz-appt-customer", "biz-inv-customer"];
+            selectors.forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const current = sel.value;
+                sel.innerHTML = '<option value="">-- Customer --</option>';
+                bizCustomers.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c.customer_id;
+                    opt.textContent = c.name;
+                    opt.dataset.name = c.name;
+                    opt.dataset.bike = c.bike_info || "";
+                    sel.appendChild(opt);
+                });
+                if (current) sel.value = current;
+            });
+        }
+
+        // --- Customers ---
+        function createCustomer() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const name = document.getElementById("biz-cust-name").value.trim();
+            if (!name) return;
+            ws.send(JSON.stringify({
+                type: "business_customer_create",
+                name: name,
+                phone: document.getElementById("biz-cust-phone").value.trim(),
+                email: document.getElementById("biz-cust-email").value.trim(),
+                bike_info: document.getElementById("biz-cust-bike").value.trim(),
+                notes: document.getElementById("biz-cust-notes").value.trim(),
+            }));
+            document.getElementById("biz-cust-name").value = "";
+            document.getElementById("biz-cust-phone").value = "";
+            document.getElementById("biz-cust-email").value = "";
+            document.getElementById("biz-cust-bike").value = "";
+            document.getElementById("biz-cust-notes").value = "";
+        }
+
+        function deleteCustomer(customerId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm("Delete this customer?")) return;
+            ws.send(JSON.stringify({ type: "business_customer_delete", customer_id: customerId }));
+        }
+
+        function renderBizCustomers() {
+            const container = document.getElementById("biz-customer-list");
+            if (!container) return;
+            if (bizCustomers.length === 0) {
+                container.innerHTML = '<div class="biz-empty">No customers yet.</div>';
+                return;
+            }
+            container.innerHTML = bizCustomers.map(c => `
+                <div class="biz-card">
+                    <div class="biz-card-info">
+                        <div class="biz-card-title">${escapeHtml(c.name)}</div>
+                        <div class="biz-card-meta">
+                            ${c.phone ? escapeHtml(c.phone) + " &middot; " : ""}${c.email ? escapeHtml(c.email) + " &middot; " : ""}${c.bike_info ? escapeHtml(c.bike_info) : ""}
+                        </div>
+                        ${c.notes ? '<div class="biz-card-meta">' + escapeHtml(c.notes) + '</div>' : ''}
+                    </div>
+                    <div class="biz-card-actions">
+                        <button class="biz-card-btn danger" onclick="deleteCustomer('${c.customer_id}')">Del</button>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // --- Appointments ---
+        function createAppointment() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const sel = document.getElementById("biz-appt-customer");
+            const opt = sel.options[sel.selectedIndex];
+            const customerId = sel.value;
+            const customerName = opt && opt.dataset ? (opt.dataset.name || "") : "";
+            ws.send(JSON.stringify({
+                type: "business_appointment_create",
+                customer_id: customerId,
+                customer_name: customerName,
+                date: document.getElementById("biz-appt-date").value,
+                time: document.getElementById("biz-appt-time").value,
+                bike: document.getElementById("biz-appt-bike").value.trim(),
+                service_type: document.getElementById("biz-appt-service").value.trim(),
+                location: document.getElementById("biz-appt-location").value.trim(),
+                estimated_cost: document.getElementById("biz-appt-cost").value || 0,
+            }));
+            document.getElementById("biz-appt-bike").value = "";
+            document.getElementById("biz-appt-service").value = "";
+            document.getElementById("biz-appt-location").value = "";
+            document.getElementById("biz-appt-cost").value = "";
+        }
+
+        function updateAppointmentStatus(apptId, status) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: "business_appointment_update",
+                appointment_id: apptId,
+                status: status,
+            }));
+        }
+
+        function deleteAppointment(apptId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm("Delete this appointment?")) return;
+            ws.send(JSON.stringify({ type: "business_appointment_delete", appointment_id: apptId }));
+        }
+
+        function renderBizAppointments() {
+            const container = document.getElementById("biz-appointment-list");
+            if (!container) return;
+            if (bizAppointments.length === 0) {
+                container.innerHTML = '<div class="biz-empty">No appointments yet.</div>';
+                return;
+            }
+            const statusOrder = { scheduled: 0, confirmed: 1, in_progress: 2, completed: 3, cancelled: 4, no_show: 5 };
+            const sorted = [...bizAppointments].sort((a, b) => {
+                const sa = statusOrder[a.status] ?? 9;
+                const sb = statusOrder[b.status] ?? 9;
+                if (sa !== sb) return sa - sb;
+                return (b.date || "").localeCompare(a.date || "");
+            });
+            const apptStatuses = ["scheduled", "confirmed", "in_progress", "completed", "cancelled", "no_show"];
+            container.innerHTML = sorted.map(a => {
+                const statusOpts = apptStatuses.map(s =>
+                    `<option value="${s}"${s === a.status ? " selected" : ""}>${s.replace(/_/g, " ")}</option>`
+                ).join("");
+                return `
+                <div class="biz-card">
+                    <div class="biz-card-info">
+                        <div class="biz-card-title">
+                            <span class="biz-status-badge ${a.status}">${(a.status || "").replace(/_/g, " ")}</span>
+                            ${escapeHtml(a.customer_name || "Unknown")} &mdash; ${escapeHtml(a.service_type || "Service")}
+                        </div>
+                        <div class="biz-card-meta">
+                            ${a.date || "No date"} ${a.time || ""} &middot; ${escapeHtml(a.bike || "")} &middot; ${escapeHtml(a.location || "")}
+                            ${a.estimated_cost > 0 ? " &middot; Est: $" + a.estimated_cost.toFixed(0) : ""}
+                        </div>
+                        ${a.notes ? '<div class="biz-card-meta">' + escapeHtml(a.notes) + '</div>' : ''}
+                    </div>
+                    <div class="biz-card-actions">
+                        <select class="biz-card-btn" onchange="updateAppointmentStatus('${a.appointment_id}', this.value)">
+                            ${statusOpts}
+                        </select>
+                        <button class="biz-card-btn danger" onclick="deleteAppointment('${a.appointment_id}')">Del</button>
+                    </div>
+                </div>
+                `;
+            }).join("");
+        }
+
+        // --- Invoices ---
+        function createInvoice() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const sel = document.getElementById("biz-inv-customer");
+            const opt = sel.options[sel.selectedIndex];
+            const customerId = sel.value;
+            const customerName = opt && opt.dataset ? (opt.dataset.name || "") : "";
+            ws.send(JSON.stringify({
+                type: "business_invoice_create",
+                customer_id: customerId,
+                customer_name: customerName,
+                labor_hours: parseFloat(document.getElementById("biz-inv-labor-hours").value) || 0,
+                labor_rate: parseFloat(document.getElementById("biz-inv-labor-rate").value) || 75,
+                notes: document.getElementById("biz-inv-notes").value.trim(),
+            }));
+            document.getElementById("biz-inv-labor-hours").value = "";
+            document.getElementById("biz-inv-notes").value = "";
+        }
+
+        function updateInvoiceStatus(invoiceId, status) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: "business_invoice_update",
+                invoice_id: invoiceId,
+                status: status,
+            }));
+        }
+
+        function deleteInvoice(invoiceId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm("Delete this invoice?")) return;
+            ws.send(JSON.stringify({ type: "business_invoice_delete", invoice_id: invoiceId }));
+        }
+
+        function renderBizInvoices() {
+            const container = document.getElementById("biz-invoice-list");
+            if (!container) return;
+            if (bizInvoices.length === 0) {
+                container.innerHTML = '<div class="biz-empty">No invoices yet.</div>';
+                return;
+            }
+            const invStatuses = ["draft", "sent", "paid", "overdue", "cancelled"];
+            container.innerHTML = bizInvoices.map(inv => {
+                const statusOpts = invStatuses.map(s =>
+                    `<option value="${s}"${s === inv.status ? " selected" : ""}>${s}</option>`
+                ).join("");
+                const itemLines = (inv.items || []).map(it =>
+                    `${escapeHtml(it.description || "")} x${it.qty || 0} @ $${(it.unit_price || 0).toFixed(2)}`
+                ).join(", ");
+                return `
+                <div class="biz-card">
+                    <div class="biz-card-info">
+                        <div class="biz-card-title">
+                            <span class="biz-status-badge ${inv.status}">${inv.status || "draft"}</span>
+                            ${escapeHtml(inv.invoice_number)} &mdash; ${escapeHtml(inv.customer_name || "Unknown")}
+                        </div>
+                        <div class="biz-card-meta">
+                            ${inv.date || "No date"} &middot; Labor: ${inv.labor_hours}h @ $${inv.labor_rate}/hr &middot; <strong>Total: $${inv.total.toFixed(2)}</strong>
+                        </div>
+                        ${itemLines ? '<div class="biz-card-meta">Items: ' + escapeHtml(itemLines) + '</div>' : ''}
+                        ${inv.notes ? '<div class="biz-card-meta">' + escapeHtml(inv.notes) + '</div>' : ''}
+                    </div>
+                    <div class="biz-card-actions">
+                        <select class="biz-card-btn" onchange="updateInvoiceStatus('${inv.invoice_id}', this.value)">
+                            ${statusOpts}
+                        </select>
+                        <button class="biz-card-btn danger" onclick="deleteInvoice('${inv.invoice_id}')">Del</button>
+                    </div>
+                </div>
+                `;
+            }).join("");
+        }
+
+        // --- Inventory ---
+        function createInventoryItem() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const name = document.getElementById("biz-inv-item-name").value.trim();
+            if (!name) return;
+            ws.send(JSON.stringify({
+                type: "business_inventory_create",
+                name: name,
+                category: document.getElementById("biz-inv-item-category").value,
+                quantity: parseInt(document.getElementById("biz-inv-item-qty").value) || 0,
+                cost: parseFloat(document.getElementById("biz-inv-item-cost").value) || 0,
+                reorder_threshold: parseInt(document.getElementById("biz-inv-item-reorder").value) || 0,
+            }));
+            document.getElementById("biz-inv-item-name").value = "";
+            document.getElementById("biz-inv-item-qty").value = "";
+            document.getElementById("biz-inv-item-cost").value = "";
+            document.getElementById("biz-inv-item-reorder").value = "";
+        }
+
+        function adjustInventoryQty(itemId, delta) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const item = bizInventory.find(i => i.item_id === itemId);
+            if (!item) return;
+            const newQty = Math.max(0, item.quantity + delta);
+            ws.send(JSON.stringify({
+                type: "business_inventory_update",
+                item_id: itemId,
+                quantity: newQty,
+            }));
+        }
+
+        function deleteInventoryItem(itemId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm("Delete this inventory item?")) return;
+            ws.send(JSON.stringify({ type: "business_inventory_delete", item_id: itemId }));
+        }
+
+        function renderBizInventory() {
+            const container = document.getElementById("biz-inventory-list");
+            if (!container) return;
+            if (bizInventory.length === 0) {
+                container.innerHTML = '<div class="biz-empty">No inventory items yet.</div>';
+                return;
+            }
+            container.innerHTML = bizInventory.map(item => {
+                const reorderAlert = item.needs_reorder
+                    ? '<span class="biz-reorder-alert">REORDER</span> '
+                    : '';
+                return `
+                <div class="biz-card">
+                    <div class="biz-card-info">
+                        <div class="biz-card-title">${reorderAlert}${escapeHtml(item.name)}</div>
+                        <div class="biz-card-meta">
+                            ${escapeHtml(item.category || "")} &middot; Qty: ${item.quantity}${item.reorder_threshold > 0 ? " (reorder at " + item.reorder_threshold + ")" : ""}
+                            ${item.cost > 0 ? " &middot; $" + item.cost.toFixed(2) + "/ea" : ""}
+                            ${item.supplier ? " &middot; " + escapeHtml(item.supplier) : ""}
+                            ${item.part_number ? " &middot; P/N: " + escapeHtml(item.part_number) : ""}
+                        </div>
+                        ${item.notes ? '<div class="biz-card-meta">' + escapeHtml(item.notes) + '</div>' : ''}
+                    </div>
+                    <div class="biz-card-actions">
+                        <button class="biz-card-btn" onclick="adjustInventoryQty('${item.item_id}', -1)">-1</button>
+                        <button class="biz-card-btn" onclick="adjustInventoryQty('${item.item_id}', 1)">+1</button>
+                        <button class="biz-card-btn danger" onclick="deleteInventoryItem('${item.item_id}')">Del</button>
+                    </div>
+                </div>
                 `;
             }).join("");
         }

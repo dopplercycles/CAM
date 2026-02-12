@@ -45,6 +45,7 @@ from security.auth import SessionManager
 from agents.content_agent import ContentAgent
 from tools.content.tts_pipeline import TTSPipeline
 from agents.research_agent import ResearchAgent
+from agents.business_agent import BusinessAgent, BusinessStore
 from tests.self_test import SelfTest
 
 
@@ -338,6 +339,26 @@ scout_store = ScoutStore(
 )
 
 
+async def broadcast_business_status():
+    """Push current business data to all connected dashboard browsers."""
+    data = business_store.to_broadcast_list()
+    await broadcast_to_dashboards({
+        "type": "business_status",
+        **data,
+        "status": business_store.get_status(),
+    })
+
+
+# Business store — SQLite-backed customer/appointment/invoice/inventory storage
+_biz_cfg = getattr(config, 'business', None)
+business_store = BusinessStore(
+    db_path=getattr(_biz_cfg, 'db_path', 'data/business.db'),
+    on_change=broadcast_business_status,
+)
+if getattr(_biz_cfg, 'seed_sample_data', True):
+    business_store.seed_sample_data()
+
+
 async def broadcast_security_audit_status():
     """Push current security audit state to all connected dashboard browsers."""
     await broadcast_to_dashboards({
@@ -505,6 +526,17 @@ async def dispatch_to_agent(task, plan):
             return research_result
     except Exception as e:
         logger.warning("Research agent failed for task %s: %s", task.short_id, e)
+
+    # --- Local agents: business agent handles business tasks ---
+    try:
+        business_result = await business_agent.try_handle(task, plan)
+        if business_result is not None:
+            task.assigned_agent = "business_agent"
+            event_logger.info("task", f"Business agent handled {task.short_id}",
+                              task_id=task.short_id, agent="business_agent")
+            return business_result
+    except Exception as e:
+        logger.warning("Business agent failed for task %s: %s", task.short_id, e)
 
     # --- Routing: find the target agent ---
     agent_id = None
@@ -702,6 +734,16 @@ research_agent = ResearchAgent(
     on_model_call=on_model_call,
 )
 
+# Business agent — local in-process agent for business tasks
+business_agent = BusinessAgent(
+    router=orchestrator.router,
+    persona=persona,
+    long_term_memory=long_term_memory,
+    business_store=business_store,
+    event_logger=event_logger,
+    on_model_call=on_model_call,
+)
+
 # Doppler Scout — motorcycle listing scraper with deal scoring
 _scout_cfg = getattr(config, 'scout', None)
 _scout_criteria = SearchCriteria(
@@ -868,6 +910,7 @@ async def lifespan(app: FastAPI):
     content_calendar.close()
     research_store.close()
     scout_store.close()
+    business_store.close()
     security_audit_log.close()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
@@ -900,6 +943,8 @@ app.state.research_store = research_store
 app.state.research_agent = research_agent
 app.state.scout_store = scout_store
 app.state.doppler_scout = doppler_scout
+app.state.business_store = business_store
+app.state.business_agent = business_agent
 app.state.security_audit_log = security_audit_log
 app.state.session_manager = session_manager
 app.state.kill_switch = {"active": False}       # mutable container
@@ -1184,6 +1229,15 @@ async def rescore_scout_listing(entry_id: str):
     except Exception as e:
         logger.warning("Scout rescore failed: %s", e)
         return {"ok": False, "error": str(e)}
+
+
+@app.get("/api/business")
+async def get_business():
+    """Return current business data as JSON."""
+    return {
+        **business_store.to_broadcast_list(),
+        "status": business_store.get_status(),
+    }
 
 
 @app.get("/api/security-audit")
@@ -1644,6 +1698,13 @@ async def dashboard_websocket(websocket: WebSocket):
         "type": "scout_status",
         "entries": scout_store.to_broadcast_list(),
         "status": scout_store.get_status(),
+    })
+
+    # Send current business data
+    await websocket.send_json({
+        "type": "business_status",
+        **business_store.to_broadcast_list(),
+        "status": business_store.get_status(),
     })
 
     # Send current security audit state
@@ -2408,6 +2469,217 @@ async def dashboard_websocket(websocket: WebSocket):
                         "ok": False,
                         "error": str(e),
                     })
+
+            # -----------------------------------------------------------
+            # Business CRUD handlers
+            # -----------------------------------------------------------
+            elif msg.get("type") == "business_customer_create":
+                cust = business_store.add_customer(
+                    name=msg.get("name", ""),
+                    phone=msg.get("phone", ""),
+                    email=msg.get("email", ""),
+                    bike_info=msg.get("bike_info", ""),
+                    notes=msg.get("notes", ""),
+                )
+                event_logger.info(
+                    "business",
+                    f"Customer created: {cust.name} ({cust.short_id})",
+                    customer_id=cust.short_id,
+                )
+                await broadcast_business_status()
+
+            elif msg.get("type") == "business_customer_update":
+                cust_id = msg.get("customer_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("name", "phone", "email", "bike_info", "notes")}
+                updated = business_store.update_customer(cust_id, **updates)
+                if updated:
+                    event_logger.info(
+                        "business",
+                        f"Customer updated: {updated.name} ({updated.short_id})",
+                        customer_id=updated.short_id,
+                    )
+                    await broadcast_business_status()
+
+            elif msg.get("type") == "business_customer_delete":
+                cust_id = msg.get("customer_id", "")
+                removed = business_store.remove_customer(cust_id)
+                if removed:
+                    event_logger.info(
+                        "business",
+                        f"Customer deleted: {cust_id[:8]}",
+                        customer_id=cust_id[:8],
+                    )
+                await websocket.send_json({
+                    "type": "business_customer_deleted",
+                    "ok": removed,
+                })
+                if removed:
+                    await broadcast_business_status()
+
+            elif msg.get("type") == "business_appointment_create":
+                appt = business_store.add_appointment(
+                    customer_id=msg.get("customer_id", ""),
+                    customer_name=msg.get("customer_name", ""),
+                    date=msg.get("date", ""),
+                    time=msg.get("time", ""),
+                    bike=msg.get("bike", ""),
+                    service_type=msg.get("service_type", ""),
+                    status=msg.get("status", "scheduled"),
+                    notes=msg.get("notes", ""),
+                    location=msg.get("location", ""),
+                    estimated_cost=float(msg.get("estimated_cost", 0)),
+                )
+                event_logger.info(
+                    "business",
+                    f"Appointment created: {appt.customer_name} on {appt.date} ({appt.short_id})",
+                    appointment_id=appt.short_id,
+                )
+                await broadcast_business_status()
+
+            elif msg.get("type") == "business_appointment_update":
+                appt_id = msg.get("appointment_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("customer_id", "customer_name", "date", "time",
+                                    "bike", "service_type", "status", "notes",
+                                    "location", "estimated_cost")}
+                if "estimated_cost" in updates:
+                    updates["estimated_cost"] = float(updates["estimated_cost"])
+                updated = business_store.update_appointment(appt_id, **updates)
+                if updated:
+                    event_logger.info(
+                        "business",
+                        f"Appointment updated: {updated.short_id}",
+                        appointment_id=updated.short_id,
+                    )
+                    await broadcast_business_status()
+
+            elif msg.get("type") == "business_appointment_delete":
+                appt_id = msg.get("appointment_id", "")
+                removed = business_store.remove_appointment(appt_id)
+                if removed:
+                    event_logger.info(
+                        "business",
+                        f"Appointment deleted: {appt_id[:8]}",
+                        appointment_id=appt_id[:8],
+                    )
+                await websocket.send_json({
+                    "type": "business_appointment_deleted",
+                    "ok": removed,
+                })
+                if removed:
+                    await broadcast_business_status()
+
+            elif msg.get("type") == "business_invoice_create":
+                items = msg.get("items", [])
+                inv = business_store.add_invoice(
+                    customer_id=msg.get("customer_id", ""),
+                    customer_name=msg.get("customer_name", ""),
+                    date=msg.get("date", ""),
+                    items=items,
+                    labor_hours=float(msg.get("labor_hours", 0)),
+                    labor_rate=float(msg.get("labor_rate",
+                                             getattr(_biz_cfg, 'default_labor_rate', 75.0))),
+                    status=msg.get("status", "draft"),
+                    notes=msg.get("notes", ""),
+                    appointment_id=msg.get("appointment_id", ""),
+                    prefix=getattr(_biz_cfg, 'invoice_prefix', 'DC'),
+                )
+                event_logger.info(
+                    "business",
+                    f"Invoice created: {inv.invoice_number} — ${inv.total:.2f} ({inv.short_id})",
+                    invoice_id=inv.short_id, invoice_number=inv.invoice_number,
+                )
+                await broadcast_business_status()
+
+            elif msg.get("type") == "business_invoice_update":
+                inv_id = msg.get("invoice_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("customer_id", "customer_name", "date", "items",
+                                    "labor_hours", "labor_rate", "status", "notes",
+                                    "appointment_id")}
+                for float_key in ("labor_hours", "labor_rate"):
+                    if float_key in updates:
+                        updates[float_key] = float(updates[float_key])
+                updated = business_store.update_invoice(inv_id, **updates)
+                if updated:
+                    event_logger.info(
+                        "business",
+                        f"Invoice updated: {updated.invoice_number} ({updated.short_id})",
+                        invoice_id=updated.short_id,
+                    )
+                    await broadcast_business_status()
+
+            elif msg.get("type") == "business_invoice_delete":
+                inv_id = msg.get("invoice_id", "")
+                removed = business_store.remove_invoice(inv_id)
+                if removed:
+                    event_logger.info(
+                        "business",
+                        f"Invoice deleted: {inv_id[:8]}",
+                        invoice_id=inv_id[:8],
+                    )
+                await websocket.send_json({
+                    "type": "business_invoice_deleted",
+                    "ok": removed,
+                })
+                if removed:
+                    await broadcast_business_status()
+
+            elif msg.get("type") == "business_inventory_create":
+                item = business_store.add_inventory_item(
+                    name=msg.get("name", ""),
+                    category=msg.get("category", ""),
+                    quantity=int(msg.get("quantity", 0)),
+                    cost=float(msg.get("cost", 0)),
+                    location=msg.get("location", ""),
+                    reorder_threshold=int(msg.get("reorder_threshold", 0)),
+                    supplier=msg.get("supplier", ""),
+                    part_number=msg.get("part_number", ""),
+                    notes=msg.get("notes", ""),
+                )
+                event_logger.info(
+                    "business",
+                    f"Inventory item created: {item.name} ({item.short_id})",
+                    item_id=item.short_id,
+                )
+                await broadcast_business_status()
+
+            elif msg.get("type") == "business_inventory_update":
+                item_id = msg.get("item_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("name", "category", "quantity", "cost", "location",
+                                    "reorder_threshold", "supplier", "part_number", "notes")}
+                for int_key in ("quantity", "reorder_threshold"):
+                    if int_key in updates:
+                        updates[int_key] = int(updates[int_key])
+                for float_key in ("cost",):
+                    if float_key in updates:
+                        updates[float_key] = float(updates[float_key])
+                updated = business_store.update_inventory_item(item_id, **updates)
+                if updated:
+                    event_logger.info(
+                        "business",
+                        f"Inventory item updated: {updated.name} ({updated.short_id})",
+                        item_id=updated.short_id,
+                    )
+                    await broadcast_business_status()
+
+            elif msg.get("type") == "business_inventory_delete":
+                item_id = msg.get("item_id", "")
+                removed = business_store.remove_inventory_item(item_id)
+                if removed:
+                    event_logger.info(
+                        "business",
+                        f"Inventory item deleted: {item_id[:8]}",
+                        item_id=item_id[:8],
+                    )
+                await websocket.send_json({
+                    "type": "business_inventory_deleted",
+                    "ok": removed,
+                })
+                if removed:
+                    await broadcast_business_status()
 
             elif msg.get("type") == "approval_response":
                 # Dashboard approving or rejecting a Tier 2 action
