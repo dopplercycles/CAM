@@ -2692,6 +2692,180 @@
             font-size: 0.85rem;
         }
 
+        /* --- Scout Panel --- */
+        .scout-section {
+            margin-bottom: 2rem;
+        }
+
+        .scout-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .scout-toolbar-left {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .scout-toolbar select {
+            background: #0f1923;
+            border: 1px solid #2a3a4a;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.6rem;
+            outline: none;
+        }
+
+        .scout-toolbar select:focus {
+            border-color: #5b9bd5;
+        }
+
+        .scout-stats {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .scout-stats .hot {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .scout-card {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid transparent;
+        }
+
+        .scout-card.hot-deal {
+            border-left-color: #ef4444;
+        }
+
+        .scout-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .scout-card-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .scout-deal-score {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            min-width: 2.5em;
+            text-align: center;
+        }
+
+        .scout-deal-score.hot  { background: rgba(239, 68, 68, 0.25); color: #ef4444; }
+        .scout-deal-score.warm { background: rgba(245, 158, 11, 0.25); color: #f59e0b; }
+        .scout-deal-score.cool { background: rgba(107, 114, 128, 0.25); color: #6b7280; }
+
+        .scout-card-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #e0e0e0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 500px;
+        }
+
+        .scout-card-title a {
+            color: #5b9bd5;
+            text-decoration: none;
+        }
+
+        .scout-card-title a:hover {
+            text-decoration: underline;
+        }
+
+        .scout-status-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .scout-status-badge.new       { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .scout-status-badge.reviewed   { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
+        .scout-status-badge.flagged    { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .scout-status-badge.dismissed  { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+
+        .scout-card-meta {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            margin-bottom: 0.4rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .scout-card-meta .price {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .scout-card-reason {
+            font-size: 0.82rem;
+            color: #8a9aaa;
+            line-height: 1.4;
+            font-style: italic;
+            margin-bottom: 0.3rem;
+        }
+
+        .scout-card-actions {
+            display: flex;
+            gap: 0.3rem;
+            align-items: center;
+        }
+
+        .scout-card-btn {
+            background: #2a3a4a;
+            border: 1px solid #3a4a5a;
+            border-radius: 4px;
+            color: #8a9aaa;
+            font-family: inherit;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .scout-card-btn:hover { background: #3a4a5a; color: #e0e0e0; }
+        .scout-card-btn.flag  { color: #ef4444; }
+        .scout-card-btn.flag:hover { background: rgba(239, 68, 68, 0.2); }
+        .scout-card-btn.ok    { color: #4ade80; }
+        .scout-card-btn.ok:hover { background: rgba(22, 163, 74, 0.2); }
+
+        .scout-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: #4a5a6a;
+            font-size: 0.85rem;
+        }
+
         /* --- Self-Test Panel --- */
         .self-test-section {
             margin-bottom: 2rem;
@@ -3742,6 +3916,30 @@
             </div>
         </section>
 
+        <section class="scout-section">
+            <h2>Motorcycle Scout</h2>
+
+            <div class="scout-toolbar">
+                <div class="scout-toolbar-left">
+                    <button class="research-search-bar button" style="background:#2563eb;border:1px solid #3b82f6;border-radius:6px;color:#fff;font-family:inherit;font-size:0.85rem;font-weight:600;padding:0.5rem 1rem;cursor:pointer;" onclick="triggerScoutScan()">Scan Now</button>
+                    <select id="scout-status-filter" onchange="filterScoutListings()">
+                        <option value="">All Statuses</option>
+                        <option value="new">New</option>
+                        <option value="reviewed">Reviewed</option>
+                        <option value="flagged">Flagged</option>
+                        <option value="dismissed">Dismissed</option>
+                    </select>
+                </div>
+                <div class="scout-stats" id="scout-stats">
+                    <span>Total: 0</span>
+                </div>
+            </div>
+
+            <div id="scout-list">
+                <div class="scout-empty">No scout results yet. Click "Scan Now" to search.</div>
+            </div>
+        </section>
+
         <section class="command-palette-section">
             <h2>Command Palette</h2>
 
@@ -4142,6 +4340,14 @@
                     if (!data.ok) console.warn("Research entry delete failed:", data.error);
                 } else if (data.type === "research_search_results") {
                     handleResearchSearchResults(data);
+                } else if (data.type === "scout_status") {
+                    handleScoutStatus(data);
+                } else if (data.type === "scout_scan_result") {
+                    if (!data.ok) console.warn("Scout scan failed:", data.error);
+                } else if (data.type === "scout_deleted") {
+                    if (!data.ok) console.warn("Scout delete failed:", data.error);
+                } else if (data.type === "scout_rescored") {
+                    if (!data.ok) console.warn("Scout rescore failed:", data.error);
                 } else if (data.type === "approval_request") {
                     handleApprovalRequest(data);
                 } else if (data.type === "security_audit_status") {
@@ -5731,6 +5937,132 @@
                             <span>Cost: ${costStr}</span>
                         </div>
                         <div class="research-card-summary">${summaryPreview}</div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Motorcycle Scout
+        // ---------------------------------------------------------------
+        let scoutEntries = [];
+        let scoutStatus = {};
+        let scoutFilterStatus = "";
+
+        function handleScoutStatus(data) {
+            scoutEntries = data.entries || [];
+            scoutStatus = data.status || {};
+            renderScoutListings();
+            renderScoutStats();
+        }
+
+        function renderScoutStats() {
+            const el = document.getElementById("scout-stats");
+            const total = scoutStatus.total || 0;
+            const hot = scoutStatus.hot_deals || 0;
+            const byStatus = scoutStatus.by_status || {};
+            el.innerHTML = `
+                <span>Total: ${total}</span>
+                ${hot > 0 ? `<span class="hot">Hot Deals: ${hot}</span>` : ""}
+                <span>New: ${byStatus.new || 0}</span>
+                <span>Flagged: ${byStatus.flagged || 0}</span>
+            `;
+        }
+
+        function triggerScoutScan() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: "scout_scan" }));
+        }
+
+        function filterScoutListings() {
+            scoutFilterStatus = document.getElementById("scout-status-filter").value;
+            renderScoutListings();
+        }
+
+        function updateScoutListingStatus(entryId, status) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: "scout_update_status",
+                entry_id: entryId,
+                status: status,
+            }));
+        }
+
+        function deleteScoutListing(entryId) {
+            if (!confirm("Delete this listing?")) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: "scout_delete",
+                entry_id: entryId,
+            }));
+        }
+
+        function rescoreScoutListing(entryId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({
+                type: "scout_rescore",
+                entry_id: entryId,
+            }));
+        }
+
+        function renderScoutListings() {
+            const container = document.getElementById("scout-list");
+            let filtered = scoutEntries;
+            if (scoutFilterStatus) {
+                filtered = scoutEntries.filter(e => e.status === scoutFilterStatus);
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="scout-empty">No scout results yet. Click "Scan Now" to search.</div>';
+                return;
+            }
+
+            // Sort by deal_score descending
+            filtered.sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0));
+
+            container.innerHTML = filtered.map(e => {
+                const score = e.deal_score || 0;
+                const scoreClass = score >= 8 ? "hot" : score >= 5 ? "warm" : "cool";
+                const isHot = score >= 8;
+                const statusClass = e.status || "new";
+                const statusLabel = e.status || "new";
+                const priceStr = e.price > 0 ? `$${e.price.toLocaleString()}` : "—";
+                const yearStr = e.year > 0 ? e.year : "";
+                const makeModel = [yearStr, e.make, e.model].filter(Boolean).join(" ");
+                const sourceLabel = e.source === "craigslist" ? "CL" : e.source === "facebook" ? "FB" : (e.source || "—");
+                const reasonStr = e.score_reason
+                    ? escapeHtml(e.score_reason.substring(0, 150))
+                    : "";
+                const dateStr = e.date_found
+                    ? new Date(e.date_found).toLocaleDateString()
+                    : "";
+
+                return `
+                    <div class="scout-card${isHot ? " hot-deal" : ""}">
+                        <div class="scout-card-header">
+                            <div class="scout-card-left">
+                                <span class="scout-deal-score ${scoreClass}">${score}/10</span>
+                                <span class="scout-card-title">
+                                    <a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.title.substring(0, 100))}</a>
+                                </span>
+                                <span class="scout-status-badge ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="scout-card-actions">
+                                <button class="scout-card-btn flag" onclick="updateScoutListingStatus('${e.entry_id}','flagged')" title="Flag">Flag</button>
+                                <button class="scout-card-btn ok" onclick="updateScoutListingStatus('${e.entry_id}','reviewed')" title="Mark OK">OK</button>
+                                <button class="scout-card-btn" onclick="updateScoutListingStatus('${e.entry_id}','dismissed')" title="Skip">Skip</button>
+                                <button class="scout-card-btn" onclick="rescoreScoutListing('${e.entry_id}')" title="Re-score">Rescore</button>
+                                <button class="scout-card-btn" onclick="deleteScoutListing('${e.entry_id}')" title="Delete">Del</button>
+                            </div>
+                        </div>
+                        <div class="scout-card-meta">
+                            <span class="price">${priceStr}</span>
+                            <span>${sourceLabel}</span>
+                            ${makeModel ? `<span>${escapeHtml(makeModel)}</span>` : ""}
+                            ${e.location ? `<span>${escapeHtml(e.location)}</span>` : ""}
+                            ${dateStr ? `<span>${dateStr}</span>` : ""}
+                        </div>
+                        ${reasonStr ? `<div class="scout-card-reason">${reasonStr}</div>` : ""}
                     </div>
                 `;
             }).join("");

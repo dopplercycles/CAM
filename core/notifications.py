@@ -284,6 +284,20 @@ class NotificationManager:
     # Emit — create notification and broadcast
     # -------------------------------------------------------------------
 
+    def emit(self, severity: str, title: str, message: str, category: str):
+        """Create a notification and broadcast it.
+
+        Public wrapper for external callers (e.g. DopplerScout) that
+        need to create notifications without accessing private methods.
+
+        Args:
+            severity: info, warn, error, or critical.
+            title:    Short headline for the notification.
+            message:  Longer description of what happened.
+            category: Source category (agent, task, system, cost, scout).
+        """
+        self._emit(severity, title, message, category)
+
     def _emit(self, severity: str, title: str, message: str, category: str):
         """Create a notification, store it, and fire the broadcast callback."""
         notif = Notification(

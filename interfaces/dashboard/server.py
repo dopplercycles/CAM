@@ -39,6 +39,7 @@ from core.commands import CommandLibrary
 from core.scheduler import Scheduler, ScheduleType
 from core.content_calendar import ContentCalendar, ContentType, ContentStatus
 from core.research_store import ResearchStore, ResearchStatus
+from tools.doppler.scout import ScoutStore, DopplerScout, SearchCriteria, ListingStatus
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -317,6 +318,23 @@ research_store = ResearchStore(
     db_path=getattr(getattr(config, 'research', None),
                     'db_path', 'data/research.db'),
     on_change=broadcast_research_status,
+)
+
+
+async def broadcast_scout_status():
+    """Push current scout listings to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "scout_status",
+        "entries": scout_store.to_broadcast_list(),
+        "status": scout_store.get_status(),
+    })
+
+
+# Scout store — SQLite-backed motorcycle listing storage
+scout_store = ScoutStore(
+    db_path=getattr(getattr(config, 'scout', None),
+                    'db_path', 'data/scout.db'),
+    on_change=broadcast_scout_status,
 )
 
 
@@ -684,6 +702,29 @@ research_agent = ResearchAgent(
     on_model_call=on_model_call,
 )
 
+# Doppler Scout — motorcycle listing scraper with deal scoring
+_scout_cfg = getattr(config, 'scout', None)
+_scout_criteria = SearchCriteria(
+    makes=getattr(_scout_cfg, 'makes', SearchCriteria.makes),
+    models=getattr(_scout_cfg, 'models', []),
+    year_min=getattr(_scout_cfg, 'year_min', 0),
+    year_max=getattr(_scout_cfg, 'year_max', 0),
+    price_min=getattr(_scout_cfg, 'price_min', 0),
+    price_max=getattr(_scout_cfg, 'price_max', 5000),
+    location=getattr(_scout_cfg, 'location', 'Portland OR'),
+    radius_miles=getattr(_scout_cfg, 'radius_miles', 50),
+    keywords=getattr(_scout_cfg, 'keywords', []),
+    exclude_keywords=getattr(_scout_cfg, 'exclude_keywords', ['parts only']),
+)
+doppler_scout = DopplerScout(
+    store=scout_store,
+    router=orchestrator.router,
+    criteria=_scout_criteria,
+    event_logger=event_logger,
+    notification_manager=notification_manager,
+    on_model_call=on_model_call,
+)
+
 
 # ---------------------------------------------------------------------------
 # Kill switch — CAM Constitution: "Prominent, always visible. One click
@@ -826,6 +867,7 @@ async def lifespan(app: FastAPI):
     episodic_memory.close()
     content_calendar.close()
     research_store.close()
+    scout_store.close()
     security_audit_log.close()
     analytics.close()
     logger.info("CAM Dashboard shutting down")
@@ -856,6 +898,8 @@ app.state.content_agent = content_agent
 app.state.tts_pipeline = tts_pipeline
 app.state.research_store = research_store
 app.state.research_agent = research_agent
+app.state.scout_store = scout_store
+app.state.doppler_scout = doppler_scout
 app.state.security_audit_log = security_audit_log
 app.state.session_manager = session_manager
 app.state.kill_switch = {"active": False}       # mutable container
@@ -1087,6 +1131,59 @@ async def get_content_calendar():
 async def get_research():
     """Return current research results as JSON."""
     return {"entries": research_store.to_broadcast_list()}
+
+
+@app.get("/api/scout")
+async def get_scout():
+    """Return current scout listings as JSON."""
+    return {
+        "entries": scout_store.to_broadcast_list(),
+        "status": scout_store.get_status(),
+    }
+
+
+@app.post("/api/scout/scan")
+async def trigger_scout_scan():
+    """Trigger an immediate scout scan for motorcycle listings."""
+    try:
+        new_listings = await doppler_scout.scan()
+        await broadcast_scout_status()
+        return {
+            "ok": True,
+            "new_count": len(new_listings),
+            "listings": [l.to_dict() for l in new_listings],
+        }
+    except Exception as e:
+        logger.warning("Scout scan failed: %s", e)
+        return {"ok": False, "error": str(e)}
+
+
+@app.post("/api/scout/{entry_id}/status")
+async def update_scout_status(entry_id: str, request: Request):
+    """Update a scout listing's status."""
+    body = await request.json()
+    new_status = body.get("status", "")
+    if new_status not in [s.value for s in ListingStatus]:
+        return JSONResponse({"ok": False, "error": "Invalid status"}, status_code=400)
+    updated = scout_store.update_entry(entry_id, status=new_status)
+    if updated:
+        await broadcast_scout_status()
+        return {"ok": True, "entry": updated.to_dict()}
+    return JSONResponse({"ok": False, "error": "Entry not found"}, status_code=404)
+
+
+@app.post("/api/scout/{entry_id}/rescore")
+async def rescore_scout_listing(entry_id: str):
+    """Re-score a specific scout listing."""
+    try:
+        listing = await doppler_scout.score_single(entry_id)
+        if listing:
+            await broadcast_scout_status()
+            return {"ok": True, "entry": listing.to_dict()}
+        return JSONResponse({"ok": False, "error": "Entry not found"}, status_code=404)
+    except Exception as e:
+        logger.warning("Scout rescore failed: %s", e)
+        return {"ok": False, "error": str(e)}
 
 
 @app.get("/api/security-audit")
@@ -1540,6 +1637,13 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "research_status",
         "entries": research_store.to_broadcast_list(),
+    })
+
+    # Send current scout listings
+    await websocket.send_json({
+        "type": "scout_status",
+        "entries": scout_store.to_broadcast_list(),
+        "status": scout_store.get_status(),
     })
 
     # Send current security audit state
@@ -2232,6 +2336,78 @@ async def dashboard_websocket(websocket: WebSocket):
                     "entries": [e.to_dict() for e in results],
                     "keyword": keyword,
                 })
+
+            elif msg.get("type") == "scout_scan":
+                # Trigger an immediate scout scan
+                try:
+                    new_listings = await doppler_scout.scan()
+                    await websocket.send_json({
+                        "type": "scout_scan_result",
+                        "ok": True,
+                        "new_count": len(new_listings),
+                    })
+                    await broadcast_scout_status()
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "scout_scan_result",
+                        "ok": False,
+                        "error": str(e),
+                    })
+
+            elif msg.get("type") == "scout_update_status":
+                entry_id = msg.get("entry_id", "")
+                new_status = msg.get("status", "")
+                if new_status in [s.value for s in ListingStatus]:
+                    updated = scout_store.update_entry(entry_id, status=new_status)
+                    if updated:
+                        event_logger.info(
+                            "scout",
+                            f"Scout listing {entry_id[:8]} marked {new_status}",
+                            entry_id=entry_id[:8], status=new_status,
+                        )
+                        await broadcast_scout_status()
+
+            elif msg.get("type") == "scout_delete":
+                entry_id = msg.get("entry_id", "")
+                removed = scout_store.remove_entry(entry_id)
+                if removed:
+                    event_logger.info(
+                        "scout",
+                        f"Scout listing {entry_id[:8]} deleted",
+                        entry_id=entry_id[:8],
+                    )
+                    await websocket.send_json({"type": "scout_deleted", "ok": True})
+                    await broadcast_scout_status()
+                else:
+                    await websocket.send_json({
+                        "type": "scout_deleted",
+                        "ok": False,
+                        "error": "Entry not found",
+                    })
+
+            elif msg.get("type") == "scout_rescore":
+                entry_id = msg.get("entry_id", "")
+                try:
+                    listing = await doppler_scout.score_single(entry_id)
+                    if listing:
+                        await websocket.send_json({
+                            "type": "scout_rescored",
+                            "ok": True,
+                            "entry": listing.to_dict(),
+                        })
+                        await broadcast_scout_status()
+                    else:
+                        await websocket.send_json({
+                            "type": "scout_rescored",
+                            "ok": False,
+                            "error": "Entry not found",
+                        })
+                except Exception as e:
+                    await websocket.send_json({
+                        "type": "scout_rescored",
+                        "ok": False,
+                        "error": str(e),
+                    })
 
             elif msg.get("type") == "approval_response":
                 # Dashboard approving or rejecting a Tier 2 action

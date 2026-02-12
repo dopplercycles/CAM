@@ -120,6 +120,21 @@ max_pages_per_query = 5                 # max pages to fetch per research task
 request_timeout = 10                    # HTTP request timeout in seconds
 rate_limit_delay = 0.5                  # seconds between web requests
 
+[scout]
+db_path = "data/scout.db"
+scan_interval = 3600                    # seconds between automatic scans
+score_threshold = 8                     # minimum score for hot deal notification
+makes = ["honda", "yamaha", "suzuki", "kawasaki", "harley-davidson", "ducati"]
+models = []
+year_min = 0
+year_max = 0
+price_min = 0
+price_max = 5000
+location = "Portland OR"
+radius_miles = 50
+keywords = []
+exclude_keywords = ["parts only"]
+
 [auth]
 username = "george"
 password_hash = ""                         # empty = auth disabled (open access). Run: python -m security.set_password
