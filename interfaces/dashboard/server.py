@@ -168,7 +168,7 @@ knowledge_ingest = KnowledgeIngest(
 agent_websockets: dict[str, WebSocket] = {}
 
 # Browser clients watching the dashboard (receive status pushes)
-dashboard_clients: list[WebSocket] = []
+dashboard_clients: dict[WebSocket, str] = {}   # ws → "full" | "compact"
 
 # Task queue — shared between dashboard and orchestrator
 task_queue = TaskQueue()
@@ -200,21 +200,24 @@ ft_manager: FileTransferManager | None = None  # initialized after broadcast_tra
 # Broadcast helper
 # ---------------------------------------------------------------------------
 
-async def broadcast_to_dashboards(message: dict):
+async def broadcast_to_dashboards(message: dict, skip_compact: bool = False):
     """Push a message to all connected dashboard browsers.
 
     Handles cleanup of any clients that have disconnected.
     Used by both agent status broadcasts and command responses.
+    If skip_compact is True, clients in compact mode won't receive this message.
     """
     disconnected = []
-    for client in dashboard_clients:
+    for client, mode in dashboard_clients.items():
+        if skip_compact and mode == "compact":
+            continue
         try:
             await client.send_json(message)
         except Exception:
             disconnected.append(client)
 
     for client in disconnected:
-        dashboard_clients.remove(client)
+        dashboard_clients.pop(client, None)
 
 
 async def broadcast_agent_status():
@@ -240,7 +243,7 @@ async def broadcast_health_status():
     await broadcast_to_dashboards({
         "type": "health_status",
         "health": health_monitor.to_broadcast_dict(),
-    })
+    }, skip_compact=True)
 
 
 async def broadcast_event(event_dict: dict):
@@ -248,7 +251,7 @@ async def broadcast_event(event_dict: dict):
     await broadcast_to_dashboards({
         "type": "event",
         "event": event_dict,
-    })
+    }, skip_compact=True)
 
 
 async def broadcast_notification(notification_dict: dict):
@@ -2222,7 +2225,7 @@ async def dashboard_websocket(websocket: WebSocket):
     global last_self_test_results, last_launch_readiness_results
 
     await websocket.accept()
-    dashboard_clients.append(websocket)
+    dashboard_clients[websocket] = "full"
     logger.info(
         "Dashboard client connected from %s",
         websocket.client.host if websocket.client else "unknown",
@@ -4009,6 +4012,12 @@ async def dashboard_websocket(websocket: WebSocket):
                 await asyncio.sleep(0.2)
                 await broadcast_security_audit_status()
 
+            elif msg.get("type") == "set_client_mode":
+                mode = msg.get("mode", "full")
+                if mode in ("compact", "full"):
+                    dashboard_clients[websocket] = mode
+                    logger.info("Dashboard client switched to %s mode", mode)
+
             elif msg.get("type") == "security_audit_filter":
                 # Dashboard requesting filtered audit entries
                 risk_level = msg.get("risk_level") or None
@@ -4243,8 +4252,7 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
 
     except WebSocketDisconnect:
-        if websocket in dashboard_clients:
-            dashboard_clients.remove(websocket)
+        dashboard_clients.pop(websocket, None)
         logger.info("Dashboard client disconnected")
 
 
