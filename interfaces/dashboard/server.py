@@ -305,6 +305,14 @@ async def broadcast_memory_status():
     })
 
 
+async def broadcast_context_status():
+    """Push current context window state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "context_status",
+        **context_manager.get_status(),
+    })
+
+
 async def broadcast_schedule_status():
     """Push current schedule state to all connected dashboard browsers."""
     await broadcast_to_dashboards({
@@ -508,6 +516,7 @@ async def on_task_phase_change(task, phase, detail):
 
     # Push updated memory status to dashboards (memory changes during OATI)
     await broadcast_memory_status()
+    await broadcast_context_status()
 
 
 async def on_task_update():
@@ -1840,6 +1849,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "working": working_memory.get_status(),
         "long_term": long_term_memory.get_status(),
         "episodic": episodic_memory.get_status(),
+    })
+
+    # Send current context window status
+    await websocket.send_json({
+        "type": "context_status",
+        **context_manager.get_status(),
     })
 
     # Send TTS pipeline status

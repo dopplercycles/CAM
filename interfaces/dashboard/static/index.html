@@ -1340,6 +1340,39 @@
             background: #e74c3c;
         }
 
+        /* --- Context Window Section --- */
+        .context-section {
+            margin-bottom: 2rem;
+        }
+
+        .context-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .context-rotation-info {
+            background: #1a2332;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #8a9aaa;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .context-rotation-info span {
+            white-space: nowrap;
+        }
+
+        .context-rotation-info .rotation-label {
+            color: #6a7a8a;
+            margin-right: 0.3rem;
+        }
+
         .memory-working-list {
             background: #1a2332;
             border: 1px solid #2a3a4a;
@@ -4813,6 +4846,45 @@
             </div>
         </section>
 
+        <section class="context-section">
+            <h2>Context Window</h2>
+            <div class="context-cards">
+                <div class="memory-card">
+                    <span class="card-label">Usage</span>
+                    <span class="card-value memory-accent" id="ctx-usage-pct">0%</span>
+                    <div class="memory-usage-bar">
+                        <div class="memory-usage-fill" id="ctx-usage-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">Session Tokens</span>
+                    <span class="card-value memory-accent" id="ctx-total-tokens">0</span>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">Prompt Tokens</span>
+                    <span class="card-value" id="ctx-prompt-tokens">0</span>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">Response Tokens</span>
+                    <span class="card-value" id="ctx-response-tokens">0</span>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">Current Model</span>
+                    <span class="card-value memory-working" id="ctx-model">--</span>
+                </div>
+                <div class="memory-card">
+                    <span class="card-label">Context Limit</span>
+                    <span class="card-value" id="ctx-limit">0</span>
+                </div>
+            </div>
+            <div class="context-rotation-info">
+                <span><span class="rotation-label">Rotations:</span> <span id="ctx-rotation-count">0</span></span>
+                <span><span class="rotation-label">Threshold:</span> <span id="ctx-threshold">90%</span></span>
+                <span><span class="rotation-label">Session Start:</span> <span id="ctx-session-start">--</span></span>
+                <span><span class="rotation-label">Last Rotation:</span> <span id="ctx-last-rotation">--</span></span>
+            </div>
+        </section>
+
         <section class="memory-section">
             <h2>Memory Status</h2>
             <div class="memory-cards">
@@ -5216,6 +5288,8 @@
                     if (data.ok === false) console.warn("Bus publish failed");
                 } else if (data.type === "bus_history_result") {
                     handleBusStatus(data);
+                } else if (data.type === "context_status") {
+                    handleContextStatus(data);
                 } else if (data.type === "memory_status") {
                     handleMemoryStatus(data);
                 } else if (data.type === "episodic_search_results") {
@@ -5829,6 +5903,63 @@
             if (agents.length > 0) renderAgents();
             if (tasks.length > 0) renderTaskHistory();
         }, 5000);
+
+        // ---------------------------------------------------------------
+        // Context Window
+        // ---------------------------------------------------------------
+
+        function handleContextStatus(data) {
+            // Usage percentage + progress bar
+            const pct = data.usage_pct || 0;
+            const pctEl = document.getElementById("ctx-usage-pct");
+            if (pctEl) pctEl.textContent = pct.toFixed(1) + "%";
+
+            const bar = document.getElementById("ctx-usage-bar");
+            if (bar) {
+                bar.style.width = pct + "%";
+                bar.className = "memory-usage-fill";
+                if (pct > 90) bar.classList.add("critical");
+                else if (pct > 70) bar.classList.add("warning");
+            }
+
+            // Token counts
+            const totalEl = document.getElementById("ctx-total-tokens");
+            if (totalEl) totalEl.textContent = (data.session_total_tokens || 0).toLocaleString();
+
+            const promptEl = document.getElementById("ctx-prompt-tokens");
+            if (promptEl) promptEl.textContent = (data.session_prompt_tokens || 0).toLocaleString();
+
+            const respEl = document.getElementById("ctx-response-tokens");
+            if (respEl) respEl.textContent = (data.session_response_tokens || 0).toLocaleString();
+
+            // Model and limit
+            const modelEl = document.getElementById("ctx-model");
+            if (modelEl) modelEl.textContent = data.current_model || "--";
+
+            const limitEl = document.getElementById("ctx-limit");
+            if (limitEl) limitEl.textContent = (data.context_limit || 0).toLocaleString();
+
+            // Rotation info
+            const rotCountEl = document.getElementById("ctx-rotation-count");
+            if (rotCountEl) rotCountEl.textContent = data.rotation_count || 0;
+
+            const threshEl = document.getElementById("ctx-threshold");
+            if (threshEl) threshEl.textContent = (data.rotation_threshold_pct || 90) + "%";
+
+            const startEl = document.getElementById("ctx-session-start");
+            if (startEl) {
+                startEl.textContent = data.session_start
+                    ? new Date(data.session_start).toLocaleString()
+                    : "--";
+            }
+
+            const lastRotEl = document.getElementById("ctx-last-rotation");
+            if (lastRotEl) {
+                lastRotEl.textContent = data.last_rotation_at
+                    ? new Date(data.last_rotation_at).toLocaleString()
+                    : "None";
+            }
+        }
 
         // ---------------------------------------------------------------
         // Memory Status
