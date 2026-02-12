@@ -3659,6 +3659,83 @@
             text-align: center;
         }
 
+        /* Invoicing & Billing */
+        .invoicing-section { margin-bottom: 2rem; }
+        .inv-summary-row {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+        }
+        .inv-summary-card {
+            flex: 1; min-width: 140px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem 1rem; text-align: center;
+        }
+        .inv-summary-card .inv-card-value {
+            font-size: 1.5rem; font-weight: 700; color: var(--text-value);
+        }
+        .inv-summary-card .inv-card-label {
+            font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem;
+        }
+        .inv-summary-card.overdue .inv-card-value { color: #f87171; }
+        .inv-revenue-chart { margin-bottom: 1.5rem; }
+        .inv-revenue-chart h3 {
+            font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;
+        }
+        .inv-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+        }
+        .inv-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .inv-card-header strong { font-size: 0.9rem; color: var(--text-value); }
+        .inv-card-body { font-size: 0.82rem; color: var(--text-secondary); }
+        .inv-card-body .inv-line-items-preview {
+            font-size: 0.78rem; color: var(--text-tertiary); margin: 0.3rem 0;
+        }
+        .inv-card-actions {
+            display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;
+        }
+        .inv-card-actions button {
+            font-size: 0.72rem; padding: 0.2rem 0.5rem;
+            border: 1px solid var(--border); border-radius: 4px;
+            background: var(--bg-primary); color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .inv-card-actions button:hover {
+            background: var(--primary); color: #fff; border-color: var(--primary);
+        }
+        .inv-payment-badge {
+            display: inline-block; font-size: 0.7rem; padding: 0.15rem 0.5rem;
+            border-radius: 10px; font-weight: 600;
+        }
+        .inv-payment-badge.cash   { background: rgba(16,185,129,0.2); color: #34d399; }
+        .inv-payment-badge.check  { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .inv-payment-badge.card   { background: rgba(168,85,247,0.2); color: #c084fc; }
+        .inv-payment-badge.zelle  { background: rgba(168,85,247,0.2); color: #c084fc; }
+        .inv-payment-badge.venmo  { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .inv-form { margin-bottom: 1.5rem; }
+        .inv-form .biz-form-row { margin-bottom: 0.5rem; }
+        .inv-line-item-row {
+            display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.3rem;
+            font-size: 0.82rem;
+        }
+        .inv-line-item-row input { flex: 1; }
+        .inv-line-item-row .inv-li-qty { max-width: 60px; }
+        .inv-line-item-row .inv-li-price { max-width: 80px; }
+        #inv-line-items-list {
+            margin: 0.5rem 0; font-size: 0.82rem;
+        }
+        .inv-li-entry {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.2rem 0; border-bottom: 1px solid var(--border);
+        }
+        .inv-li-entry button {
+            font-size: 0.7rem; padding: 0.1rem 0.3rem;
+            border: 1px solid var(--border); border-radius: 3px;
+            background: var(--bg-primary); color: var(--text-tertiary); cursor: pointer;
+        }
+
         /* CRM */
         .crm-section { margin-bottom: 2rem; }
         .crm-stats-bar {
@@ -6740,6 +6817,93 @@
             </div>
         </section>
 
+        <section class="invoicing-section" data-panel-id="invoicing">
+            <h2>Invoicing &amp; Billing</h2>
+
+            <!-- Summary cards -->
+            <div class="inv-summary-row">
+                <div class="inv-summary-card">
+                    <div class="inv-card-value" id="inv-total-count">0</div>
+                    <div class="inv-card-label">Total Invoices</div>
+                </div>
+                <div class="inv-summary-card">
+                    <div class="inv-card-value" id="inv-outstanding">$0</div>
+                    <div class="inv-card-label">Outstanding</div>
+                </div>
+                <div class="inv-summary-card">
+                    <div class="inv-card-value" id="inv-revenue-month">$0</div>
+                    <div class="inv-card-label">This Month Revenue</div>
+                </div>
+                <div class="inv-summary-card overdue">
+                    <div class="inv-card-value" id="inv-overdue-count">0</div>
+                    <div class="inv-card-label">Overdue</div>
+                </div>
+            </div>
+
+            <!-- Monthly revenue chart -->
+            <div class="inv-revenue-chart">
+                <h3>Monthly Revenue (Paid Invoices)</h3>
+                <div id="inv-revenue-bars"></div>
+            </div>
+
+            <!-- Create form -->
+            <details class="biz-tab-section">
+                <summary>Create Invoice</summary>
+                <div class="inv-form" style="margin-top: 0.5rem;">
+                    <div class="biz-form-row">
+                        <label>Customer</label>
+                        <select id="inv-customer-select" style="width:100%;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                            <option value="">-- Select customer or type below --</option>
+                        </select>
+                    </div>
+                    <div class="biz-form-row">
+                        <label>Customer Name</label>
+                        <input id="inv-customer-name" placeholder="Customer name" style="width:100%;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                    </div>
+                    <div class="biz-form-row">
+                        <label>Email / Phone</label>
+                        <div style="display:flex;gap:0.5rem;">
+                            <input id="inv-customer-email" placeholder="Email" style="flex:1;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                            <input id="inv-customer-phone" placeholder="Phone" style="flex:1;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                        </div>
+                    </div>
+                    <div class="biz-form-row">
+                        <label>From Service Record (optional)</label>
+                        <select id="inv-service-select" style="width:100%;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                            <option value="">-- None (manual entry) --</option>
+                        </select>
+                    </div>
+                    <div class="biz-form-row">
+                        <label>Labor</label>
+                        <div style="display:flex;gap:0.5rem;">
+                            <input id="inv-labor-hours" type="number" step="0.5" min="0" value="0" placeholder="Hours" style="flex:1;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                            <input id="inv-labor-rate" type="number" step="5" min="0" value="75" placeholder="Rate $/hr" style="flex:1;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                        </div>
+                    </div>
+                    <div class="biz-form-row">
+                        <label>Line Items</label>
+                        <div class="inv-line-item-row">
+                            <input id="inv-li-desc" placeholder="Description" style="padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                            <input id="inv-li-qty" class="inv-li-qty" type="number" min="1" value="1" placeholder="Qty" style="padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                            <input id="inv-li-price" class="inv-li-price" type="number" step="0.01" min="0" value="0" placeholder="Price" style="padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;">
+                            <button onclick="addInvoiceLineItem()" style="padding:0.3rem 0.6rem;background:var(--primary);color:#fff;border:none;border-radius:4px;cursor:pointer;">Add</button>
+                        </div>
+                        <div id="inv-line-items-list"></div>
+                    </div>
+                    <div class="biz-form-row">
+                        <label>Notes</label>
+                        <textarea id="inv-notes" rows="2" placeholder="Optional notes" style="width:100%;padding:0.3rem;background:var(--bg-primary);color:var(--text-value);border:1px solid var(--border);border-radius:4px;font-family:inherit;"></textarea>
+                    </div>
+                    <button onclick="createEnhancedInvoice()" style="padding:0.4rem 1rem;background:var(--primary);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;">Create Invoice</button>
+                </div>
+            </details>
+
+            <!-- Invoice list -->
+            <div id="inv-list" style="margin-top: 1rem;">
+                <div class="biz-empty">No invoices yet.</div>
+            </div>
+        </section>
+
         <section class="crm-section" data-panel-id="crm">
             <h2>Customer CRM</h2>
 
@@ -7633,6 +7797,7 @@
             { id: 'tts', name: 'Voice Synthesis' },
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
+            { id: 'invoicing', name: 'Invoicing & Billing' },
             { id: 'crm', name: 'Customer CRM' },
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
@@ -7961,6 +8126,18 @@
                     handleApptWeekViewResponse(data);
                 } else if (data.type === "appt_day_schedule") {
                     handleApptDayScheduleResponse(data);
+
+                // --- Invoicing ---
+                } else if (data.type === "invoicing_status") {
+                    handleInvoicingStatus(data);
+                } else if (data.type === "invoicing_created" || data.type === "invoicing_updated" || data.type === "invoicing_paid" || data.type === "invoicing_sent") {
+                    // individual confirmations — full state comes via broadcast
+                } else if (data.type === "invoicing_deleted") {
+                    // handled by broadcast
+                } else if (data.type === "invoicing_pdf_result") {
+                    if (data.ok && data.url) window.open(data.url, '_blank');
+                } else if (data.type === "invoicing_send_result") {
+                    if (data.message) addToLog('invoicing', data.message);
 
                 } else if (data.type === "knowledge_status") {
                     handleKnowledgeStatus(data);
@@ -10597,6 +10774,226 @@
                 console.warn("PDF generation failed:", data.error);
                 alert("PDF generation failed: " + (data.error || "Unknown error"));
             }
+        }
+
+        // ---------------------------------------------------------------
+        // Invoicing & Billing
+        // ---------------------------------------------------------------
+        let invInvoices = [];
+        let invStatus = {};
+        let invMonthlyRevenue = [];
+        let invLineItems = [];  // temp form state for line items builder
+
+        function handleInvoicingStatus(data) {
+            invInvoices = data.invoices || [];
+            invStatus = data.status || {};
+            invMonthlyRevenue = data.monthly_revenue || [];
+            renderInvSummary();
+            renderInvRevenueChart();
+            renderInvList();
+            populateInvDropdowns();
+        }
+
+        function renderInvSummary() {
+            const el = (id) => document.getElementById(id);
+            el('inv-total-count').textContent = invStatus.total_invoices || 0;
+            el('inv-outstanding').textContent = '$' + (invStatus.outstanding_total || 0).toFixed(2);
+            el('inv-revenue-month').textContent = '$' + (invStatus.revenue_this_month || 0).toFixed(2);
+            el('inv-overdue-count').textContent = invStatus.overdue || 0;
+        }
+
+        function renderInvRevenueChart() {
+            const container = document.getElementById('inv-revenue-bars');
+            if (!container) return;
+            if (!invMonthlyRevenue.length) {
+                container.innerHTML = '<div class="biz-empty">No revenue data yet.</div>';
+                return;
+            }
+            const maxRev = Math.max(...invMonthlyRevenue.map(m => m.revenue), 1);
+            container.innerHTML = invMonthlyRevenue.map(m => {
+                const pct = (m.revenue / maxRev * 100).toFixed(1);
+                return `<div class="bar-row">
+                    <span class="bar-label">${m.month}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:${pct}%"></div>
+                    </div>
+                    <span class="bar-count">$${m.revenue.toFixed(0)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function renderInvList() {
+            const container = document.getElementById('inv-list');
+            if (!container) return;
+            if (!invInvoices.length) {
+                container.innerHTML = '<div class="biz-empty">No invoices yet.</div>';
+                return;
+            }
+            container.innerHTML = invInvoices.map(inv => {
+                const statusClass = inv.status || 'draft';
+                const itemsPreview = (inv.line_items || []).map(li =>
+                    `${li.description} x${li.qty}`
+                ).join(', ') || 'No line items';
+
+                let actions = '';
+                if (inv.status === 'draft') {
+                    actions += `<button onclick="markInvoiceSent('${inv.invoice_id}')">Mark Sent</button>`;
+                }
+                if (inv.status === 'sent' || inv.status === 'overdue') {
+                    actions += `<button onclick="markInvoicePaid('${inv.invoice_id}')">Mark Paid</button>`;
+                }
+                actions += `<button onclick="generateInvoicePdf('${inv.invoice_id}')">PDF</button>`;
+                actions += `<button onclick="sendInvoice('${inv.invoice_id}')">Send</button>`;
+                if (inv.status === 'draft') {
+                    actions += `<button onclick="deleteEnhancedInvoice('${inv.invoice_id}')">Delete</button>`;
+                }
+
+                let paidInfo = '';
+                if (inv.status === 'paid' && inv.payment_method) {
+                    paidInfo = ` <span class="inv-payment-badge ${inv.payment_method}">${inv.payment_method}</span>`;
+                }
+
+                return `<div class="inv-card">
+                    <div class="inv-card-header">
+                        <strong>${inv.invoice_number}</strong>
+                        <span class="biz-status-badge ${statusClass}">${inv.status}${paidInfo}</span>
+                    </div>
+                    <div class="inv-card-body">
+                        <div>${inv.customer_name} &mdash; <strong>$${(inv.total || 0).toFixed(2)}</strong></div>
+                        <div class="inv-line-items-preview">${itemsPreview}</div>
+                        <div>Date: ${inv.date} &middot; Due: ${inv.due_date}${inv.paid_date ? ' &middot; Paid: ' + inv.paid_date : ''}</div>
+                        ${inv.notes ? '<div style="margin-top:0.2rem;font-style:italic;">' + inv.notes + '</div>' : ''}
+                    </div>
+                    <div class="inv-card-actions">${actions}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function populateInvDropdowns() {
+            // Customer dropdown — from CRM customers
+            const custSel = document.getElementById('inv-customer-select');
+            if (custSel) {
+                const current = custSel.value;
+                let opts = '<option value="">-- Select customer or type below --</option>';
+                (typeof crmCustomers !== 'undefined' ? crmCustomers : []).forEach(c => {
+                    opts += `<option value="${c.customer_id}" data-name="${c.name || ''}" data-email="${c.email || ''}" data-phone="${c.phone || ''}">${c.name || c.customer_id}</option>`;
+                });
+                custSel.innerHTML = opts;
+                custSel.value = current;
+            }
+
+            // Service record dropdown
+            const svcSel = document.getElementById('inv-service-select');
+            if (svcSel) {
+                const current = svcSel.value;
+                let opts = '<option value="">-- None (manual entry) --</option>';
+                (typeof svcRecords !== 'undefined' ? svcRecords : []).forEach(r => {
+                    const label = `${r.date || '?'} — ${r.customer_name || 'Unknown'} ($${(r.total_cost || 0).toFixed(2)})`;
+                    opts += `<option value="${r.record_id}">${label}</option>`;
+                });
+                svcSel.innerHTML = opts;
+                svcSel.value = current;
+            }
+        }
+
+        // Auto-fill customer fields from dropdown
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'inv-customer-select') {
+                const opt = e.target.selectedOptions[0];
+                if (opt && opt.value) {
+                    document.getElementById('inv-customer-name').value = opt.dataset.name || '';
+                    document.getElementById('inv-customer-email').value = opt.dataset.email || '';
+                    document.getElementById('inv-customer-phone').value = opt.dataset.phone || '';
+                }
+            }
+        });
+
+        function addInvoiceLineItem() {
+            const desc = document.getElementById('inv-li-desc').value.trim();
+            const qty = parseFloat(document.getElementById('inv-li-qty').value) || 1;
+            const price = parseFloat(document.getElementById('inv-li-price').value) || 0;
+            if (!desc) return;
+            invLineItems.push({ description: desc, qty, unit_price: price, total: +(qty * price).toFixed(2) });
+            document.getElementById('inv-li-desc').value = '';
+            document.getElementById('inv-li-qty').value = '1';
+            document.getElementById('inv-li-price').value = '0';
+            renderInvLineItemsList();
+        }
+
+        function removeInvoiceLineItem(idx) {
+            invLineItems.splice(idx, 1);
+            renderInvLineItemsList();
+        }
+
+        function renderInvLineItemsList() {
+            const container = document.getElementById('inv-line-items-list');
+            if (!container) return;
+            if (!invLineItems.length) { container.innerHTML = ''; return; }
+            container.innerHTML = invLineItems.map((li, i) =>
+                `<div class="inv-li-entry">
+                    <span>${li.description} x${li.qty} @ $${li.unit_price.toFixed(2)} = $${li.total.toFixed(2)}</span>
+                    <button onclick="removeInvoiceLineItem(${i})">x</button>
+                </div>`
+            ).join('');
+        }
+
+        function createEnhancedInvoice() {
+            const svcId = document.getElementById('inv-service-select').value;
+            if (svcId) {
+                // Create from service record
+                ws.send(JSON.stringify({
+                    type: 'invoicing_create_from_service',
+                    record_id: svcId,
+                    parts_markup: 0,
+                }));
+            } else {
+                const custId = document.getElementById('inv-customer-select').value;
+                const name = document.getElementById('inv-customer-name').value.trim();
+                if (!name) { alert('Customer name is required'); return; }
+                ws.send(JSON.stringify({
+                    type: 'invoicing_create',
+                    customer_id: custId,
+                    customer_name: name,
+                    customer_email: document.getElementById('inv-customer-email').value.trim(),
+                    customer_phone: document.getElementById('inv-customer-phone').value.trim(),
+                    line_items: invLineItems,
+                    labor_hours: parseFloat(document.getElementById('inv-labor-hours').value) || 0,
+                    labor_rate: parseFloat(document.getElementById('inv-labor-rate').value) || 75,
+                    notes: document.getElementById('inv-notes').value.trim(),
+                }));
+            }
+            // Reset form
+            invLineItems = [];
+            renderInvLineItemsList();
+            document.getElementById('inv-customer-name').value = '';
+            document.getElementById('inv-customer-email').value = '';
+            document.getElementById('inv-customer-phone').value = '';
+            document.getElementById('inv-notes').value = '';
+            document.getElementById('inv-labor-hours').value = '0';
+            document.getElementById('inv-service-select').value = '';
+            document.getElementById('inv-customer-select').value = '';
+        }
+
+        function markInvoicePaid(id) {
+            const method = prompt('Payment method (cash, check, card, zelle, venmo):') || '';
+            ws.send(JSON.stringify({ type: 'invoicing_mark_paid', invoice_id: id, payment_method: method }));
+        }
+
+        function markInvoiceSent(id) {
+            ws.send(JSON.stringify({ type: 'invoicing_mark_sent', invoice_id: id }));
+        }
+
+        function generateInvoicePdf(id) {
+            ws.send(JSON.stringify({ type: 'invoicing_pdf', invoice_id: id }));
+        }
+
+        function sendInvoice(id) {
+            ws.send(JSON.stringify({ type: 'invoicing_send', invoice_id: id }));
+        }
+
+        function deleteEnhancedInvoice(id) {
+            if (!confirm('Delete this invoice?')) return;
+            ws.send(JSON.stringify({ type: 'invoicing_delete', invoice_id: id }));
         }
 
         // ---------------------------------------------------------------

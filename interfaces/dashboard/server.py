@@ -58,6 +58,7 @@ from tools.doppler.service_records import ServiceRecordStore
 from tools.doppler.diagnostics import DiagnosticEngine
 from tools.doppler.crm import CRMStore
 from tools.doppler.scheduler_appointments import AppointmentScheduler
+from tools.doppler.invoicing import InvoiceManager
 from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
@@ -540,6 +541,24 @@ appointment_scheduler = AppointmentScheduler(
     home_lon=getattr(_appt_cfg, "home_lon", -122.4302),
     avg_speed_mph=getattr(_appt_cfg, "avg_speed_mph", 30.0),
     road_factor=getattr(_appt_cfg, "road_factor", 1.4),
+)
+
+async def broadcast_invoicing_status():
+    """Push current invoicing state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "invoicing_status",
+        **invoice_manager.to_broadcast_dict(),
+    })
+
+# Invoice manager — separate SQLite DB for professional invoicing
+_inv_cfg = getattr(config, "invoicing", None)
+_biz_cfg = getattr(config, "business", None)
+invoice_manager = InvoiceManager(
+    db_path=getattr(_inv_cfg, "db_path", "data/invoices.db"),
+    on_change=broadcast_invoicing_status,
+    service_store=service_store,
+    default_labor_rate=getattr(_biz_cfg, "default_labor_rate", 75.0),
+    invoice_prefix=getattr(_biz_cfg, "invoice_prefix", "DC"),
 )
 
 async def broadcast_diagnostics_status():
@@ -1274,6 +1293,27 @@ async def appointment_reminder_loop():
             logger.debug("Appointment reminder loop error", exc_info=True)
 
 
+async def invoice_overdue_loop():
+    """Hourly check for invoices past their due date — auto-mark overdue."""
+    while True:
+        try:
+            await asyncio.sleep(3600)
+            newly_overdue = invoice_manager.check_overdue()
+            for inv in newly_overdue:
+                notification_manager.emit(
+                    "warning",
+                    "Invoice Overdue",
+                    f"{inv.invoice_number} ({inv.customer_name}) — ${inv.total:.2f} due {inv.due_date}",
+                    "invoicing",
+                )
+            if newly_overdue:
+                await broadcast_invoicing_status()
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            logger.debug("Invoice overdue loop error", exc_info=True)
+
+
 # ---------------------------------------------------------------------------
 # App lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
@@ -1292,8 +1332,10 @@ async def lifespan(app: FastAPI):
     pipeline_check_task = asyncio.create_task(pipeline_progress_loop())
     knowledge_inbox_task = asyncio.create_task(knowledge_inbox_loop())
     appt_reminder_task = asyncio.create_task(appointment_reminder_loop())
+    invoice_overdue_task = asyncio.create_task(invoice_overdue_loop())
     logger.info("Orchestrator loop started as background task")
     logger.info("Appointment reminder loop started")
+    logger.info("Invoice overdue loop started")
     logger.info("Scheduler loop started as background task")
     logger.info("Pipeline progress loop started as background task")
     logger.info("Webhook retry loop started as background task")
@@ -1366,6 +1408,7 @@ async def lifespan(app: FastAPI):
     pipeline_check_task.cancel()
     knowledge_inbox_task.cancel()
     appt_reminder_task.cancel()
+    invoice_overdue_task.cancel()
 
     # 7. Close all databases
     knowledge_ingest.close()
@@ -1379,6 +1422,7 @@ async def lifespan(app: FastAPI):
     service_store.close()
     crm_store.close()
     appointment_scheduler.close()
+    invoice_manager.close()
     diagnostic_engine.close()
     report_engine.close()
     security_audit_log.close()
@@ -1805,6 +1849,29 @@ async def download_service_report(record_id: str):
         str(pdf_path),
         media_type="application/pdf",
         filename=f"doppler-service-report-{safe_id[:8]}.pdf",
+    )
+
+
+@app.get("/api/invoice-pdf/{invoice_id}")
+async def download_invoice_pdf(invoice_id: str):
+    """Download an invoice PDF."""
+    try:
+        uuid_obj = __import__("uuid").UUID(invoice_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid invoice ID"})
+
+    safe_id = str(uuid_obj)
+    pdf_path = Path("data/invoices") / f"{safe_id}.pdf"
+
+    if not pdf_path.exists():
+        result = invoice_manager.generate_pdf(safe_id)
+        if result is None:
+            return JSONResponse(status_code=404, content={"error": "Invoice not found"})
+
+    return FileResponse(
+        str(pdf_path),
+        media_type="application/pdf",
+        filename=f"doppler-invoice-{safe_id[:8]}.pdf",
     )
 
 
@@ -2497,6 +2564,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "appointment_schedule_status",
         **appointment_scheduler.to_broadcast_dict(),
+    })
+
+    # Send current invoicing data
+    await websocket.send_json({
+        "type": "invoicing_status",
+        **invoice_manager.to_broadcast_dict(),
     })
 
     # Send current diagnostic engine state
@@ -4265,6 +4338,117 @@ async def dashboard_websocket(websocket: WebSocket):
                     "start_date": msg.get("start_date", ""),
                     "week": week,
                 })
+
+            # --- Invoicing handlers ---
+            elif msg.get("type") == "invoicing_create":
+                inv = invoice_manager.create_invoice(
+                    customer_name=msg.get("customer_name", ""),
+                    customer_id=msg.get("customer_id", ""),
+                    customer_email=msg.get("customer_email", ""),
+                    customer_phone=msg.get("customer_phone", ""),
+                    service_record_id=msg.get("service_record_id", ""),
+                    invoice_date=msg.get("date", ""),
+                    due_date=msg.get("due_date", ""),
+                    line_items=msg.get("line_items", []),
+                    labor_hours=float(msg.get("labor_hours", 0)),
+                    labor_rate=float(msg.get("labor_rate", 0)) or None,
+                    tax_rate=float(msg.get("tax_rate", 0)),
+                    notes=msg.get("notes", ""),
+                    appointment_id=msg.get("appointment_id", ""),
+                )
+                event_logger.info("invoicing", f"Created: {inv.invoice_number} for {inv.customer_name} — ${inv.total:.2f}")
+                await websocket.send_json({"type": "invoicing_created", "ok": True, "invoice": inv.to_dict()})
+                await broadcast_invoicing_status()
+
+            elif msg.get("type") == "invoicing_create_from_service":
+                inv = invoice_manager.create_from_service_record(
+                    record_id=msg.get("record_id", ""),
+                    parts_markup=float(msg.get("parts_markup", 0)),
+                )
+                if inv:
+                    event_logger.info("invoicing", f"Created from service: {inv.invoice_number} — ${inv.total:.2f}")
+                await websocket.send_json({
+                    "type": "invoicing_created",
+                    "ok": inv is not None,
+                    "invoice": inv.to_dict() if inv else None,
+                })
+                if inv:
+                    await broadcast_invoicing_status()
+
+            elif msg.get("type") == "invoicing_update":
+                inv_id = msg.get("invoice_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("customer_name", "customer_id", "customer_email",
+                                    "customer_phone", "date", "due_date", "line_items",
+                                    "labor_hours", "labor_rate", "tax_rate", "notes", "status")}
+                inv = invoice_manager.update_invoice(inv_id, **updates)
+                await websocket.send_json({
+                    "type": "invoicing_updated",
+                    "ok": inv is not None,
+                    "invoice": inv.to_dict() if inv else None,
+                })
+                if inv:
+                    await broadcast_invoicing_status()
+
+            elif msg.get("type") == "invoicing_mark_paid":
+                inv = invoice_manager.mark_paid(
+                    invoice_id=msg.get("invoice_id", ""),
+                    payment_method=msg.get("payment_method", ""),
+                    paid_date=msg.get("paid_date", ""),
+                )
+                if inv:
+                    event_logger.info("invoicing", f"Paid: {inv.invoice_number} via {inv.payment_method or 'unspecified'}")
+                await websocket.send_json({
+                    "type": "invoicing_paid",
+                    "ok": inv is not None,
+                    "invoice": inv.to_dict() if inv else None,
+                })
+                if inv:
+                    await broadcast_invoicing_status()
+
+            elif msg.get("type") == "invoicing_mark_sent":
+                inv = invoice_manager.mark_sent(msg.get("invoice_id", ""))
+                if inv:
+                    event_logger.info("invoicing", f"Sent: {inv.invoice_number}")
+                await websocket.send_json({
+                    "type": "invoicing_sent",
+                    "ok": inv is not None,
+                    "invoice": inv.to_dict() if inv else None,
+                })
+                if inv:
+                    await broadcast_invoicing_status()
+
+            elif msg.get("type") == "invoicing_delete":
+                inv_id = msg.get("invoice_id", "")
+                ok = invoice_manager.delete_invoice(inv_id)
+                await websocket.send_json({
+                    "type": "invoicing_deleted",
+                    "ok": ok,
+                    "invoice_id": inv_id,
+                })
+                if ok:
+                    event_logger.info("invoicing", f"Deleted invoice {inv_id[:8]}")
+                    await broadcast_invoicing_status()
+
+            elif msg.get("type") == "invoicing_pdf":
+                inv_id = msg.get("invoice_id", "")
+                path = invoice_manager.generate_pdf(inv_id)
+                await websocket.send_json({
+                    "type": "invoicing_pdf_result",
+                    "ok": path is not None,
+                    "invoice_id": inv_id,
+                    "url": f"/api/invoice-pdf/{inv_id}" if path else None,
+                })
+                if path:
+                    await broadcast_invoicing_status()
+
+            elif msg.get("type") == "invoicing_send":
+                result = invoice_manager.send_invoice(msg.get("invoice_id", ""))
+                await websocket.send_json({
+                    "type": "invoicing_send_result",
+                    **result,
+                })
+                await broadcast_invoicing_status()
 
             # --- Scheduled Reports handlers ---
             elif msg.get("type") == "reports_generate":

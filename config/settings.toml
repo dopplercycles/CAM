@@ -202,6 +202,11 @@ from_address = "cam@dopplercycles.com"
 to_address = ""
 use_tls = true
 
+[invoicing]
+db_path = "data/invoices.db"
+pdf_dir = "data/invoices"
+payment_terms_days = 30
+
 [appointments]
 db_path = "data/appointments.db"
 home_lat = 45.4976
