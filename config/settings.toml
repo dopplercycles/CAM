@@ -183,3 +183,12 @@ max_retries = 5
 retry_base_seconds = 10
 retry_max_seconds = 3600
 inbound_secret = ""
+
+[knowledge]
+db_path = "data/knowledge_ingest.db"
+inbox_dir = "data/knowledge/inbox"
+processed_dir = "data/knowledge/processed"
+scan_interval = 30
+max_file_size = 10485760
+chunk_target_size = 1000
+chunk_overlap = 100

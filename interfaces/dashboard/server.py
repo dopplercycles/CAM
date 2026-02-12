@@ -55,6 +55,7 @@ from tools.content.tts_pipeline import TTSPipeline
 from agents.research_agent import ResearchAgent
 from agents.business_agent import BusinessAgent, BusinessStore
 from tools.doppler.service_records import ServiceRecordStore
+from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
 from tests.integration_test import LaunchReadiness
 
@@ -149,6 +150,17 @@ long_term_memory = LongTermMemory(
 _seed_file = getattr(getattr(config, 'memory', None),
                      'long_term_seed_file', 'CAM_BRAIN.md')
 long_term_memory.seed_from_file(_seed_file)
+
+# Knowledge ingestion — bulk document ingest into LTM
+knowledge_ingest = KnowledgeIngest(
+    ltm=long_term_memory,
+    db_path=getattr(getattr(config, 'knowledge', None), 'db_path', 'data/knowledge_ingest.db'),
+    inbox_dir=getattr(getattr(config, 'knowledge', None), 'inbox_dir', 'data/knowledge/inbox'),
+    processed_dir=getattr(getattr(config, 'knowledge', None), 'processed_dir', 'data/knowledge/processed'),
+    max_file_size=getattr(getattr(config, 'knowledge', None), 'max_file_size', 10_485_760),
+    chunk_target_size=getattr(getattr(config, 'knowledge', None), 'chunk_target_size', 1000),
+    chunk_overlap=getattr(getattr(config, 'knowledge', None), 'chunk_overlap', 100),
+)
 
 # agent_id -> WebSocket (live connections, needed for commands + kill switch)
 agent_websockets: dict[str, WebSocket] = {}
@@ -288,6 +300,14 @@ async def broadcast_swarm_status():
     await broadcast_to_dashboards({
         "type": "swarm_status",
         "swarms": task_queue.swarms_to_broadcast_list(),
+    })
+
+
+async def broadcast_knowledge_status():
+    """Push current knowledge ingestion state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "knowledge_status",
+        **knowledge_ingest.to_broadcast_dict(),
     })
 
 
@@ -1072,6 +1092,22 @@ async def pipeline_progress_loop():
             logger.debug("Pipeline progress loop error", exc_info=True)
 
 
+async def knowledge_inbox_loop():
+    """Periodically scan the inbox directory for new documents to ingest."""
+    interval = getattr(getattr(config, 'knowledge', None), 'scan_interval', 30)
+    while True:
+        try:
+            await asyncio.sleep(interval)
+            results = knowledge_ingest.scan_inbox()
+            if results:
+                logger.info("Knowledge inbox scan: %d files processed", len(results))
+                await broadcast_knowledge_status()
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            logger.debug("Knowledge inbox loop error", exc_info=True)
+
+
 # ---------------------------------------------------------------------------
 # App lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
@@ -1088,6 +1124,7 @@ async def lifespan(app: FastAPI):
     scheduler_task = asyncio.create_task(scheduler.run())
     webhook_retry_task = asyncio.create_task(webhook_manager.process_retries())
     pipeline_check_task = asyncio.create_task(pipeline_progress_loop())
+    knowledge_inbox_task = asyncio.create_task(knowledge_inbox_loop())
     logger.info("Orchestrator loop started as background task")
     logger.info("Scheduler loop started as background task")
     logger.info("Pipeline progress loop started as background task")
@@ -1127,6 +1164,8 @@ async def lifespan(app: FastAPI):
     scheduler_task.cancel()
     webhook_retry_task.cancel()
     pipeline_check_task.cancel()
+    knowledge_inbox_task.cancel()
+    knowledge_ingest.close()
     episodic_memory.close()
     content_calendar.close()
     pipeline_manager.close()
@@ -1785,6 +1824,32 @@ async def upload_file(
     }
 
 
+@app.post("/api/knowledge/upload")
+async def knowledge_upload(file: UploadFile = File(...)):
+    """Upload a document for knowledge ingestion.
+
+    Accepts any supported file type (.md, .txt, .pdf, .csv).
+    Chunks the document and stores in long-term memory.
+    """
+    data = await file.read()
+    filename = file.filename or "upload"
+
+    doc = knowledge_ingest.ingest_bytes(data, filename, source="upload")
+
+    event_logger.info(
+        "knowledge",
+        f"Knowledge upload: {filename} → {doc.status} ({doc.chunk_count} chunks)",
+        filename=filename, status=doc.status, chunks=doc.chunk_count,
+    )
+
+    await broadcast_knowledge_status()
+
+    return {
+        "ok": doc.status == "completed",
+        "document": doc.to_dict(),
+    }
+
+
 # ---------------------------------------------------------------------------
 # WebSocket: agents connect here to send heartbeats
 # ---------------------------------------------------------------------------
@@ -2181,6 +2246,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "service_records_status",
         **service_store.to_broadcast_dict(),
+    })
+
+    # Send current knowledge ingestion state
+    await websocket.send_json({
+        "type": "knowledge_status",
+        **knowledge_ingest.to_broadcast_dict(),
     })
 
     # Send current security audit state
@@ -3625,6 +3696,16 @@ async def dashboard_websocket(websocket: WebSocket):
                         "ok": False,
                         "error": str(e),
                     })
+
+            elif msg.get("type") == "knowledge_scan_inbox":
+                results = knowledge_ingest.scan_inbox()
+                await websocket.send_json({
+                    "type": "knowledge_scan_result",
+                    "ok": True,
+                    "scanned": len(results),
+                    "completed": sum(1 for d in results if d.status == "completed"),
+                })
+                await broadcast_knowledge_status()
 
             elif msg.get("type") == "approval_response":
                 # Dashboard approving or rejecting a Tier 2 action

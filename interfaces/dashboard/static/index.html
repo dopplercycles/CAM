@@ -3871,6 +3871,89 @@
             font-size: 0.78rem;
         }
 
+        /* Knowledge Ingestion */
+        .ki-stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        .ki-stats-bar span {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .ki-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 1rem;
+        }
+        .ki-upload-area:hover, .ki-upload-area.dragover {
+            border-color: var(--accent);
+            background: rgba(37, 99, 235, 0.05);
+        }
+        .ki-upload-area input[type="file"] {
+            display: none;
+        }
+        .ki-upload-area .ki-browse {
+            color: var(--accent);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .ki-upload-area .ki-supported {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            margin-top: 0.5rem;
+        }
+        .ki-history-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 1rem 0 0.5rem;
+        }
+        .ki-doc-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.6rem 1rem;
+            margin-bottom: 0.4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ki-doc-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.88rem;
+        }
+        .ki-doc-meta {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .ki-doc-badge {
+            font-size: 0.72rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .ki-doc-badge.completed { background: var(--success); color: #fff; }
+        .ki-doc-badge.failed { background: var(--error); color: #fff; }
+        .ki-doc-badge.processing { background: var(--warning); color: #000; }
+        .ki-empty {
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
         .scout-section {
             margin-bottom: 2rem;
         }
@@ -6213,6 +6296,30 @@
             </div>
         </section>
 
+        <section data-panel-id="knowledge-ingest" style="display:none;">
+            <h2>Knowledge Ingestion</h2>
+
+            <div class="ki-stats-bar" id="ki-stats-bar">
+                Documents: <span id="ki-stat-docs">0</span> &middot;
+                Chunks: <span id="ki-stat-chunks">0</span> &middot;
+                Failed: <span id="ki-stat-failed">0</span> &middot;
+                Inbox: <span id="ki-stat-inbox">0</span>
+            </div>
+
+            <div class="ki-upload-area" id="ki-upload-area">
+                <div>Drag and drop files here, or <label class="ki-browse" for="ki-file-input">browse</label></div>
+                <div class="ki-supported">Supported: .md, .txt, .pdf, .csv (max 10 MB)</div>
+                <input type="file" id="ki-file-input" multiple accept=".md,.txt,.pdf,.csv">
+            </div>
+
+            <button style="background:#2563eb;border:1px solid #3b82f6;border-radius:6px;color:#fff;font-family:inherit;font-size:0.85rem;font-weight:600;padding:0.5rem 1rem;cursor:pointer;margin-bottom:1rem;" onclick="kiScanInbox()">Scan Inbox</button>
+
+            <div class="ki-history-title">Ingestion History</div>
+            <div id="ki-history-list">
+                <div class="ki-empty">No documents ingested yet.</div>
+            </div>
+        </section>
+
         <section class="scout-section" data-panel-id="scout">
             <h2>Motorcycle Scout</h2>
 
@@ -6783,6 +6890,7 @@
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
             { id: 'service-records', name: 'Service Records' },
+            { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'scout', name: 'Motorcycle Scout' },
             { id: 'market-analytics', name: 'Market Analytics' },
             { id: 'webhooks', name: 'Webhooks' },
@@ -7051,6 +7159,10 @@
                     if (!data.ok) console.warn("Service record delete failed");
                 } else if (data.type === "service_record_pdf_result") {
                     handleServiceRecordPdf(data);
+                } else if (data.type === "knowledge_status") {
+                    handleKnowledgeStatus(data);
+                } else if (data.type === "knowledge_scan_result") {
+                    if (!data.ok) console.warn("Knowledge inbox scan failed");
                 } else if (data.type === "scout_status") {
                     handleScoutStatus(data);
                 } else if (data.type === "scout_scan_result") {
@@ -9648,6 +9760,114 @@
                 console.warn("PDF generation failed:", data.error);
                 alert("PDF generation failed: " + (data.error || "Unknown error"));
             }
+        }
+
+        // ---------------------------------------------------------------
+        // Knowledge Ingestion
+        // ---------------------------------------------------------------
+        let kiDocuments = [];
+        let kiStatus = {};
+
+        function handleKnowledgeStatus(data) {
+            kiDocuments = data.documents || [];
+            kiStatus = data.status || {};
+            renderKnowledgePanel();
+        }
+
+        function renderKnowledgePanel() {
+            const s = kiStatus;
+            const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+            set("ki-stat-docs", s.total_documents || 0);
+            set("ki-stat-chunks", s.total_chunks || 0);
+            set("ki-stat-failed", s.failed || 0);
+            set("ki-stat-inbox", s.inbox_pending || 0);
+
+            const list = document.getElementById("ki-history-list");
+            if (!list) return;
+
+            if (!kiDocuments.length) {
+                list.innerHTML = '<div class="ki-empty">No documents ingested yet.</div>';
+                return;
+            }
+
+            list.innerHTML = kiDocuments.map(doc => {
+                const ts = doc.created_at ? new Date(doc.created_at).toLocaleString() : "";
+                const meta = [
+                    doc.file_type.toUpperCase(),
+                    doc.status === "completed" ? doc.chunk_count + " chunks" : "",
+                    doc.source,
+                    ts,
+                ].filter(Boolean).join(" &middot; ");
+                const error = doc.error ? `<div style="color:var(--error);font-size:0.75rem;margin-top:2px;">${doc.error}</div>` : "";
+                return `<div class="ki-doc-card">
+                    <div>
+                        <div class="ki-doc-name">${doc.filename}</div>
+                        <div class="ki-doc-meta">${meta}</div>
+                        ${error}
+                    </div>
+                    <span class="ki-doc-badge ${doc.status}">${doc.status}</span>
+                </div>`;
+            }).join("");
+        }
+
+        function kiUploadFiles(files) {
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append("file", file);
+                fetch("/api/knowledge/upload", { method: "POST", body: formData })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.ok) {
+                            console.warn("Knowledge upload issue:", data.document?.error || "Unknown");
+                        }
+                    })
+                    .catch(err => console.error("Knowledge upload failed:", err));
+            }
+        }
+
+        function kiScanInbox() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "knowledge_scan_inbox" }));
+            }
+        }
+
+        // Drag-and-drop + file input setup
+        (function initKnowledgeUpload() {
+            document.addEventListener("DOMContentLoaded", () => {
+                const area = document.getElementById("ki-upload-area");
+                const input = document.getElementById("ki-file-input");
+                if (!area || !input) return;
+
+                area.addEventListener("dragover", e => {
+                    e.preventDefault();
+                    area.classList.add("dragover");
+                });
+                area.addEventListener("dragleave", e => {
+                    e.preventDefault();
+                    area.classList.remove("dragover");
+                });
+                area.addEventListener("drop", e => {
+                    e.preventDefault();
+                    area.classList.remove("dragover");
+                    if (e.dataTransfer.files.length) kiUploadFiles(e.dataTransfer.files);
+                });
+                area.addEventListener("click", e => {
+                    if (e.target.tagName !== "LABEL") input.click();
+                });
+                input.addEventListener("change", () => {
+                    if (input.files.length) kiUploadFiles(input.files);
+                    input.value = "";
+                });
+            });
+        })();
+
+        // Hook into renderAgents to also render knowledge panel
+        const _origRenderAgentsForKI = typeof renderAgents === "function" ? renderAgents : null;
+        if (_origRenderAgentsForKI) {
+            renderAgents = function() {
+                _origRenderAgentsForKI.apply(this, arguments);
+                renderKnowledgePanel();
+            };
         }
 
         // ---------------------------------------------------------------

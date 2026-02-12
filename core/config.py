@@ -194,6 +194,15 @@ _DEFAULTS: dict[str, Any] = {
         "max_delivery_history": 500,
         "inbound_secret": "",
     },
+    "knowledge": {
+        "db_path": "data/knowledge_ingest.db",
+        "inbox_dir": "data/knowledge/inbox",
+        "processed_dir": "data/knowledge/processed",
+        "scan_interval": 30,
+        "max_file_size": 10485760,
+        "chunk_target_size": 1000,
+        "chunk_overlap": 100,
+    },
     "context": {
         "rotation_threshold": 0.9,
         "ltm_top_k": 3,
