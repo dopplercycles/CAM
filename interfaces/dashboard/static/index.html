@@ -3940,6 +3940,112 @@
             margin-right: 3px; vertical-align: middle;
         }
 
+        /* Route Planner */
+        .route-section { margin-bottom: 2rem; }
+        .route-toolbar {
+            display: flex; gap: 0.5rem; align-items: center;
+            flex-wrap: wrap; margin-bottom: 1rem;
+        }
+        .route-toolbar input[type="date"],
+        .route-toolbar input[type="time"] {
+            background: var(--bg-card); border: 1px solid var(--border);
+            color: var(--text-primary); padding: 0.35rem 0.5rem;
+            border-radius: 6px; font-size: 0.85rem;
+        }
+        .route-summary-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem; margin-bottom: 1.2rem;
+        }
+        .route-summary-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem; text-align: center;
+        }
+        .route-card-value {
+            font-size: 1.4rem; font-weight: 700; color: var(--text-primary);
+        }
+        .route-card-label {
+            font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem;
+        }
+        .route-timeline {
+            position: relative; padding-left: 2rem; margin-bottom: 1.5rem;
+        }
+        .route-timeline::before {
+            content: ''; position: absolute; left: 0.7rem; top: 0; bottom: 0;
+            width: 2px; background: var(--border);
+        }
+        .route-node {
+            position: relative; margin-bottom: 0.3rem;
+        }
+        .route-node::before {
+            content: ''; position: absolute; left: -1.65rem; top: 0.55rem;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--accent); border: 2px solid var(--bg-card);
+        }
+        .route-node.home-node::before { background: #34d399; }
+        .route-node.completed-node::before { background: #34d399; }
+        .route-stop-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.65rem 0.8rem;
+        }
+        .route-stop-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.25rem;
+        }
+        .route-stop-name { font-weight: 600; font-size: 0.9rem; }
+        .route-stop-badge {
+            font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 4px;
+            font-weight: 600;
+        }
+        .route-stop-badge.planned { background: rgba(99,102,241,0.15); color: #818cf8; }
+        .route-stop-badge.arrived { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .route-stop-badge.done { background: rgba(52,211,153,0.15); color: #34d399; }
+        .route-stop-detail {
+            font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem;
+        }
+        .route-stop-actions {
+            margin-top: 0.4rem; display: flex; gap: 0.4rem;
+        }
+        .route-stop-actions button {
+            font-size: 0.72rem; padding: 0.2rem 0.5rem;
+        }
+        .route-travel-seg {
+            padding: 0.3rem 0 0.3rem 0.5rem;
+            font-size: 0.75rem; color: var(--text-secondary);
+            border-left: 2px dashed var(--border);
+            margin-left: -1.65rem; padding-left: 2.15rem;
+        }
+        .route-home-label {
+            font-weight: 600; font-size: 0.85rem; padding: 0.4rem 0;
+        }
+        .route-status-badge {
+            display: inline-block; font-size: 0.72rem; padding: 0.15rem 0.5rem;
+            border-radius: 4px; font-weight: 600;
+        }
+        .route-status-badge.planned { background: rgba(99,102,241,0.15); color: #818cf8; }
+        .route-status-badge.in_progress { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .route-status-badge.completed { background: rgba(52,211,153,0.15); color: #34d399; }
+        .route-accuracy-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.6rem; margin-bottom: 1rem;
+        }
+        .route-accuracy-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.6rem; text-align: center;
+        }
+        .route-accuracy-card .route-card-value { font-size: 1.1rem; }
+        .route-history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border);
+            font-size: 0.82rem;
+        }
+        .route-history-item:last-child { border-bottom: none; }
+        .route-history-date { font-weight: 600; }
+        .route-history-stats { color: var(--text-secondary); }
+        .route-empty {
+            text-align: center; color: var(--text-secondary);
+            padding: 2rem; font-size: 0.9rem;
+        }
+
         /* CRM */
         .crm-section { margin-bottom: 2rem; }
         .crm-stats-bar {
@@ -7303,6 +7409,76 @@
             </div>
         </section>
 
+        <section class="route-section" data-panel-id="route-planner">
+            <h2>Route Planner</h2>
+
+            <!-- Toolbar: date picker, depart time, plan button -->
+            <div class="route-toolbar">
+                <input type="date" id="route-date">
+                <label style="font-size:0.82rem; color:var(--text-secondary);">Depart:</label>
+                <input type="time" id="route-depart" value="08:00">
+                <button class="btn btn-sm" onclick="planRoute()">Plan Route</button>
+                <button class="btn btn-sm" id="route-start-btn" style="display:none;" onclick="startRoute()">Start Route</button>
+                <button class="btn btn-sm" id="route-complete-btn" style="display:none;" onclick="completeRoute()">Complete Route</button>
+            </div>
+
+            <!-- Summary cards -->
+            <div class="route-summary-row">
+                <div class="route-summary-card">
+                    <div class="route-card-value" id="route-stop-count">--</div>
+                    <div class="route-card-label">Stops</div>
+                </div>
+                <div class="route-summary-card">
+                    <div class="route-card-value" id="route-total-dist">--</div>
+                    <div class="route-card-label">Total Miles</div>
+                </div>
+                <div class="route-summary-card">
+                    <div class="route-card-value" id="route-drive-time">--</div>
+                    <div class="route-card-label">Drive Time</div>
+                </div>
+                <div class="route-summary-card">
+                    <div class="route-card-value" id="route-return-eta">--</div>
+                    <div class="route-card-label">Return ETA</div>
+                </div>
+            </div>
+
+            <!-- Timeline view -->
+            <div id="route-timeline" class="route-timeline">
+                <div class="route-empty">No route planned. Pick a date and hit "Plan Route".</div>
+            </div>
+
+            <!-- Accuracy stats -->
+            <details style="margin-bottom:1rem;">
+                <summary style="cursor:pointer; font-weight:600; font-size:0.9rem; margin-bottom:0.5rem;">Accuracy Stats</summary>
+                <div class="route-accuracy-row" id="route-accuracy">
+                    <div class="route-accuracy-card">
+                        <div class="route-card-value" id="route-acc-routes">0</div>
+                        <div class="route-card-label">Completed Routes</div>
+                    </div>
+                    <div class="route-accuracy-card">
+                        <div class="route-card-value" id="route-acc-stops">0</div>
+                        <div class="route-card-label">Tracked Stops</div>
+                    </div>
+                    <div class="route-accuracy-card">
+                        <div class="route-card-value" id="route-acc-arrival">--</div>
+                        <div class="route-card-label">Avg Arrival Var (min)</div>
+                    </div>
+                    <div class="route-accuracy-card">
+                        <div class="route-card-value" id="route-acc-ontime">--</div>
+                        <div class="route-card-label">On-Time %</div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Route history -->
+            <details>
+                <summary style="cursor:pointer; font-weight:600; font-size:0.9rem; margin-bottom:0.5rem;">Route History</summary>
+                <div id="route-history" style="background:var(--bg-card); border:1px solid var(--border); border-radius:8px;">
+                    <div class="route-empty">No routes yet.</div>
+                </div>
+            </details>
+        </section>
+
         <section class="crm-section" data-panel-id="crm">
             <h2>Customer CRM</h2>
 
@@ -8199,6 +8375,7 @@
             { id: 'invoicing', name: 'Invoicing & Billing' },
             { id: 'parts-inventory', name: 'Parts Inventory' },
             { id: 'financial-dashboard', name: 'Financial Dashboard' },
+            { id: 'route-planner', name: 'Route Planner' },
             { id: 'crm', name: 'Customer CRM' },
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
@@ -8559,6 +8736,16 @@
                     if (data.count > 0) addToLog('finances', `Synced ${data.count} invoices`);
                 } else if (data.type === "finances_runway_result") {
                     console.log("Runway:", data);
+
+                // --- Route Planner ---
+                } else if (data.type === "route_status") {
+                    handleRouteStatus(data);
+                } else if (data.type === "route_planned" || data.type === "route_started" || data.type === "route_completed") {
+                    // individual confirmations — full state comes via broadcast
+                } else if (data.type === "route_stop_completed") {
+                    // individual confirmation
+                } else if (data.type === "route_day_plan") {
+                    if (data.route) handleRouteStatus({ today_route: data.route, status: routeStatus, route_history: routeHistory, accuracy_stats: routeAccuracy });
 
                 } else if (data.type === "knowledge_status") {
                     handleKnowledgeStatus(data);
@@ -11790,6 +11977,190 @@
             if (!typeEl || !catEl) return;
             const cats = typeEl.value === 'income' ? FIN_INCOME_CATS : FIN_EXPENSE_CATS;
             catEl.innerHTML = cats.map(c => `<option value="${c}">${c.replace(/_/g, ' ')}</option>`).join('');
+        }
+
+        // ---------------------------------------------------------------
+        // Route Planner
+        // ---------------------------------------------------------------
+        let routeToday = null;
+        let routeStatus = {};
+        let routeHistory = [];
+        let routeAccuracy = {};
+
+        // Set default date to today on load
+        (function() {
+            const el = document.getElementById('route-date');
+            if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
+        })();
+
+        function handleRouteStatus(data) {
+            routeToday = data.today_route || null;
+            routeStatus = data.status || {};
+            routeHistory = data.route_history || [];
+            routeAccuracy = data.accuracy_stats || {};
+            renderRouteSummary();
+            renderRouteTimeline();
+            renderRouteAccuracy();
+            renderRouteHistory();
+        }
+
+        function renderRouteSummary() {
+            const r = routeToday;
+            const el = id => document.getElementById(id);
+            el('route-stop-count').textContent = r ? r.stop_count : '--';
+            el('route-total-dist').textContent = r ? r.total_distance_miles.toFixed(1) : '--';
+            el('route-drive-time').textContent = r ? Math.round(r.total_drive_minutes) + 'm' : '--';
+            el('route-return-eta').textContent = r ? r.estimated_return : '--';
+
+            // Show/hide action buttons
+            const startBtn = el('route-start-btn');
+            const completeBtn = el('route-complete-btn');
+            if (startBtn) startBtn.style.display = (r && r.status === 'planned') ? '' : 'none';
+            if (completeBtn) completeBtn.style.display = (r && r.status === 'in_progress') ? '' : 'none';
+        }
+
+        function renderRouteTimeline() {
+            const container = document.getElementById('route-timeline');
+            if (!container) return;
+            const r = routeToday;
+            if (!r || !r.stops || r.stops.length === 0) {
+                container.innerHTML = '<div class="route-empty">No route planned. Pick a date and hit "Plan Route".</div>';
+                return;
+            }
+
+            let html = '';
+            // Depart from home
+            html += `<div class="route-node home-node">
+                <div class="route-home-label">Home Base &mdash; Depart ${esc(r.depart_time)}</div>
+            </div>`;
+
+            r.stops.forEach((s, i) => {
+                // Travel segment
+                html += `<div class="route-travel-seg">
+                    ${s.travel_miles_from_prev.toFixed(1)} mi &middot; ~${Math.round(s.travel_minutes_from_prev)} min drive
+                </div>`;
+
+                // Stop status
+                let badgeClass = 'planned';
+                let badgeText = 'Planned';
+                if (s.actual_departure) { badgeClass = 'done'; badgeText = 'Done'; }
+                else if (s.actual_arrival) { badgeClass = 'arrived'; badgeText = 'Arrived'; }
+
+                const nodeClass = s.actual_departure ? 'completed-node' : '';
+
+                html += `<div class="route-node ${nodeClass}">
+                    <div class="route-stop-card">
+                        <div class="route-stop-header">
+                            <span class="route-stop-name">${i + 1}. ${esc(s.customer_name)}</span>
+                            <span class="route-stop-badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        <div class="route-stop-detail">${esc(s.address)}</div>
+                        <div class="route-stop-detail">
+                            ETA ${esc(s.eta)} &middot; ${esc(s.service_type)} &middot; ~${s.duration_minutes}min
+                            &middot; Depart ${esc(s.planned_departure)}
+                        </div>`;
+
+                if (s.actual_arrival) {
+                    html += `<div class="route-stop-detail" style="color:#34d399;">
+                        Arrived: ${esc(s.actual_arrival)}${s.actual_departure ? ' &middot; Left: ' + esc(s.actual_departure) : ''}
+                    </div>`;
+                }
+
+                // Action buttons (only when route is in progress)
+                if (r.status === 'in_progress' && !s.actual_departure) {
+                    html += `<div class="route-stop-actions">`;
+                    if (!s.actual_arrival) {
+                        html += `<button class="btn btn-sm" onclick="completeStop(${s.stop_order}, true)">Mark Arrived</button>`;
+                    } else {
+                        html += `<button class="btn btn-sm" onclick="completeStop(${s.stop_order}, false)">Mark Complete</button>`;
+                    }
+                    html += `</div>`;
+                }
+
+                html += `</div></div>`;
+            });
+
+            // Return home segment
+            const lastStop = r.stops[r.stops.length - 1];
+            const returnTravel = Math.max(0, r.total_drive_minutes - r.stops.reduce((sum, s) => sum + s.travel_minutes_from_prev, 0));
+            const returnMiles = Math.max(0, r.total_distance_miles - r.stops.reduce((sum, s) => sum + s.travel_miles_from_prev, 0));
+            html += `<div class="route-travel-seg">
+                ${returnMiles.toFixed(1)} mi &middot; ~${Math.round(returnTravel)} min drive
+            </div>`;
+            html += `<div class="route-node home-node">
+                <div class="route-home-label">Home Base &mdash; Return ${esc(r.estimated_return)}
+                    ${r.actual_return ? ' (Actual: ' + esc(r.actual_return) + ')' : ''}
+                    <span class="route-status-badge ${r.status}">${r.status.replace('_', ' ')}</span>
+                </div>
+            </div>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderRouteAccuracy() {
+            const a = routeAccuracy;
+            const el = id => document.getElementById(id);
+            el('route-acc-routes').textContent = a.total_routes || 0;
+            el('route-acc-stops').textContent = a.total_stops || 0;
+            el('route-acc-arrival').textContent = a.total_stops ? (a.avg_arrival_variance_min > 0 ? '+' : '') + a.avg_arrival_variance_min : '--';
+            el('route-acc-ontime').textContent = a.total_stops ? a.on_time_pct + '%' : '--';
+        }
+
+        function renderRouteHistory() {
+            const container = document.getElementById('route-history');
+            if (!container) return;
+            if (!routeHistory || routeHistory.length === 0) {
+                container.innerHTML = '<div class="route-empty">No routes yet.</div>';
+                return;
+            }
+            container.innerHTML = routeHistory.map(r => `
+                <div class="route-history-item">
+                    <span class="route-history-date">${esc(r.date)}</span>
+                    <span class="route-history-stats">
+                        ${r.stop_count} stops &middot; ${r.total_distance_miles.toFixed(1)} mi
+                        &middot; <span class="route-status-badge ${r.status}">${r.status.replace('_', ' ')}</span>
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function planRoute() {
+            const date = document.getElementById('route-date').value;
+            const depart = document.getElementById('route-depart').value || '08:00';
+            if (!date) return;
+            ws.send(JSON.stringify({ type: 'route_plan_day', date, depart_time: depart }));
+        }
+
+        function startRoute() {
+            if (!routeToday) return;
+            ws.send(JSON.stringify({ type: 'route_start', route_id: routeToday.route_id }));
+        }
+
+        function completeStop(stopOrder, arrivalOnly) {
+            if (!routeToday) return;
+            const now = new Date();
+            const hhmm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            const payload = {
+                type: 'route_complete_stop',
+                route_id: routeToday.route_id,
+                stop_order: stopOrder,
+            };
+            if (arrivalOnly) {
+                payload.actual_arrival = hhmm;
+            } else {
+                // Find the stop to get its existing arrival
+                const stop = routeToday.stops.find(s => s.stop_order === stopOrder);
+                payload.actual_arrival = (stop && stop.actual_arrival) || hhmm;
+                payload.actual_departure = hhmm;
+            }
+            ws.send(JSON.stringify(payload));
+        }
+
+        function completeRoute() {
+            if (!routeToday) return;
+            const now = new Date();
+            const hhmm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            ws.send(JSON.stringify({ type: 'route_complete', route_id: routeToday.route_id, actual_return: hhmm }));
         }
 
         // ---------------------------------------------------------------

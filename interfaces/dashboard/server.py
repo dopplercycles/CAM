@@ -61,6 +61,7 @@ from tools.doppler.scheduler_appointments import AppointmentScheduler
 from tools.doppler.invoicing import InvoiceManager
 from tools.doppler.inventory import InventoryManager
 from tools.doppler.finances import FinanceTracker
+from tools.doppler.route_planner import RoutePlanner
 from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
@@ -593,6 +594,20 @@ finance_tracker = FinanceTracker(
     invoice_manager=invoice_manager,
 )
 finance_tracker.sync_from_invoices()
+
+# Route planner — optimised daily routes for mobile service calls
+async def broadcast_route_status():
+    """Push current route planner state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "route_status",
+        **route_planner.to_broadcast_dict(),
+    })
+
+route_planner = RoutePlanner(
+    db_path="data/routes.db",
+    on_change=broadcast_route_status,
+    appointment_scheduler=appointment_scheduler,
+)
 
 async def broadcast_diagnostics_status():
     """Push current diagnostic engine state to all connected dashboard browsers."""
@@ -1458,6 +1473,7 @@ async def lifespan(app: FastAPI):
     invoice_manager.close()
     inventory_manager.close()
     finance_tracker.close()
+    route_planner.close()
     diagnostic_engine.close()
     report_engine.close()
     security_audit_log.close()
@@ -2617,6 +2633,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "finances_status",
         **finance_tracker.to_broadcast_dict(current_balance=_finance_state["balance"]),
+    })
+
+    # Send current route planner state
+    await websocket.send_json({
+        "type": "route_status",
+        **route_planner.to_broadcast_dict(),
     })
 
     # Send current diagnostic engine state
@@ -4312,6 +4334,14 @@ async def dashboard_websocket(websocket: WebSocket):
                     "appointment": appt.to_dict(),
                 })
                 await broadcast_appointment_schedule_status()
+                # Auto-replan today's route when appointments change
+                _today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                if appt.date == _today and route_planner.get_day_plan(_today):
+                    try:
+                        route_planner.plan_route(_today)
+                        await broadcast_route_status()
+                    except Exception:
+                        logger.exception("Auto-replan failed after appointment book")
 
             elif msg.get("type") == "appt_schedule_reschedule":
                 appt = appointment_scheduler.reschedule(
@@ -4329,6 +4359,13 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 if appt:
                     await broadcast_appointment_schedule_status()
+                    _today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                    if appt.date == _today and route_planner.get_day_plan(_today):
+                        try:
+                            route_planner.plan_route(_today)
+                            await broadcast_route_status()
+                        except Exception:
+                            logger.exception("Auto-replan failed after reschedule")
 
             elif msg.get("type") == "appt_schedule_cancel":
                 appt = appointment_scheduler.cancel(
@@ -4344,6 +4381,13 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 if appt:
                     await broadcast_appointment_schedule_status()
+                    _today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                    if appt.date == _today and route_planner.get_day_plan(_today):
+                        try:
+                            route_planner.plan_route(_today)
+                            await broadcast_route_status()
+                        except Exception:
+                            logger.exception("Auto-replan failed after cancel")
 
             elif msg.get("type") == "appt_schedule_update":
                 aid = msg.get("appointment_id", "")
@@ -4360,6 +4404,13 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 if appt:
                     await broadcast_appointment_schedule_status()
+                    _today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                    if appt.date == _today and route_planner.get_day_plan(_today):
+                        try:
+                            route_planner.plan_route(_today)
+                            await broadcast_route_status()
+                        except Exception:
+                            logger.exception("Auto-replan failed after update")
 
             elif msg.get("type") == "appt_schedule_delete":
                 aid = msg.get("appointment_id", "")
@@ -4371,6 +4422,13 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 if removed:
                     await broadcast_appointment_schedule_status()
+                    _today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                    if route_planner.get_day_plan(_today):
+                        try:
+                            route_planner.plan_route(_today)
+                            await broadcast_route_status()
+                        except Exception:
+                            logger.exception("Auto-replan failed after delete")
 
             elif msg.get("type") == "appt_schedule_check_availability":
                 result = appointment_scheduler.check_availability(
@@ -4646,6 +4704,73 @@ async def dashboard_websocket(websocket: WebSocket):
                 balance = float(msg.get("balance", _finance_state["balance"]))
                 runway = finance_tracker.runway_calculator(balance)
                 await websocket.send_json({"type": "finances_runway_result", **runway})
+
+            # --- Route Planner handlers ---
+            elif msg.get("type") == "route_plan_day":
+                try:
+                    route = route_planner.plan_route(
+                        date_str=msg.get("date", ""),
+                        depart_time=msg.get("depart_time", "08:00"),
+                    )
+                    event_logger.info("route", f"Planned route for {route.date}: {route.stop_count} stops, {route.total_distance_miles:.1f} mi")
+                    await websocket.send_json({
+                        "type": "route_planned",
+                        "ok": True,
+                        "route": route.to_dict(),
+                    })
+                    await broadcast_route_status()
+                except Exception as e:
+                    logger.error("Route planning failed: %s", e)
+                    await websocket.send_json({"type": "route_planned", "ok": False, "error": str(e)})
+
+            elif msg.get("type") == "route_start":
+                route = route_planner.start_route(msg.get("route_id", ""))
+                await websocket.send_json({
+                    "type": "route_started",
+                    "ok": route is not None,
+                    "route": route.to_dict() if route else None,
+                })
+                if route:
+                    event_logger.info("route", f"Route started: {route.date}")
+                    await broadcast_route_status()
+
+            elif msg.get("type") == "route_complete_stop":
+                stop = route_planner.complete_stop(
+                    route_id=msg.get("route_id", ""),
+                    stop_order=msg.get("stop_order", 0),
+                    actual_arrival=msg.get("actual_arrival", ""),
+                    actual_departure=msg.get("actual_departure", ""),
+                )
+                await websocket.send_json({
+                    "type": "route_stop_completed",
+                    "ok": stop is not None,
+                    "stop": stop.to_dict() if stop else None,
+                })
+                if stop:
+                    event_logger.info("route", f"Stop {stop.stop_order} completed: {stop.customer_name}")
+                    await broadcast_route_status()
+
+            elif msg.get("type") == "route_complete":
+                route = route_planner.complete_route(
+                    route_id=msg.get("route_id", ""),
+                    actual_return=msg.get("actual_return", ""),
+                )
+                await websocket.send_json({
+                    "type": "route_completed",
+                    "ok": route is not None,
+                    "route": route.to_dict() if route else None,
+                })
+                if route:
+                    event_logger.info("route", f"Route completed: {route.date}")
+                    await broadcast_route_status()
+
+            elif msg.get("type") == "route_get_day":
+                route = route_planner.get_day_plan(msg.get("date", ""))
+                await websocket.send_json({
+                    "type": "route_day_plan",
+                    "ok": True,
+                    "route": route.to_dict() if route else None,
+                })
 
             # --- Scheduled Reports handlers ---
             elif msg.get("type") == "reports_generate":
