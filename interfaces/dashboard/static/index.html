@@ -2783,6 +2783,140 @@
             font-size: 0.85rem;
         }
 
+        /* --- Content Pipeline (Kanban) --- */
+        .pipeline-stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+        .pipeline-stats-bar .stat-label { color: var(--text-tertiary); }
+        .pipeline-stats-bar .stat-value { color: var(--text-primary); font-weight: 600; margin-left: 0.3rem; }
+
+        .pipeline-create-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .pipeline-create-bar input {
+            flex: 1;
+            min-width: 120px;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+        .pipeline-create-bar input:focus { border-color: var(--accent-primary); outline: none; }
+        .pipeline-create-btn {
+            padding: 0.5rem 1rem;
+            background: var(--accent-primary);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .pipeline-create-btn:hover { opacity: 0.9; }
+
+        .pipeline-kanban {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            min-height: 180px;
+        }
+        .pipeline-column {
+            flex: 1;
+            min-width: 130px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .pipeline-col-header {
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.35rem 0;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+        .pipeline-col-header.research  { background: #3b82f6; }
+        .pipeline-col-header.outline   { background: #6366f1; }
+        .pipeline-col-header.script    { background: #8b5cf6; }
+        .pipeline-col-header.review    { background: #f59e0b; }
+        .pipeline-col-header.tts       { background: #06b6d4; }
+        .pipeline-col-header.package   { background: #10b981; }
+        .pipeline-col-header.done      { background: #22c55e; }
+
+        .pipeline-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            padding: 0.5rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.8rem;
+        }
+        .pipeline-card-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+            word-break: break-word;
+        }
+        .pipeline-card-topic {
+            color: var(--text-tertiary);
+            font-size: 0.75rem;
+            margin-bottom: 0.3rem;
+            word-break: break-word;
+        }
+        .pipeline-card-status {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+        .pipeline-card-status.paused { color: #f59e0b; }
+        .pipeline-card-status.failed { color: #ef4444; }
+        .pipeline-card-status.cancelled { color: #6b7280; }
+
+        .pipeline-card-actions {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+        }
+        .pipeline-card-actions button {
+            padding: 0.2rem 0.5rem;
+            font-size: 0.7rem;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+        }
+        .pipeline-btn-approve { background: #22c55e; }
+        .pipeline-btn-approve:hover { background: #16a34a; }
+        .pipeline-btn-reject { background: #ef4444; }
+        .pipeline-btn-reject:hover { background: #dc2626; }
+        .pipeline-btn-cancel { background: #6b7280; }
+        .pipeline-btn-cancel:hover { background: #4b5563; }
+
+        .pipeline-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+        }
+
         /* --- Voice Synthesis (TTS) --- */
         .tts-section {
             margin-bottom: 2rem;
@@ -5392,6 +5526,27 @@
             </div>
         </section>
 
+        <section data-panel-id="pipeline">
+            <h2>Content Pipeline</h2>
+
+            <div class="pipeline-stats-bar" id="pipeline-stats">
+                <span><span class="stat-label">Active:</span><span class="stat-value" id="pl-stat-active">0</span></span>
+                <span><span class="stat-label">Review:</span><span class="stat-value" id="pl-stat-review">0</span></span>
+                <span><span class="stat-label">Completed:</span><span class="stat-value" id="pl-stat-completed">0</span></span>
+                <span><span class="stat-label">Failed:</span><span class="stat-value" id="pl-stat-failed">0</span></span>
+            </div>
+
+            <div class="pipeline-create-bar">
+                <input type="text" id="pipeline-title" placeholder="Title">
+                <input type="text" id="pipeline-topic" placeholder="Topic (what should the video be about?)">
+                <button class="pipeline-create-btn" onclick="createPipeline()">Start New Content</button>
+            </div>
+
+            <div class="pipeline-kanban" id="pipeline-kanban">
+                <div class="pipeline-empty">No pipelines yet. Enter a title and topic above to start.</div>
+            </div>
+        </section>
+
         <section class="tts-section" data-panel-id="tts">
             <h2>Voice Synthesis</h2>
 
@@ -6086,6 +6241,7 @@
             { id: 'chains', name: 'Task Chains' },
             { id: 'scheduler', name: 'Task Scheduler' },
             { id: 'content', name: 'Content Calendar' },
+            { id: 'pipeline', name: 'Content Pipeline' },
             { id: 'tts', name: 'Voice Synthesis' },
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
@@ -6307,6 +6463,16 @@
                     if (!data.ok) console.warn("Content entry delete failed:", data.error);
                 } else if (data.type === "content_entry_updated") {
                     if (!data.ok) console.warn("Content entry update failed:", data.error);
+                } else if (data.type === "pipeline_status") {
+                    handlePipelineStatus(data);
+                } else if (data.type === "pipeline_created") {
+                    if (!data.ok) console.warn("Pipeline create failed:", data.error);
+                } else if (data.type === "pipeline_approved") {
+                    if (!data.ok) console.warn("Pipeline approve failed:", data.error);
+                } else if (data.type === "pipeline_rejected") {
+                    if (!data.ok) console.warn("Pipeline reject failed:", data.error);
+                } else if (data.type === "pipeline_cancelled") {
+                    if (!data.ok) console.warn("Pipeline cancel failed:", data.error);
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
                 } else if (data.type === "tts_result") {
@@ -7827,6 +7993,125 @@
                     </div>
                 `;
             }).join("");
+        }
+
+        // ---------------------------------------------------------------
+        // Content Pipeline (Kanban)
+        // ---------------------------------------------------------------
+
+        let pipelineData = { pipelines: [], status: { total: 0, by_stage: {}, by_status: {} } };
+
+        const PIPELINE_STAGES = ["research", "outline", "script", "review", "tts", "package", "done"];
+
+        function handlePipelineStatus(data) {
+            pipelineData = {
+                pipelines: data.pipelines || [],
+                status: data.status || { total: 0, by_stage: {}, by_status: {} },
+            };
+            renderPipeline();
+        }
+
+        function renderPipeline() {
+            // Update stats bar
+            const st = pipelineData.status;
+            const byStatus = st.by_status || {};
+            const byStage = st.by_stage || {};
+            const el = (id) => document.getElementById(id);
+            if (el("pl-stat-active")) el("pl-stat-active").textContent = byStatus.active || 0;
+            if (el("pl-stat-review")) el("pl-stat-review").textContent = byStage.review || 0;
+            if (el("pl-stat-completed")) el("pl-stat-completed").textContent = byStatus.completed || 0;
+            if (el("pl-stat-failed")) el("pl-stat-failed").textContent = byStatus.failed || 0;
+
+            const kanban = document.getElementById("pipeline-kanban");
+            if (!kanban) return;
+
+            if (pipelineData.pipelines.length === 0) {
+                kanban.innerHTML = '<div class="pipeline-empty">No pipelines yet. Enter a title and topic above to start.</div>';
+                return;
+            }
+
+            // Build columns
+            kanban.innerHTML = PIPELINE_STAGES.map(stage => {
+                const cards = pipelineData.pipelines
+                    .filter(p => p.stage === stage)
+                    .map(p => renderPipelineCard(p, stage))
+                    .join("");
+                return `
+                    <div class="pipeline-column">
+                        <div class="pipeline-col-header ${stage}">${stage.toUpperCase()}</div>
+                        ${cards}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderPipelineCard(p, stage) {
+            const pid = p.pipeline_id;
+            const shortId = pid.substring(0, 8);
+            let statusClass = "";
+            if (p.status === "paused") statusClass = " paused";
+            else if (p.status === "failed") statusClass = " failed";
+            else if (p.status === "cancelled") statusClass = " cancelled";
+
+            let actions = "";
+            if (stage === "review" && p.status === "paused") {
+                actions = `
+                    <div class="pipeline-card-actions">
+                        <button class="pipeline-btn-approve" onclick="approvePipeline('${pid}')">Approve</button>
+                        <button class="pipeline-btn-reject" onclick="rejectPipeline('${pid}')">Reject</button>
+                    </div>
+                `;
+            } else if (p.status === "active" || p.status === "paused") {
+                actions = `
+                    <div class="pipeline-card-actions">
+                        <button class="pipeline-btn-cancel" onclick="cancelPipeline('${pid}')">Cancel</button>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="pipeline-card">
+                    <div class="pipeline-card-title">${escapeHtml(p.title)}</div>
+                    <div class="pipeline-card-topic">${escapeHtml((p.topic || "").substring(0, 60))}</div>
+                    <div class="pipeline-card-status${statusClass}">${p.status} &middot; ${shortId}</div>
+                    ${actions}
+                </div>
+            `;
+        }
+
+        function createPipeline() {
+            const titleInput = document.getElementById("pipeline-title");
+            const topicInput = document.getElementById("pipeline-topic");
+            const title = titleInput.value.trim();
+            const topic = topicInput.value.trim();
+            if (!title) { titleInput.focus(); return; }
+            if (!topic) { topicInput.focus(); return; }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "pipeline_create", title, topic }));
+            }
+            titleInput.value = "";
+            topicInput.value = "";
+        }
+
+        function approvePipeline(pipelineId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "pipeline_approve", pipeline_id: pipelineId }));
+            }
+        }
+
+        function rejectPipeline(pipelineId) {
+            const notes = prompt("Rejection reason (optional):");
+            if (notes === null) return;  // user cancelled
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "pipeline_reject", pipeline_id: pipelineId, notes }));
+            }
+        }
+
+        function cancelPipeline(pipelineId) {
+            if (!confirm("Cancel this pipeline?")) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "pipeline_cancel", pipeline_id: pipelineId }));
+            }
         }
 
         // ---------------------------------------------------------------

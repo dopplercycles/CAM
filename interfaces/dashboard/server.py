@@ -46,6 +46,7 @@ from core.research_store import ResearchStore, ResearchStatus
 from tools.doppler.scout import ScoutStore, DopplerScout, SearchCriteria, ListingStatus
 from tools.doppler.market_analyzer import MarketAnalyzer
 from core.webhook_manager import WebhookManager
+from tools.content.pipeline import ContentPipelineManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -331,6 +332,14 @@ async def broadcast_content_calendar_status():
     await broadcast_to_dashboards({
         "type": "content_calendar_status",
         "entries": content_calendar.to_broadcast_list(),
+    })
+
+
+async def broadcast_pipeline_status():
+    """Push current content pipeline state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "pipeline_status",
+        **pipeline_manager.to_broadcast_dict(),
     })
 
 
@@ -865,6 +874,16 @@ content_agent = ContentAgent(
     tts_pipeline=tts_pipeline,
 )
 
+# Content pipeline manager — tracks content through research → TTS → package
+pipeline_manager = ContentPipelineManager(
+    db_path="data/content_pipeline.db",
+    task_queue=task_queue,
+    tts_pipeline=tts_pipeline,
+    event_logger=event_logger,
+    content_calendar=content_calendar,
+    on_change=broadcast_pipeline_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1002,6 +1021,18 @@ async def check_heartbeats():
         await broadcast_health_status()
 
 
+async def pipeline_progress_loop():
+    """Check content pipeline progress every 5 seconds."""
+    while True:
+        try:
+            await asyncio.sleep(5)
+            await pipeline_manager.check_progress()
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            logger.debug("Pipeline progress loop error", exc_info=True)
+
+
 # ---------------------------------------------------------------------------
 # App lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
@@ -1017,8 +1048,10 @@ async def lifespan(app: FastAPI):
     orchestrator_task = asyncio.create_task(orchestrator.run())
     scheduler_task = asyncio.create_task(scheduler.run())
     webhook_retry_task = asyncio.create_task(webhook_manager.process_retries())
+    pipeline_check_task = asyncio.create_task(pipeline_progress_loop())
     logger.info("Orchestrator loop started as background task")
     logger.info("Scheduler loop started as background task")
+    logger.info("Pipeline progress loop started as background task")
     logger.info("Webhook retry loop started as background task")
     if session_manager.auth_enabled:
         logger.info("Dashboard authentication ENABLED (user: %s)", session_manager.username)
@@ -1054,8 +1087,10 @@ async def lifespan(app: FastAPI):
     session_cleanup_task.cancel()
     scheduler_task.cancel()
     webhook_retry_task.cancel()
+    pipeline_check_task.cancel()
     episodic_memory.close()
     content_calendar.close()
+    pipeline_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1098,6 +1133,7 @@ app.state.business_store = business_store
 app.state.business_agent = business_agent
 app.state.security_audit_log = security_audit_log
 app.state.webhook_manager = webhook_manager
+app.state.pipeline_manager = pipeline_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2033,6 +2069,12 @@ async def dashboard_websocket(websocket: WebSocket):
         "entries": content_calendar.to_broadcast_list(),
     })
 
+    # Send current content pipeline state
+    await websocket.send_json({
+        "type": "pipeline_status",
+        **pipeline_manager.to_broadcast_dict(),
+    })
+
     # Send current research results
     await websocket.send_json({
         "type": "research_status",
@@ -2795,6 +2837,69 @@ async def dashboard_websocket(websocket: WebSocket):
                         "type": "content_entry_deleted",
                         "ok": False,
                         "error": "Entry not found",
+                    })
+
+            # --- Content Pipeline handlers ---
+            elif msg.get("type") == "pipeline_create":
+                title = (msg.get("title") or "").strip()
+                topic = (msg.get("topic") or "").strip()
+                if not title or not topic:
+                    await websocket.send_json({
+                        "type": "pipeline_created",
+                        "ok": False,
+                        "error": "Title and topic are required",
+                    })
+                    continue
+                pipeline = pipeline_manager.create_pipeline(
+                    title=title, topic=topic,
+                    metadata=msg.get("metadata"),
+                )
+                await websocket.send_json({
+                    "type": "pipeline_created",
+                    "ok": True,
+                    "pipeline_id": pipeline["pipeline_id"],
+                })
+                await broadcast_pipeline_status()
+
+            elif msg.get("type") == "pipeline_approve":
+                pipeline_id = msg.get("pipeline_id", "")
+                notes = (msg.get("notes") or "").strip()
+                result = await pipeline_manager.approve_review(pipeline_id, notes)
+                if result:
+                    await websocket.send_json({"type": "pipeline_approved", "ok": True})
+                    await broadcast_pipeline_status()
+                else:
+                    await websocket.send_json({
+                        "type": "pipeline_approved",
+                        "ok": False,
+                        "error": "Pipeline not found or not in review",
+                    })
+
+            elif msg.get("type") == "pipeline_reject":
+                pipeline_id = msg.get("pipeline_id", "")
+                notes = (msg.get("notes") or "").strip()
+                result = await pipeline_manager.reject_review(pipeline_id, notes)
+                if result:
+                    await websocket.send_json({"type": "pipeline_rejected", "ok": True})
+                    await broadcast_pipeline_status()
+                else:
+                    await websocket.send_json({
+                        "type": "pipeline_rejected",
+                        "ok": False,
+                        "error": "Pipeline not found or not in review",
+                    })
+
+            elif msg.get("type") == "pipeline_cancel":
+                pipeline_id = msg.get("pipeline_id", "")
+                result = await pipeline_manager.cancel_pipeline(pipeline_id)
+                if result:
+                    await websocket.send_json({"type": "pipeline_cancelled", "ok": True})
+                    await broadcast_pipeline_status()
+                else:
+                    await websocket.send_json({
+                        "type": "pipeline_cancelled",
+                        "ok": False,
+                        "error": "Pipeline not found or already finished",
                     })
 
             elif msg.get("type") == "research_result_delete":
