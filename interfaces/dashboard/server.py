@@ -56,6 +56,7 @@ from agents.research_agent import ResearchAgent
 from agents.business_agent import BusinessAgent, BusinessStore
 from tools.doppler.service_records import ServiceRecordStore
 from tools.doppler.diagnostics import DiagnosticEngine
+from tools.doppler.crm import CRMStore
 from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
@@ -506,6 +507,21 @@ service_store = ServiceRecordStore(
     db_path="data/service_records.db",
     on_change=broadcast_service_records_status,
 )
+
+async def broadcast_crm_status():
+    """Push current CRM data to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "crm_status",
+        **crm_store.to_broadcast_dict(),
+    })
+
+# CRM store — separate SQLite DB for enriched customer records
+crm_store = CRMStore(
+    db_path="data/crm.db",
+    service_store=service_store,
+    on_change=broadcast_crm_status,
+)
+crm_store.import_from_business_store(business_store)
 
 async def broadcast_diagnostics_status():
     """Push current diagnostic engine state to all connected dashboard browsers."""
@@ -1059,6 +1075,7 @@ business_agent = BusinessAgent(
     business_store=business_store,
     event_logger=event_logger,
     on_model_call=on_model_call,
+    crm_store=crm_store,
 )
 
 # Doppler Scout — motorcycle listing scraper with deal scoring
@@ -1306,6 +1323,7 @@ async def lifespan(app: FastAPI):
     market_analyzer.close()
     business_store.close()
     service_store.close()
+    crm_store.close()
     diagnostic_engine.close()
     report_engine.close()
     security_audit_log.close()
@@ -2412,6 +2430,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "service_records_status",
         **service_store.to_broadcast_dict(),
+    })
+
+    # Send current CRM data
+    await websocket.send_json({
+        "type": "crm_status",
+        **crm_store.to_broadcast_dict(),
     })
 
     # Send current diagnostic engine state
@@ -3984,6 +4008,90 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "diag_notes_result",
                     "ok": ok,
                 })
+
+            # --- CRM handlers ---
+            elif msg.get("type") == "crm_customer_create":
+                customer = crm_store.add_customer(
+                    name=msg.get("name", ""),
+                    phone=msg.get("phone", ""),
+                    email=msg.get("email", ""),
+                    address=msg.get("address", ""),
+                    preferred_contact_method=msg.get("preferred_contact_method", "phone"),
+                    tags=msg.get("tags", []),
+                    notes_summary=msg.get("notes_summary", ""),
+                )
+                await websocket.send_json({
+                    "type": "crm_customer_created",
+                    "ok": True,
+                    "customer": customer.to_dict(),
+                })
+                await broadcast_crm_status()
+
+            elif msg.get("type") == "crm_customer_update":
+                cid = msg.get("customer_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("name", "phone", "email", "address",
+                                    "preferred_contact_method", "tags",
+                                    "notes_summary", "last_contact",
+                                    "business_customer_id", "metadata")}
+                customer = crm_store.update_customer(cid, **updates)
+                if customer:
+                    await websocket.send_json({
+                        "type": "crm_customer_updated",
+                        "ok": True,
+                        "customer": customer.to_dict(),
+                    })
+                    await broadcast_crm_status()
+
+            elif msg.get("type") == "crm_customer_delete":
+                cid = msg.get("customer_id", "")
+                removed = crm_store.remove_customer(cid)
+                await websocket.send_json({
+                    "type": "crm_customer_deleted",
+                    "ok": removed,
+                    "customer_id": cid,
+                })
+                if removed:
+                    await broadcast_crm_status()
+
+            elif msg.get("type") == "crm_customer_search":
+                query = msg.get("query", "")
+                results = crm_store.search_customers(query)
+                await websocket.send_json({
+                    "type": "crm_search_result",
+                    "customers": [c.to_dict() for c in results],
+                })
+
+            elif msg.get("type") == "crm_customer_profile":
+                cid = msg.get("customer_id", "")
+                profile = crm_store.get_customer_profile(cid)
+                await websocket.send_json({
+                    "type": "crm_profile_result",
+                    **profile,
+                })
+
+            elif msg.get("type") == "crm_note_create":
+                cid = msg.get("customer_id", "")
+                content = msg.get("content", "")
+                category = msg.get("category", "general")
+                note = crm_store.add_note(cid, content, category)
+                await websocket.send_json({
+                    "type": "crm_note_created",
+                    "ok": True,
+                    "note": note.to_dict(),
+                })
+                await broadcast_crm_status()
+
+            elif msg.get("type") == "crm_note_delete":
+                nid = msg.get("note_id", "")
+                removed = crm_store.remove_note(nid)
+                await websocket.send_json({
+                    "type": "crm_note_deleted",
+                    "ok": removed,
+                    "note_id": nid,
+                })
+                if removed:
+                    await broadcast_crm_status()
 
             # --- Scheduled Reports handlers ---
             elif msg.get("type") == "reports_generate":

@@ -1503,6 +1503,8 @@ BUSINESS_KEYWORDS = [
     "invoice", "bill", "charge", "payment", "receipt", "billing",
     "inventory", "stock", "parts", "tools", "reorder", "low stock",
     "business", "revenue", "pricing", "service history",
+    "crm", "customer profile", "last service",
+    "who has a", "customer note", "customer tag",
 ]
 
 # Business-specific system prompt for model calls
@@ -1555,6 +1557,7 @@ class BusinessAgent:
         business_store: BusinessStore,
         event_logger,
         on_model_call: Callable | None = None,
+        crm_store=None,
     ):
         self.router = router
         self.persona = persona
@@ -1562,6 +1565,7 @@ class BusinessAgent:
         self.store = business_store
         self.event_logger = event_logger
         self._on_model_call = on_model_call
+        self.crm_store = crm_store
 
         logger.info("BusinessAgent initialized")
 
@@ -1706,6 +1710,36 @@ class BusinessAgent:
             if all_items:
                 lines = [f"  - {item.name}: {item.quantity} ({item.category})" for item in all_items]
                 parts.append(f"Full inventory ({len(all_items)} items):\n" + "\n".join(lines))
+
+        # CRM context — richer customer profiles, vehicles, notes
+        crm_keywords = ["crm", "customer profile", "service history", "last service",
+                         "who has a", "customer note", "customer tag"]
+        if self.crm_store and any(kw in desc_lower for kw in crm_keywords):
+            try:
+                crm_customers = self.crm_store.list_customers(limit=30)
+                if crm_customers:
+                    lines = []
+                    for cc in crm_customers:
+                        # Get vehicles from service history
+                        hist = self.crm_store.get_service_history(cc.customer_id)
+                        vehicles = [
+                            f"{v.get('year', '')} {v.get('make', '')} {v.get('model', '')}".strip()
+                            for v in hist.get("vehicles", [])
+                        ]
+                        veh_str = ", ".join(vehicles) if vehicles else "no vehicles"
+                        tags_str = ", ".join(cc.tags) if cc.tags else ""
+                        last = cc.last_contact[:10] if cc.last_contact else "unknown"
+                        notes = self.crm_store.get_notes(cc.customer_id, limit=3)
+                        note_str = "; ".join(n.content for n in notes) if notes else ""
+                        line = f"  - {cc.name} | Vehicles: {veh_str} | Last contact: {last}"
+                        if tags_str:
+                            line += f" | Tags: {tags_str}"
+                        if note_str:
+                            line += f" | Notes: {note_str}"
+                        lines.append(line)
+                    parts.append(f"CRM customer profiles ({len(crm_customers)}):\n" + "\n".join(lines))
+            except Exception:
+                pass  # CRM context is supplemental; don't block on errors
 
         # General business status
         status = self.store.get_status()

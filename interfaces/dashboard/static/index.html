@@ -3659,6 +3659,143 @@
             text-align: center;
         }
 
+        /* CRM */
+        .crm-section { margin-bottom: 2rem; }
+        .crm-stats-bar {
+            display: flex; gap: 1.2rem; font-size: 0.82rem;
+            color: var(--text-secondary); margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .crm-stats-bar span { color: var(--text-primary); font-weight: 600; }
+        .crm-search-bar {
+            display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .crm-search-bar input {
+            flex: 1; min-width: 180px; padding: 0.4rem 0.6rem;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--text-primary); font-size: 0.85rem;
+        }
+        .crm-search-bar button {
+            padding: 0.4rem 0.8rem; border: 1px solid var(--border);
+            border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+            background: var(--bg-secondary); color: var(--text-primary);
+        }
+        .crm-search-bar button:hover { background: var(--bg-tertiary); }
+        .crm-search-bar button.primary {
+            background: var(--primary); border-color: var(--primary); color: #fff;
+        }
+        .crm-search-bar button.primary:hover { opacity: 0.9; }
+        .crm-layout {
+            display: grid; grid-template-columns: 1fr 1.4fr; gap: 1rem;
+        }
+        @media (max-width: 800px) {
+            .crm-layout { grid-template-columns: 1fr; }
+        }
+        .crm-customer-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 600px; overflow-y: auto; }
+        .crm-customer-card {
+            padding: 0.6rem 0.8rem; background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .crm-customer-card:hover, .crm-customer-card.selected {
+            border-color: var(--primary);
+        }
+        .crm-customer-card .crm-card-name {
+            font-weight: 600; font-size: 0.9rem; color: var(--text-primary);
+        }
+        .crm-customer-card .crm-card-meta {
+            font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;
+        }
+        .crm-tag {
+            display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.4rem;
+            border-radius: 3px; background: rgba(59,130,246,0.2); color: #60a5fa;
+            margin-right: 0.3rem; margin-top: 0.2rem;
+        }
+        .crm-profile-panel {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 6px; padding: 1rem; min-height: 200px;
+        }
+        .crm-profile-panel h3 { margin: 0 0 0.8rem 0; font-size: 1rem; }
+        .crm-profile-section { margin-bottom: 1rem; }
+        .crm-profile-section h4 {
+            font-size: 0.8rem; color: var(--text-secondary);
+            margin: 0 0 0.4rem 0; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .crm-profile-field {
+            font-size: 0.82rem; color: var(--text-primary); margin-bottom: 0.2rem;
+        }
+        .crm-profile-field label { color: var(--text-secondary); margin-right: 0.3rem; }
+        .crm-note-item {
+            padding: 0.4rem 0.6rem; background: var(--bg-tertiary);
+            border-radius: 4px; margin-bottom: 0.4rem; font-size: 0.8rem;
+        }
+        .crm-note-item .crm-note-meta {
+            font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.15rem;
+        }
+        .crm-note-item .crm-note-del {
+            float: right; cursor: pointer; color: var(--text-tertiary);
+            font-size: 0.7rem;
+        }
+        .crm-note-item .crm-note-del:hover { color: #f87171; }
+        .crm-add-note-row {
+            display: flex; gap: 0.4rem; margin-top: 0.5rem;
+        }
+        .crm-add-note-row input {
+            flex: 1; padding: 0.3rem 0.5rem; font-size: 0.8rem;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--text-primary);
+        }
+        .crm-add-note-row select {
+            padding: 0.3rem 0.4rem; font-size: 0.75rem;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--text-primary);
+        }
+        .crm-add-note-row button {
+            padding: 0.3rem 0.6rem; font-size: 0.8rem; cursor: pointer;
+            background: var(--primary); border: none; border-radius: 4px; color: #fff;
+        }
+        .crm-add-form {
+            display: none; background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.8rem; margin-bottom: 1rem;
+        }
+        .crm-add-form.visible { display: block; }
+        .crm-add-form .crm-form-row {
+            display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;
+        }
+        .crm-add-form input, .crm-add-form select {
+            flex: 1; min-width: 140px; padding: 0.35rem 0.5rem; font-size: 0.82rem;
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--text-primary);
+        }
+        .crm-add-form .crm-form-actions {
+            display: flex; gap: 0.5rem; justify-content: flex-end;
+        }
+        .crm-add-form .crm-form-actions button {
+            padding: 0.35rem 0.8rem; font-size: 0.8rem; cursor: pointer;
+            border-radius: 4px; border: 1px solid var(--border);
+            background: var(--bg-secondary); color: var(--text-primary);
+        }
+        .crm-add-form .crm-form-actions button.primary {
+            background: var(--primary); border-color: var(--primary); color: #fff;
+        }
+        .crm-vehicle-item, .crm-record-item {
+            padding: 0.3rem 0.5rem; background: var(--bg-tertiary);
+            border-radius: 4px; margin-bottom: 0.3rem; font-size: 0.78rem;
+        }
+        .crm-profile-actions {
+            display: flex; gap: 0.5rem; margin-top: 0.8rem;
+        }
+        .crm-profile-actions button {
+            padding: 0.3rem 0.7rem; font-size: 0.78rem; cursor: pointer;
+            border-radius: 4px; border: 1px solid var(--border);
+            background: var(--bg-secondary); color: var(--text-primary);
+        }
+        .crm-profile-actions button.danger { border-color: #7f1d1d; color: #f87171; }
+        .crm-profile-actions button.danger:hover { background: #7f1d1d; color: #fff; }
+        .crm-empty {
+            color: var(--text-tertiary); font-size: 0.85rem;
+            padding: 1rem; text-align: center;
+        }
+
         /* Service Records */
         .svc-section {
             margin-bottom: 2rem;
@@ -6484,6 +6621,55 @@
             </div>
         </section>
 
+        <section class="crm-section" data-panel-id="crm">
+            <h2>Customer CRM</h2>
+
+            <div class="crm-stats-bar" id="crm-stats-bar">
+                Customers: <span id="crm-stat-total">0</span> &middot;
+                This Month: <span id="crm-stat-month">0</span> &middot;
+                Notes: <span id="crm-stat-notes">0</span>
+            </div>
+
+            <div class="crm-search-bar">
+                <input type="text" id="crm-search-input" placeholder="Search name, phone, email, vehicle..." onkeydown="if(event.key==='Enter') crmSearch()">
+                <button class="primary" onclick="crmSearch()">Search</button>
+                <button onclick="crmShowAll()">Show All</button>
+                <button onclick="crmToggleAddForm()">+ Add</button>
+            </div>
+
+            <div class="crm-add-form" id="crm-add-form">
+                <div class="crm-form-row">
+                    <input type="text" id="crm-add-name" placeholder="Full Name *">
+                    <input type="text" id="crm-add-phone" placeholder="Phone">
+                </div>
+                <div class="crm-form-row">
+                    <input type="email" id="crm-add-email" placeholder="Email">
+                    <input type="text" id="crm-add-address" placeholder="Address">
+                </div>
+                <div class="crm-form-row">
+                    <select id="crm-add-contact-pref">
+                        <option value="phone">Prefer: Phone</option>
+                        <option value="text">Prefer: Text</option>
+                        <option value="email">Prefer: Email</option>
+                    </select>
+                    <input type="text" id="crm-add-tags" placeholder="Tags (comma-separated)">
+                </div>
+                <div class="crm-form-actions">
+                    <button onclick="crmToggleAddForm()">Cancel</button>
+                    <button class="primary" onclick="crmCreateCustomer()">Add Customer</button>
+                </div>
+            </div>
+
+            <div class="crm-layout">
+                <div class="crm-customer-list" id="crm-customer-list">
+                    <div class="crm-empty">No customers yet.</div>
+                </div>
+                <div class="crm-profile-panel" id="crm-profile-panel">
+                    <div class="crm-empty">Select a customer to view profile.</div>
+                </div>
+            </div>
+        </section>
+
         <section class="svc-section" data-panel-id="service-records">
             <h2>Service Records</h2>
 
@@ -7251,6 +7437,7 @@
             { id: 'tts', name: 'Voice Synthesis' },
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
+            { id: 'crm', name: 'Customer CRM' },
             { id: 'service-records', name: 'Service Records' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
@@ -7553,6 +7740,16 @@
                     if (!data.ok) console.warn("Service record delete failed");
                 } else if (data.type === "service_record_pdf_result") {
                     handleServiceRecordPdf(data);
+                } else if (data.type === "crm_status") {
+                    handleCrmStatus(data);
+                } else if (data.type === "crm_search_result") {
+                    handleCrmSearchResult(data);
+                } else if (data.type === "crm_profile_result") {
+                    handleCrmProfileResult(data);
+                } else if (data.type === "crm_customer_deleted") {
+                    if (data.ok) crmSelectedId = null;
+                } else if (data.type === "crm_note_deleted") {
+                    // handled by broadcast
                 } else if (data.type === "knowledge_status") {
                     handleKnowledgeStatus(data);
                 } else if (data.type === "knowledge_scan_result") {
@@ -10188,6 +10385,225 @@
                 console.warn("PDF generation failed:", data.error);
                 alert("PDF generation failed: " + (data.error || "Unknown error"));
             }
+        }
+
+        // ---------------------------------------------------------------
+        // Customer CRM
+        // ---------------------------------------------------------------
+        let crmCustomers = [];
+        let crmStatus = {};
+        let crmSelectedId = null;
+        let crmProfileData = null;
+
+        function handleCrmStatus(data) {
+            crmCustomers = data.customers || [];
+            crmStatus = data.status || {};
+            renderCrmStats();
+            renderCrmCustomerList(crmCustomers);
+            // If the selected customer was deleted, clear the profile
+            if (crmSelectedId && !crmCustomers.find(c => c.customer_id === crmSelectedId)) {
+                crmSelectedId = null;
+                crmProfileData = null;
+                document.getElementById('crm-profile-panel').innerHTML =
+                    '<div class="crm-empty">Select a customer to view profile.</div>';
+            }
+            // Reload profile if selected
+            if (crmSelectedId) crmLoadProfile(crmSelectedId);
+        }
+
+        function renderCrmStats() {
+            const s = crmStatus;
+            document.getElementById('crm-stat-total').textContent = s.total_customers || 0;
+            document.getElementById('crm-stat-month').textContent = s.customers_this_month || 0;
+            document.getElementById('crm-stat-notes').textContent = s.total_notes || 0;
+        }
+
+        function renderCrmCustomerList(customers) {
+            const el = document.getElementById('crm-customer-list');
+            if (!customers.length) {
+                el.innerHTML = '<div class="crm-empty">No customers found.</div>';
+                return;
+            }
+            el.innerHTML = customers.map(c => {
+                const selected = c.customer_id === crmSelectedId ? ' selected' : '';
+                const tags = (c.tags || []).map(t =>
+                    `<span class="crm-tag">${esc(t)}</span>`
+                ).join('');
+                const contact = [c.phone, c.email].filter(Boolean).join(' · ');
+                const lastContact = c.last_contact
+                    ? new Date(c.last_contact).toLocaleDateString()
+                    : '';
+                return `<div class="crm-customer-card${selected}" onclick="crmSelectCustomer('${c.customer_id}')">
+                    <div class="crm-card-name">${esc(c.name)}</div>
+                    <div class="crm-card-meta">${esc(contact)}${lastContact ? ' · Last: ' + lastContact : ''}</div>
+                    ${tags ? '<div>' + tags + '</div>' : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function crmSearch() {
+            const q = document.getElementById('crm-search-input').value.trim();
+            if (!q || !ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'crm_customer_search', query: q }));
+        }
+
+        function crmShowAll() {
+            document.getElementById('crm-search-input').value = '';
+            renderCrmCustomerList(crmCustomers);
+        }
+
+        function handleCrmSearchResult(data) {
+            renderCrmCustomerList(data.customers || []);
+        }
+
+        function crmSelectCustomer(id) {
+            crmSelectedId = id;
+            // Highlight the selected card
+            document.querySelectorAll('.crm-customer-card').forEach(card => {
+                card.classList.toggle('selected', card.onclick.toString().includes(id));
+            });
+            crmLoadProfile(id);
+        }
+
+        function crmLoadProfile(id) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'crm_customer_profile', customer_id: id }));
+        }
+
+        function handleCrmProfileResult(data) {
+            crmProfileData = data;
+            renderCrmProfile(data);
+        }
+
+        function renderCrmProfile(profile) {
+            const panel = document.getElementById('crm-profile-panel');
+            if (!profile || !profile.customer) {
+                panel.innerHTML = '<div class="crm-empty">Customer not found.</div>';
+                return;
+            }
+            const c = profile.customer;
+            const notes = profile.notes || [];
+            const vehicles = profile.vehicles || [];
+            const records = profile.records || [];
+
+            const tagHtml = (c.tags || []).map(t =>
+                `<span class="crm-tag">${esc(t)}</span>`
+            ).join('');
+
+            const notesHtml = notes.length
+                ? notes.map(n => `<div class="crm-note-item">
+                    <span class="crm-note-del" onclick="crmDeleteNote('${n.note_id}')" title="Delete note">x</span>
+                    ${esc(n.content)}
+                    <div class="crm-note-meta">${esc(n.category)} · ${new Date(n.created_at).toLocaleString()}</div>
+                </div>`).join('')
+                : '<div class="crm-empty">No notes yet.</div>';
+
+            const vehiclesHtml = vehicles.length
+                ? vehicles.map(v =>
+                    `<div class="crm-vehicle-item">${esc(v.year || '')} ${esc(v.make || '')} ${esc(v.model || '')}${v.vin ? ' · VIN: ' + esc(v.vin) : ''}${v.mileage ? ' · ' + v.mileage.toLocaleString() + ' mi' : ''}</div>`
+                ).join('')
+                : '<div class="crm-empty">No vehicles linked.</div>';
+
+            const recordsHtml = records.length
+                ? records.map(r => {
+                    const d = r.service_date ? new Date(r.service_date).toLocaleDateString() : '';
+                    return `<div class="crm-record-item">${d ? d + ' · ' : ''}${esc(r.description || r.complaint || 'Service record')}${r.total_cost ? ' · $' + Number(r.total_cost).toFixed(2) : ''}</div>`;
+                }).join('')
+                : '<div class="crm-empty">No service records.</div>';
+
+            const contactPref = { phone: 'Phone', email: 'Email', text: 'Text' }[c.preferred_contact_method] || c.preferred_contact_method;
+
+            panel.innerHTML = `
+                <h3>${esc(c.name)}</h3>
+                <div class="crm-profile-section">
+                    <h4>Contact Info</h4>
+                    <div class="crm-profile-field"><label>Phone:</label> ${esc(c.phone || '—')}</div>
+                    <div class="crm-profile-field"><label>Email:</label> ${esc(c.email || '—')}</div>
+                    <div class="crm-profile-field"><label>Address:</label> ${esc(c.address || '—')}</div>
+                    <div class="crm-profile-field"><label>Preferred:</label> ${esc(contactPref)}</div>
+                    ${tagHtml ? '<div style="margin-top:0.3rem">' + tagHtml + '</div>' : ''}
+                    ${c.notes_summary ? '<div class="crm-profile-field" style="margin-top:0.3rem"><label>Notes:</label> ' + esc(c.notes_summary) + '</div>' : ''}
+                </div>
+                <div class="crm-profile-section">
+                    <h4>Vehicles</h4>
+                    ${vehiclesHtml}
+                </div>
+                <div class="crm-profile-section">
+                    <h4>Service History (Last 10)</h4>
+                    ${recordsHtml}
+                </div>
+                <div class="crm-profile-section">
+                    <h4>Notes</h4>
+                    ${notesHtml}
+                    <div class="crm-add-note-row">
+                        <input type="text" id="crm-note-input" placeholder="Add a note..." onkeydown="if(event.key==='Enter') crmAddNote('${c.customer_id}')">
+                        <select id="crm-note-category">
+                            <option value="general">General</option>
+                            <option value="service">Service</option>
+                            <option value="followup">Follow-up</option>
+                            <option value="reminder">Reminder</option>
+                        </select>
+                        <button onclick="crmAddNote('${c.customer_id}')">Add</button>
+                    </div>
+                </div>
+                <div class="crm-profile-actions">
+                    <button class="danger" onclick="crmDeleteCustomer('${c.customer_id}')">Delete Customer</button>
+                </div>
+            `;
+        }
+
+        function crmCreateCustomer() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const name = document.getElementById('crm-add-name').value.trim();
+            if (!name) { alert('Name is required.'); return; }
+            const tagsRaw = document.getElementById('crm-add-tags').value.trim();
+            const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+            ws.send(JSON.stringify({
+                type: 'crm_customer_create',
+                name: name,
+                phone: document.getElementById('crm-add-phone').value.trim(),
+                email: document.getElementById('crm-add-email').value.trim(),
+                address: document.getElementById('crm-add-address').value.trim(),
+                preferred_contact_method: document.getElementById('crm-add-contact-pref').value,
+                tags: tags,
+            }));
+            // Clear form
+            document.getElementById('crm-add-name').value = '';
+            document.getElementById('crm-add-phone').value = '';
+            document.getElementById('crm-add-email').value = '';
+            document.getElementById('crm-add-address').value = '';
+            document.getElementById('crm-add-tags').value = '';
+            document.getElementById('crm-add-form').classList.remove('visible');
+        }
+
+        function crmDeleteCustomer(id) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm('Delete this customer and all their notes?')) return;
+            ws.send(JSON.stringify({ type: 'crm_customer_delete', customer_id: id }));
+        }
+
+        function crmAddNote(customerId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const input = document.getElementById('crm-note-input');
+            const content = input.value.trim();
+            if (!content) return;
+            const category = document.getElementById('crm-note-category').value;
+            ws.send(JSON.stringify({
+                type: 'crm_note_create',
+                customer_id: customerId,
+                content: content,
+                category: category,
+            }));
+            input.value = '';
+        }
+
+        function crmDeleteNote(noteId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'crm_note_delete', note_id: noteId }));
+        }
+
+        function crmToggleAddForm() {
+            document.getElementById('crm-add-form').classList.toggle('visible');
         }
 
         // ---------------------------------------------------------------
