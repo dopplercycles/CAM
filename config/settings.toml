@@ -202,6 +202,15 @@ from_address = "cam@dopplercycles.com"
 to_address = ""
 use_tls = true
 
+[appointments]
+db_path = "data/appointments.db"
+home_lat = 45.4976
+home_lon = -122.4302
+avg_speed_mph = 30.0
+road_factor = 1.4
+reminder_check_interval = 300
+default_duration = 60
+
 [knowledge]
 db_path = "data/knowledge_ingest.db"
 inbox_dir = "data/knowledge/inbox"

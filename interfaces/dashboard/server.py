@@ -57,6 +57,7 @@ from agents.business_agent import BusinessAgent, BusinessStore
 from tools.doppler.service_records import ServiceRecordStore
 from tools.doppler.diagnostics import DiagnosticEngine
 from tools.doppler.crm import CRMStore
+from tools.doppler.scheduler_appointments import AppointmentScheduler
 from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
@@ -522,6 +523,24 @@ crm_store = CRMStore(
     on_change=broadcast_crm_status,
 )
 crm_store.import_from_business_store(business_store)
+
+async def broadcast_appointment_schedule_status():
+    """Push current appointment schedule to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "appointment_schedule_status",
+        **appointment_scheduler.to_broadcast_dict(),
+    })
+
+# Appointment scheduler — separate SQLite DB for enriched scheduling
+_appt_cfg = getattr(config, "appointments", None)
+appointment_scheduler = AppointmentScheduler(
+    db_path=getattr(_appt_cfg, "db_path", "data/appointments.db"),
+    on_change=broadcast_appointment_schedule_status,
+    home_lat=getattr(_appt_cfg, "home_lat", 45.4976),
+    home_lon=getattr(_appt_cfg, "home_lon", -122.4302),
+    avg_speed_mph=getattr(_appt_cfg, "avg_speed_mph", 30.0),
+    road_factor=getattr(_appt_cfg, "road_factor", 1.4),
+)
 
 async def broadcast_diagnostics_status():
     """Push current diagnostic engine state to all connected dashboard browsers."""
@@ -1223,6 +1242,38 @@ async def knowledge_inbox_loop():
             logger.debug("Knowledge inbox loop error", exc_info=True)
 
 
+async def appointment_reminder_loop():
+    """Periodically check for upcoming appointments and emit reminder notifications."""
+    interval = getattr(getattr(config, "appointments", None), "reminder_check_interval", 300)
+    while True:
+        try:
+            await asyncio.sleep(interval)
+            pending = appointment_scheduler.get_pending_reminders()
+            for item in pending:
+                appt = item["appointment"]
+                rtype = item["reminder_type"]
+                hours = item["hours_until"]
+                if rtype == "24hr":
+                    title = "Appointment Tomorrow"
+                    body = (
+                        f"{appt['customer_name']} — {appt['service_type']} "
+                        f"at {appt['time_slot']} ({appt['location_address'] or 'no address'})"
+                    )
+                else:
+                    title = "Appointment in ~1 Hour"
+                    body = (
+                        f"{appt['customer_name']} — {appt['service_type']} "
+                        f"at {appt['time_slot']} ({appt['location_address'] or 'no address'})"
+                    )
+                notification_manager.emit("info", title, body, "appointment")
+                appointment_scheduler.mark_reminder_sent(appt["appointment_id"], rtype)
+                logger.info("Sent %s reminder for appointment %s", rtype, appt["appointment_id"][:8])
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            logger.debug("Appointment reminder loop error", exc_info=True)
+
+
 # ---------------------------------------------------------------------------
 # App lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
@@ -1240,7 +1291,9 @@ async def lifespan(app: FastAPI):
     webhook_retry_task = asyncio.create_task(webhook_manager.process_retries())
     pipeline_check_task = asyncio.create_task(pipeline_progress_loop())
     knowledge_inbox_task = asyncio.create_task(knowledge_inbox_loop())
+    appt_reminder_task = asyncio.create_task(appointment_reminder_loop())
     logger.info("Orchestrator loop started as background task")
+    logger.info("Appointment reminder loop started")
     logger.info("Scheduler loop started as background task")
     logger.info("Pipeline progress loop started as background task")
     logger.info("Webhook retry loop started as background task")
@@ -1312,6 +1365,7 @@ async def lifespan(app: FastAPI):
     webhook_retry_task.cancel()
     pipeline_check_task.cancel()
     knowledge_inbox_task.cancel()
+    appt_reminder_task.cancel()
 
     # 7. Close all databases
     knowledge_ingest.close()
@@ -1324,6 +1378,7 @@ async def lifespan(app: FastAPI):
     business_store.close()
     service_store.close()
     crm_store.close()
+    appointment_scheduler.close()
     diagnostic_engine.close()
     report_engine.close()
     security_audit_log.close()
@@ -2436,6 +2491,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "crm_status",
         **crm_store.to_broadcast_dict(),
+    })
+
+    # Send current appointment schedule
+    await websocket.send_json({
+        "type": "appointment_schedule_status",
+        **appointment_scheduler.to_broadcast_dict(),
     })
 
     # Send current diagnostic engine state
@@ -4092,6 +4153,118 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 if removed:
                     await broadcast_crm_status()
+
+            # --- Appointment Scheduler handlers ---
+            elif msg.get("type") == "appt_schedule_book":
+                appt = appointment_scheduler.book(
+                    customer_id=msg.get("customer_id", ""),
+                    customer_name=msg.get("customer_name", ""),
+                    vehicle_id=msg.get("vehicle_id", ""),
+                    vehicle_summary=msg.get("vehicle_summary", ""),
+                    date=msg.get("date", ""),
+                    time_slot=msg.get("time_slot", ""),
+                    duration_estimate=msg.get("duration_estimate", 60),
+                    location_address=msg.get("location_address", ""),
+                    location_lat=msg.get("location_lat", 0.0),
+                    location_lon=msg.get("location_lon", 0.0),
+                    service_type=msg.get("service_type", "diagnostic"),
+                    estimated_cost=msg.get("estimated_cost", 0.0),
+                    notes=msg.get("notes", ""),
+                    metadata=msg.get("metadata"),
+                )
+                event_logger.info("appointment", f"Booked: {appt.customer_name} on {appt.date} {appt.time_slot}")
+                await websocket.send_json({
+                    "type": "appt_schedule_booked",
+                    "ok": True,
+                    "appointment": appt.to_dict(),
+                })
+                await broadcast_appointment_schedule_status()
+
+            elif msg.get("type") == "appt_schedule_reschedule":
+                appt = appointment_scheduler.reschedule(
+                    appointment_id=msg.get("appointment_id", ""),
+                    new_date=msg.get("new_date"),
+                    new_time_slot=msg.get("new_time_slot"),
+                    new_duration=msg.get("new_duration"),
+                )
+                if appt:
+                    event_logger.info("appointment", f"Rescheduled: {appt.customer_name} to {appt.date} {appt.time_slot}")
+                await websocket.send_json({
+                    "type": "appt_schedule_rescheduled",
+                    "ok": appt is not None,
+                    "appointment": appt.to_dict() if appt else None,
+                })
+                if appt:
+                    await broadcast_appointment_schedule_status()
+
+            elif msg.get("type") == "appt_schedule_cancel":
+                appt = appointment_scheduler.cancel(
+                    appointment_id=msg.get("appointment_id", ""),
+                    reason=msg.get("reason", ""),
+                )
+                if appt:
+                    event_logger.info("appointment", f"Cancelled: {appt.customer_name} on {appt.date}")
+                await websocket.send_json({
+                    "type": "appt_schedule_cancelled",
+                    "ok": appt is not None,
+                    "appointment": appt.to_dict() if appt else None,
+                })
+                if appt:
+                    await broadcast_appointment_schedule_status()
+
+            elif msg.get("type") == "appt_schedule_update":
+                aid = msg.get("appointment_id", "")
+                updates = {k: v for k, v in msg.items()
+                           if k in ("customer_name", "vehicle_id", "vehicle_summary",
+                                    "date", "time_slot", "duration_estimate",
+                                    "location_address", "location_lat", "location_lon",
+                                    "service_type", "status", "estimated_cost", "notes")}
+                appt = appointment_scheduler.update_appointment(aid, **updates)
+                await websocket.send_json({
+                    "type": "appt_schedule_updated",
+                    "ok": appt is not None,
+                    "appointment": appt.to_dict() if appt else None,
+                })
+                if appt:
+                    await broadcast_appointment_schedule_status()
+
+            elif msg.get("type") == "appt_schedule_delete":
+                aid = msg.get("appointment_id", "")
+                removed = appointment_scheduler.remove_appointment(aid)
+                await websocket.send_json({
+                    "type": "appt_schedule_deleted",
+                    "ok": removed,
+                    "appointment_id": aid,
+                })
+                if removed:
+                    await broadcast_appointment_schedule_status()
+
+            elif msg.get("type") == "appt_schedule_check_availability":
+                result = appointment_scheduler.check_availability(
+                    target_date=msg.get("date", ""),
+                    time_slot=msg.get("time_slot", ""),
+                    duration_minutes=msg.get("duration_minutes", 60),
+                )
+                await websocket.send_json({
+                    "type": "appt_availability_result",
+                    **result,
+                })
+
+            elif msg.get("type") == "appt_schedule_day":
+                day_appts = appointment_scheduler.get_day_schedule(msg.get("date", ""))
+                await websocket.send_json({
+                    "type": "appt_day_schedule",
+                    "date": msg.get("date", ""),
+                    "appointments": [a.to_dict() for a in day_appts],
+                })
+
+            elif msg.get("type") == "appt_schedule_week":
+                week = appointment_scheduler.get_week_view(msg.get("start_date", ""))
+                await websocket.send_json({
+                    "type": "appt_week_view",
+                    "start_date": msg.get("start_date", ""),
+                    "week": week,
+                })
 
             # --- Scheduled Reports handlers ---
             elif msg.get("type") == "reports_generate":

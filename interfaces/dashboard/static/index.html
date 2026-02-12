@@ -3796,6 +3796,125 @@
             padding: 1rem; text-align: center;
         }
 
+        /* Appointment Calendar */
+        .appt-cal-section { margin-bottom: 2rem; }
+        .appt-cal-header {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.5rem 0; flex-wrap: wrap;
+        }
+        .appt-cal-header h2 { margin: 0; flex-shrink: 0; }
+        .appt-cal-nav { display: flex; gap: 0.25rem; }
+        .appt-cal-nav button, .appt-cal-toggle button {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            color: var(--text-primary); padding: 0.25rem 0.6rem; border-radius: 4px;
+            cursor: pointer; font-size: 0.8rem;
+        }
+        .appt-cal-nav button:hover, .appt-cal-toggle button:hover { background: var(--border); }
+        .appt-cal-toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .appt-cal-date-label { font-size: 0.95rem; color: var(--text-secondary); min-width: 160px; }
+        .appt-cal-stats {
+            display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-secondary);
+            margin-left: auto;
+        }
+        .appt-cal-stats span { color: var(--accent); font-weight: 600; }
+
+        /* Week grid */
+        .appt-week-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr);
+            gap: 4px; margin-top: 0.5rem;
+        }
+        .appt-day-col {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 6px; min-height: 180px; padding: 0.4rem;
+        }
+        .appt-day-col-header {
+            font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
+            text-align: center; padding-bottom: 0.3rem;
+            border-bottom: 1px solid var(--border); margin-bottom: 0.3rem;
+        }
+        .appt-day-col-header.today { color: var(--accent); }
+        .appt-day-col-date { font-size: 0.7rem; color: var(--text-tertiary); }
+
+        /* Day view */
+        .appt-day-timeline { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+        /* Appointment slot (shared) */
+        .appt-slot {
+            padding: 0.4rem 0.5rem; border-radius: 4px; cursor: pointer;
+            font-size: 0.78rem; border-left: 3px solid transparent;
+            margin-bottom: 3px; transition: background 0.15s;
+        }
+        .appt-slot:hover { filter: brightness(1.15); }
+        .appt-slot-time { font-weight: 600; }
+        .appt-slot-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .appt-slot-type { font-size: 0.7rem; opacity: 0.8; }
+        .appt-slot-travel {
+            font-size: 0.68rem; color: #d97706; font-style: italic; margin-top: 1px;
+        }
+
+        /* Service type colors */
+        .appt-slot.type-diagnostic { background: #1e3a5f; border-left-color: #3b82f6; }
+        .appt-slot.type-routine_maintenance { background: #14532d; border-left-color: #22c55e; }
+        .appt-slot.type-repair { background: #451a03; border-left-color: #f59e0b; }
+        .appt-slot.type-consultation { background: #3b0764; border-left-color: #a855f7; }
+        .appt-slot.type-pickup_delivery { background: #4a0d2b; border-left-color: #ec4899; }
+
+        /* Detailed slot (day view) */
+        .appt-slot-detail { padding: 0.6rem 0.75rem; font-size: 0.85rem; }
+        .appt-slot-detail .appt-slot-meta { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem; }
+        .appt-slot-detail .appt-slot-actions { margin-top: 0.4rem; display: flex; gap: 0.4rem; }
+        .appt-slot-detail .appt-slot-actions button {
+            font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 3px;
+            border: 1px solid var(--border); background: var(--bg-secondary);
+            color: var(--text-primary); cursor: pointer;
+        }
+        .appt-slot-detail .appt-slot-actions button:hover { background: var(--border); }
+        .appt-slot-detail .appt-slot-actions button.danger { border-color: #7f1d1d; color: #f87171; }
+
+        /* Book / Reschedule modal */
+        .appt-modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .appt-modal-overlay.active { display: flex; }
+        .appt-modal {
+            background: var(--bg-primary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1.25rem; width: 420px; max-width: 95vw;
+            max-height: 85vh; overflow-y: auto;
+        }
+        .appt-modal h3 { margin: 0 0 0.75rem; }
+        .appt-modal label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; }
+        .appt-modal input, .appt-modal select, .appt-modal textarea {
+            width: 100%; padding: 0.35rem 0.5rem; border: 1px solid var(--border);
+            background: var(--bg-secondary); color: var(--text-primary);
+            border-radius: 4px; font-size: 0.85rem; margin-top: 0.15rem;
+            box-sizing: border-box;
+        }
+        .appt-modal textarea { height: 60px; resize: vertical; }
+        .appt-modal-actions { margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .appt-modal-actions button {
+            padding: 0.35rem 0.8rem; border-radius: 4px; cursor: pointer;
+            border: 1px solid var(--border); background: var(--bg-secondary);
+            color: var(--text-primary); font-size: 0.85rem;
+        }
+        .appt-modal-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .appt-cal-empty { color: var(--text-tertiary); font-size: 0.78rem; text-align: center; padding: 1rem 0; }
+        .appt-cal-book-btn {
+            font-size: 0.7rem; color: var(--accent); cursor: pointer;
+            text-align: center; padding: 0.2rem; opacity: 0.6;
+        }
+        .appt-cal-book-btn:hover { opacity: 1; }
+
+        /* Responsive: collapse week grid on small screens */
+        @media (max-width: 900px) {
+            .appt-week-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .appt-week-grid { grid-template-columns: repeat(2, 1fr); }
+            .appt-cal-header { flex-direction: column; align-items: flex-start; }
+            .appt-cal-stats { margin-left: 0; }
+        }
+
         /* Service Records */
         .svc-section {
             margin-bottom: 2rem;
@@ -6670,6 +6789,83 @@
             </div>
         </section>
 
+        <section class="appt-cal-section" data-panel-id="appointment-calendar">
+            <div class="appt-cal-header">
+                <h2>Appointment Calendar</h2>
+                <div class="appt-cal-nav">
+                    <button onclick="apptCalPrev()" title="Previous">&larr;</button>
+                    <button onclick="apptCalToday()">Today</button>
+                    <button onclick="apptCalNext()" title="Next">&rarr;</button>
+                </div>
+                <div class="appt-cal-date-label" id="appt-cal-date-label"></div>
+                <div class="appt-cal-stats">
+                    Today: <span id="appt-stat-today">0</span> &middot;
+                    This Week: <span id="appt-stat-week">0</span> &middot;
+                    Upcoming: <span id="appt-stat-upcoming">0</span>
+                </div>
+                <div class="appt-cal-toggle">
+                    <button id="appt-view-week" class="active" onclick="apptCalSetView('week')">Week</button>
+                    <button id="appt-view-day" onclick="apptCalSetView('day')">Day</button>
+                </div>
+                <button onclick="openBookModal()" style="margin-left:0.5rem;background:var(--accent);color:#fff;border:1px solid var(--accent);padding:0.25rem 0.6rem;border-radius:4px;cursor:pointer;font-size:0.8rem;">+ Book</button>
+            </div>
+            <div id="appt-cal-body"></div>
+        </section>
+
+        <!-- Book / Reschedule Modal -->
+        <div class="appt-modal-overlay" id="appt-modal-overlay">
+            <div class="appt-modal" id="appt-modal">
+                <h3 id="appt-modal-title">Book Appointment</h3>
+                <label>Customer
+                    <select id="appt-modal-customer">
+                        <option value="">-- Select --</option>
+                    </select>
+                </label>
+                <label>Vehicle Summary
+                    <input type="text" id="appt-modal-vehicle" placeholder="e.g. 2018 Ducati Monster 821">
+                </label>
+                <label>Date
+                    <input type="date" id="appt-modal-date">
+                </label>
+                <label>Time
+                    <input type="time" id="appt-modal-time">
+                </label>
+                <label>Duration (minutes)
+                    <input type="number" id="appt-modal-duration" value="60" min="15" step="15">
+                </label>
+                <label>Service Type
+                    <select id="appt-modal-service-type">
+                        <option value="diagnostic">Diagnostic</option>
+                        <option value="routine_maintenance">Routine Maintenance</option>
+                        <option value="repair">Repair</option>
+                        <option value="consultation">Consultation</option>
+                        <option value="pickup_delivery">Pickup / Delivery</option>
+                    </select>
+                </label>
+                <label>Location Address
+                    <input type="text" id="appt-modal-address" placeholder="Street address">
+                </label>
+                <label>Latitude
+                    <input type="number" id="appt-modal-lat" step="0.0001" value="0">
+                </label>
+                <label>Longitude
+                    <input type="number" id="appt-modal-lon" step="0.0001" value="0">
+                </label>
+                <label>Estimated Cost ($)
+                    <input type="number" id="appt-modal-cost" step="0.01" value="0">
+                </label>
+                <label>Notes
+                    <textarea id="appt-modal-notes" placeholder="Additional notes..."></textarea>
+                </label>
+                <input type="hidden" id="appt-modal-id">
+                <input type="hidden" id="appt-modal-mode" value="book">
+                <div class="appt-modal-actions">
+                    <button onclick="closeApptModal()">Cancel</button>
+                    <button class="primary" onclick="submitApptModal()">Save</button>
+                </div>
+            </div>
+        </div>
+
         <section class="svc-section" data-panel-id="service-records">
             <h2>Service Records</h2>
 
@@ -7438,6 +7634,7 @@
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
             { id: 'crm', name: 'Customer CRM' },
+            { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
@@ -7750,6 +7947,21 @@
                     if (data.ok) crmSelectedId = null;
                 } else if (data.type === "crm_note_deleted") {
                     // handled by broadcast
+
+                // --- Appointment Calendar ---
+                } else if (data.type === "appointment_schedule_status") {
+                    handleAppointmentScheduleStatus(data);
+                } else if (data.type === "appt_schedule_booked" || data.type === "appt_schedule_rescheduled" || data.type === "appt_schedule_cancelled" || data.type === "appt_schedule_updated") {
+                    // individual confirmations — full state comes via broadcast
+                } else if (data.type === "appt_schedule_deleted") {
+                    // handled by broadcast
+                } else if (data.type === "appt_availability_result") {
+                    handleApptAvailabilityResult(data);
+                } else if (data.type === "appt_week_view") {
+                    handleApptWeekViewResponse(data);
+                } else if (data.type === "appt_day_schedule") {
+                    handleApptDayScheduleResponse(data);
+
                 } else if (data.type === "knowledge_status") {
                     handleKnowledgeStatus(data);
                 } else if (data.type === "knowledge_scan_result") {
@@ -10604,6 +10816,349 @@
 
         function crmToggleAddForm() {
             document.getElementById('crm-add-form').classList.toggle('visible');
+        }
+
+        // ---------------------------------------------------------------
+        // Appointment Calendar
+        // ---------------------------------------------------------------
+        // Local HTML-escape helper (global esc() defined later in script)
+        function apptEsc(s) {
+            if (!s) return '';
+            const d = document.createElement('div');
+            d.textContent = String(s);
+            return d.innerHTML;
+        }
+        let apptCalView = 'week';  // 'week' or 'day'
+        let apptCalDate = new Date();
+        let apptCalAllAppts = [];
+        let apptCalWeek = {};
+        let apptCalStatus = {};
+
+        function handleAppointmentScheduleStatus(data) {
+            apptCalAllAppts = data.appointments || [];
+            apptCalStatus = data.status || {};
+            apptCalWeek = data.current_week || {};
+            renderApptCalStats();
+            renderApptCalendar();
+        }
+
+        function renderApptCalStats() {
+            const el = id => document.getElementById(id);
+            if (el('appt-stat-today')) el('appt-stat-today').textContent = apptCalStatus.today_count || 0;
+            if (el('appt-stat-week')) el('appt-stat-week').textContent = apptCalStatus.this_week_count || 0;
+            if (el('appt-stat-upcoming')) el('appt-stat-upcoming').textContent = apptCalStatus.upcoming || 0;
+        }
+
+        function getMonday(d) {
+            const dt = new Date(d);
+            const day = dt.getDay();
+            const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(dt.setDate(diff));
+        }
+
+        function fmtDate(d) {
+            return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+
+        function renderApptCalendar() {
+            const label = document.getElementById('appt-cal-date-label');
+            if (apptCalView === 'week') {
+                const mon = getMonday(apptCalDate);
+                const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+                if (label) label.textContent = fmtDate(mon) + '  to  ' + fmtDate(sun);
+                renderApptWeekView(mon);
+            } else {
+                if (label) label.textContent = apptCalDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                renderApptDayView(fmtDate(apptCalDate));
+            }
+            // Toggle button active state
+            const wBtn = document.getElementById('appt-view-week');
+            const dBtn = document.getElementById('appt-view-day');
+            if (wBtn) wBtn.classList.toggle('active', apptCalView === 'week');
+            if (dBtn) dBtn.classList.toggle('active', apptCalView === 'day');
+        }
+
+        function renderApptWeekView(monday) {
+            const body = document.getElementById('appt-cal-body');
+            if (!body) return;
+            const todayStr = fmtDate(new Date());
+            const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+            let html = '<div class="appt-week-grid">';
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(monday);
+                d.setDate(d.getDate() + i);
+                const ds = fmtDate(d);
+                const isToday = ds === todayStr;
+                const dayAppts = apptCalWeek[ds] || apptCalAllAppts.filter(a => a.date === ds && a.status !== 'cancelled');
+                dayAppts.sort((a,b) => (a.time_slot||'').localeCompare(b.time_slot||''));
+                html += '<div class="appt-day-col">';
+                html += `<div class="appt-day-col-header${isToday?' today':''}">${days[i]}<br><span class="appt-day-col-date">${ds.slice(5)}</span></div>`;
+                if (dayAppts.length === 0) {
+                    html += '<div class="appt-cal-empty">No appts</div>';
+                } else {
+                    dayAppts.forEach(a => { html += renderApptSlot(a); });
+                }
+                html += `<div class="appt-cal-book-btn" onclick="openBookModal('${ds}')">+ Add</div>`;
+                html += '</div>';
+            }
+            html += '</div>';
+            body.innerHTML = html;
+        }
+
+        function renderApptDayView(dateStr) {
+            const body = document.getElementById('appt-cal-body');
+            if (!body) return;
+            const dayAppts = apptCalWeek[dateStr] || apptCalAllAppts.filter(a => a.date === dateStr && a.status !== 'cancelled');
+            dayAppts.sort((a,b) => (a.time_slot||'').localeCompare(b.time_slot||''));
+            if (dayAppts.length === 0) {
+                body.innerHTML = '<div class="appt-cal-empty">No appointments scheduled for this day.</div>' +
+                    `<div class="appt-cal-book-btn" onclick="openBookModal('${dateStr}')" style="font-size:0.9rem;padding:0.5rem">+ Book Appointment</div>`;
+                return;
+            }
+            let html = '<div class="appt-day-timeline">';
+            dayAppts.forEach(a => { html += renderApptSlotDetailed(a); });
+            html += `<div class="appt-cal-book-btn" onclick="openBookModal('${dateStr}')" style="font-size:0.85rem;padding:0.5rem">+ Book Another</div>`;
+            html += '</div>';
+            body.innerHTML = html;
+        }
+
+        function renderApptSlot(a) {
+            const typeClass = 'type-' + (a.service_type || 'diagnostic');
+            let html = `<div class="appt-slot ${typeClass}" onclick="showApptDetail('${a.appointment_id}')" title="${a.customer_name} — ${a.service_type}">`;
+            html += `<div class="appt-slot-time">${a.time_slot || '??:??'}</div>`;
+            html += `<div class="appt-slot-name">${apptEsc(a.customer_name)}</div>`;
+            html += `<div class="appt-slot-type">${(a.service_type||'').replace('_',' ')}</div>`;
+            if (a.travel_minutes_from_prev > 0) {
+                html += `<div class="appt-slot-travel">${Math.round(a.travel_minutes_from_prev)} min travel</div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function renderApptSlotDetailed(a) {
+            const typeClass = 'type-' + (a.service_type || 'diagnostic');
+            let html = `<div class="appt-slot appt-slot-detail ${typeClass}">`;
+            html += `<div class="appt-slot-time">${a.time_slot || '??:??'} — ${a.duration_estimate || 60} min</div>`;
+            html += `<div class="appt-slot-name" style="font-size:1rem;font-weight:600">${apptEsc(a.customer_name)}</div>`;
+            if (a.vehicle_summary) html += `<div class="appt-slot-type">${apptEsc(a.vehicle_summary)}</div>`;
+            html += `<div class="appt-slot-type">${(a.service_type||'').replace('_',' ')}</div>`;
+            html += '<div class="appt-slot-meta">';
+            if (a.location_address) html += `Location: ${apptEsc(a.location_address)}<br>`;
+            if (a.estimated_cost > 0) html += `Est. Cost: $${Number(a.estimated_cost).toFixed(2)}<br>`;
+            if (a.notes) html += `Notes: ${apptEsc(a.notes)}<br>`;
+            html += `Status: ${a.status}`;
+            if (a.travel_minutes_from_prev > 0) {
+                html += ` &middot; <span style="color:#d97706">${Math.round(a.travel_minutes_from_prev)} min travel from prev</span>`;
+            }
+            html += '</div>';
+            html += '<div class="appt-slot-actions">';
+            html += `<button onclick="openRescheduleModal('${a.appointment_id}')">Reschedule</button>`;
+            if (a.status === 'scheduled' || a.status === 'confirmed') {
+                html += `<button onclick="apptUpdateStatus('${a.appointment_id}','confirmed')">Confirm</button>`;
+                html += `<button onclick="apptUpdateStatus('${a.appointment_id}','in_progress')">Start</button>`;
+            }
+            if (a.status === 'in_progress') {
+                html += `<button onclick="apptUpdateStatus('${a.appointment_id}','completed')">Complete</button>`;
+            }
+            html += `<button class="danger" onclick="cancelAppointment('${a.appointment_id}')">Cancel</button>`;
+            html += '</div></div>';
+            return html;
+        }
+
+        // Navigation
+        function apptCalPrev() {
+            if (apptCalView === 'week') {
+                apptCalDate.setDate(apptCalDate.getDate() - 7);
+            } else {
+                apptCalDate.setDate(apptCalDate.getDate() - 1);
+            }
+            // Request fresh data for the new range
+            if (apptCalView === 'week') {
+                const mon = getMonday(apptCalDate);
+                ws.send(JSON.stringify({ type: 'appt_schedule_week', start_date: fmtDate(mon) }));
+            }
+            renderApptCalendar();
+        }
+
+        function apptCalNext() {
+            if (apptCalView === 'week') {
+                apptCalDate.setDate(apptCalDate.getDate() + 7);
+            } else {
+                apptCalDate.setDate(apptCalDate.getDate() + 1);
+            }
+            if (apptCalView === 'week') {
+                const mon = getMonday(apptCalDate);
+                ws.send(JSON.stringify({ type: 'appt_schedule_week', start_date: fmtDate(mon) }));
+            }
+            renderApptCalendar();
+        }
+
+        function apptCalToday() {
+            apptCalDate = new Date();
+            if (apptCalView === 'week') {
+                const mon = getMonday(apptCalDate);
+                ws.send(JSON.stringify({ type: 'appt_schedule_week', start_date: fmtDate(mon) }));
+            }
+            renderApptCalendar();
+        }
+
+        function apptCalSetView(view) {
+            apptCalView = view;
+            if (view === 'week') {
+                const mon = getMonday(apptCalDate);
+                ws.send(JSON.stringify({ type: 'appt_schedule_week', start_date: fmtDate(mon) }));
+            }
+            renderApptCalendar();
+        }
+
+        function showApptDetail(id) {
+            // Switch to day view for the appointment's date
+            const appt = apptCalAllAppts.find(a => a.appointment_id === id);
+            if (appt) {
+                apptCalDate = new Date(appt.date + 'T00:00:00');
+                apptCalView = 'day';
+                renderApptCalendar();
+            }
+        }
+
+        // Booking modal
+        function openBookModal(dateStr) {
+            document.getElementById('appt-modal-mode').value = 'book';
+            document.getElementById('appt-modal-title').textContent = 'Book Appointment';
+            document.getElementById('appt-modal-id').value = '';
+            document.getElementById('appt-modal-date').value = dateStr || fmtDate(new Date());
+            document.getElementById('appt-modal-time').value = '09:00';
+            document.getElementById('appt-modal-duration').value = '60';
+            document.getElementById('appt-modal-service-type').value = 'diagnostic';
+            document.getElementById('appt-modal-address').value = '';
+            document.getElementById('appt-modal-lat').value = '0';
+            document.getElementById('appt-modal-lon').value = '0';
+            document.getElementById('appt-modal-cost').value = '0';
+            document.getElementById('appt-modal-notes').value = '';
+            document.getElementById('appt-modal-vehicle').value = '';
+            // Populate customer dropdown from bizCustomers
+            populateApptCustomerDropdown();
+            document.getElementById('appt-modal-overlay').classList.add('active');
+        }
+
+        function openRescheduleModal(appointmentId) {
+            const appt = apptCalAllAppts.find(a => a.appointment_id === appointmentId);
+            if (!appt) return;
+            document.getElementById('appt-modal-mode').value = 'reschedule';
+            document.getElementById('appt-modal-title').textContent = 'Reschedule Appointment';
+            document.getElementById('appt-modal-id').value = appointmentId;
+            document.getElementById('appt-modal-date').value = appt.date;
+            document.getElementById('appt-modal-time').value = appt.time_slot;
+            document.getElementById('appt-modal-duration').value = appt.duration_estimate || 60;
+            document.getElementById('appt-modal-service-type').value = appt.service_type || 'diagnostic';
+            document.getElementById('appt-modal-address').value = appt.location_address || '';
+            document.getElementById('appt-modal-lat').value = appt.location_lat || 0;
+            document.getElementById('appt-modal-lon').value = appt.location_lon || 0;
+            document.getElementById('appt-modal-cost').value = appt.estimated_cost || 0;
+            document.getElementById('appt-modal-notes').value = appt.notes || '';
+            document.getElementById('appt-modal-vehicle').value = appt.vehicle_summary || '';
+            populateApptCustomerDropdown();
+            document.getElementById('appt-modal-customer').value = appt.customer_id || '';
+            document.getElementById('appt-modal-overlay').classList.add('active');
+        }
+
+        function closeApptModal() {
+            document.getElementById('appt-modal-overlay').classList.remove('active');
+        }
+
+        function populateApptCustomerDropdown() {
+            const sel = document.getElementById('appt-modal-customer');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">-- Select Customer --</option>';
+            // Use bizCustomers from business operations (already populated)
+            (bizCustomers || []).forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.customer_id;
+                opt.textContent = c.name;
+                opt.dataset.name = c.name;
+                sel.appendChild(opt);
+            });
+            // Also add CRM customers if available
+            (crmCustomers || []).forEach(c => {
+                // Avoid duplicates by customer_id
+                if (!bizCustomers.some(b => b.customer_id === c.customer_id)) {
+                    const opt = document.createElement('option');
+                    opt.value = c.customer_id;
+                    opt.textContent = c.name + ' (CRM)';
+                    opt.dataset.name = c.name;
+                    sel.appendChild(opt);
+                }
+            });
+        }
+
+        function submitApptModal() {
+            const mode = document.getElementById('appt-modal-mode').value;
+            const sel = document.getElementById('appt-modal-customer');
+            const selectedOpt = sel.options[sel.selectedIndex];
+            const customerName = selectedOpt ? (selectedOpt.dataset.name || selectedOpt.textContent) : '';
+
+            if (mode === 'reschedule') {
+                ws.send(JSON.stringify({
+                    type: 'appt_schedule_reschedule',
+                    appointment_id: document.getElementById('appt-modal-id').value,
+                    new_date: document.getElementById('appt-modal-date').value,
+                    new_time_slot: document.getElementById('appt-modal-time').value,
+                    new_duration: parseInt(document.getElementById('appt-modal-duration').value) || 60,
+                }));
+            } else {
+                ws.send(JSON.stringify({
+                    type: 'appt_schedule_book',
+                    customer_id: sel.value,
+                    customer_name: customerName.replace(' (CRM)', ''),
+                    vehicle_id: '',
+                    vehicle_summary: document.getElementById('appt-modal-vehicle').value,
+                    date: document.getElementById('appt-modal-date').value,
+                    time_slot: document.getElementById('appt-modal-time').value,
+                    duration_estimate: parseInt(document.getElementById('appt-modal-duration').value) || 60,
+                    location_address: document.getElementById('appt-modal-address').value,
+                    location_lat: parseFloat(document.getElementById('appt-modal-lat').value) || 0,
+                    location_lon: parseFloat(document.getElementById('appt-modal-lon').value) || 0,
+                    service_type: document.getElementById('appt-modal-service-type').value,
+                    estimated_cost: parseFloat(document.getElementById('appt-modal-cost').value) || 0,
+                    notes: document.getElementById('appt-modal-notes').value,
+                }));
+            }
+            closeApptModal();
+        }
+
+        function cancelAppointment(id) {
+            if (!confirm('Cancel this appointment?')) return;
+            ws.send(JSON.stringify({ type: 'appt_schedule_cancel', appointment_id: id, reason: 'Cancelled via dashboard' }));
+        }
+
+        function apptUpdateStatus(id, newStatus) {
+            ws.send(JSON.stringify({ type: 'appt_schedule_update', appointment_id: id, status: newStatus }));
+        }
+
+        function handleApptAvailabilityResult(data) {
+            if (data.available) {
+                alert('Time slot is available!');
+            } else {
+                const conflicts = (data.conflicts || []).map(c => c.customer_name + ' at ' + c.time_slot).join(', ');
+                const suggested = (data.suggested_times || []).join(', ');
+                alert('Conflict with: ' + conflicts + '\n\nSuggested times: ' + (suggested || 'none'));
+            }
+        }
+
+        function handleApptWeekViewResponse(data) {
+            // Merge into week cache for navigation
+            if (data.week) {
+                Object.assign(apptCalWeek, data.week);
+            }
+            renderApptCalendar();
+        }
+
+        function handleApptDayScheduleResponse(data) {
+            // Update the week cache for this specific day
+            if (data.date && data.appointments) {
+                apptCalWeek[data.date] = data.appointments;
+            }
+            renderApptCalendar();
         }
 
         // ---------------------------------------------------------------
