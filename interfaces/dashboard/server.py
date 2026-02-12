@@ -48,6 +48,7 @@ from tools.doppler.scout import ScoutStore, DopplerScout, SearchCriteria, Listin
 from tools.doppler.market_analyzer import MarketAnalyzer
 from core.webhook_manager import WebhookManager
 from tools.content.pipeline import ContentPipelineManager
+from tools.content.youtube import YouTubeManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -386,6 +387,14 @@ async def broadcast_pipeline_status():
     await broadcast_to_dashboards({
         "type": "pipeline_status",
         **pipeline_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_youtube_status():
+    """Push current YouTube publishing state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "youtube_status",
+        **youtube_manager.to_broadcast_dict(),
     })
 
 
@@ -1143,6 +1152,13 @@ pipeline_manager = ContentPipelineManager(
     on_change=broadcast_pipeline_status,
 )
 
+# YouTube publishing pipeline — tracks videos through draft → queued → published
+youtube_manager = YouTubeManager(
+    db_path="data/youtube.db",
+    on_change=broadcast_youtube_status,
+    router=orchestrator.router,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1463,6 +1479,7 @@ async def lifespan(app: FastAPI):
     episodic_memory.close()
     content_calendar.close()
     pipeline_manager.close()
+    youtube_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1518,6 +1535,7 @@ app.state.report_engine = report_engine
 app.state.security_audit_log = security_audit_log
 app.state.webhook_manager = webhook_manager
 app.state.pipeline_manager = pipeline_manager
+app.state.youtube_manager = youtube_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2573,6 +2591,12 @@ async def dashboard_websocket(websocket: WebSocket):
         **pipeline_manager.to_broadcast_dict(),
     })
 
+    # Send current YouTube publishing state
+    await websocket.send_json({
+        "type": "youtube_status",
+        **youtube_manager.to_broadcast_dict(),
+    })
+
     # Send current research results
     await websocket.send_json({
         "type": "research_status",
@@ -3531,6 +3555,96 @@ async def dashboard_websocket(websocket: WebSocket):
                         "ok": False,
                         "error": "Pipeline not found or already finished",
                     })
+
+            # ── YouTube Publishing ──────────────────────────────
+            elif msg.get("type") == "yt_create":
+                try:
+                    video = youtube_manager.create_video(
+                        title=msg.get("title", "Untitled"),
+                        topic=msg.get("topic", ""),
+                        category=msg.get("category", "general"),
+                        keywords=msg.get("keywords", []),
+                        scheduled_date=msg.get("scheduled_date"),
+                        thumbnail_path=msg.get("thumbnail_path"),
+                        video_path=msg.get("video_path"),
+                        chapters=msg.get("chapters", []),
+                        pipeline_id=msg.get("pipeline_id"),
+                    )
+                    await websocket.send_json({"type": "yt_created", "ok": True, "video": video.to_dict()})
+                    await broadcast_youtube_status()
+                except Exception as e:
+                    await websocket.send_json({"type": "yt_created", "ok": False, "error": str(e)})
+
+            elif msg.get("type") == "yt_update":
+                video_id = msg.get("video_id", "")
+                kwargs = {k: v for k, v in msg.items() if k not in ("type", "video_id")}
+                video = youtube_manager.update_video(video_id, **kwargs)
+                if video:
+                    await websocket.send_json({"type": "yt_updated", "ok": True, "video": video.to_dict()})
+                    await broadcast_youtube_status()
+                else:
+                    await websocket.send_json({"type": "yt_updated", "ok": False, "error": "Video not found"})
+
+            elif msg.get("type") == "yt_delete":
+                video_id = msg.get("video_id", "")
+                deleted = youtube_manager.delete_video(video_id)
+                if deleted:
+                    await websocket.send_json({"type": "yt_deleted", "ok": True})
+                    await broadcast_youtube_status()
+                else:
+                    await websocket.send_json({"type": "yt_deleted", "ok": False, "error": "Video not found"})
+
+            elif msg.get("type") == "yt_queue":
+                video_id = msg.get("video_id", "")
+                video = youtube_manager.queue_video(video_id)
+                if video:
+                    await websocket.send_json({"type": "yt_queued", "ok": True, "video": video.to_dict()})
+                    await broadcast_youtube_status()
+                else:
+                    await websocket.send_json({"type": "yt_queued", "ok": False, "error": "Cannot queue — missing title/description or not in draft status"})
+
+            elif msg.get("type") == "yt_publish":
+                video_id = msg.get("video_id", "")
+                url = msg.get("published_url", "")
+                video = youtube_manager.mark_published(video_id, url)
+                if video:
+                    await websocket.send_json({"type": "yt_published", "ok": True, "video": video.to_dict()})
+                    await broadcast_youtube_status()
+                else:
+                    await websocket.send_json({"type": "yt_published", "ok": False, "error": "Cannot publish — not in queued status"})
+
+            elif msg.get("type") == "yt_fail":
+                video_id = msg.get("video_id", "")
+                error = msg.get("error", "")
+                video = youtube_manager.mark_failed(video_id, error)
+                if video:
+                    await websocket.send_json({"type": "yt_failed", "ok": True})
+                    await broadcast_youtube_status()
+                else:
+                    await websocket.send_json({"type": "yt_failed", "ok": False, "error": "Video not found"})
+
+            elif msg.get("type") == "yt_generate_seo":
+                video_id = msg.get("video_id", "")
+                result = await youtube_manager.generate_seo(video_id)
+                if result:
+                    await websocket.send_json({"type": "yt_seo_result", "ok": True, "seo": result})
+                    await broadcast_youtube_status()
+                else:
+                    await websocket.send_json({"type": "yt_seo_result", "ok": False, "error": "SEO generation failed"})
+
+            elif msg.get("type") == "yt_update_stats":
+                video_id = msg.get("video_id", "")
+                video = youtube_manager.update_stats(
+                    video_id,
+                    view_count=msg.get("view_count", 0),
+                    like_count=msg.get("like_count", 0),
+                    comment_count=msg.get("comment_count", 0),
+                )
+                if video:
+                    await websocket.send_json({"type": "yt_stats_updated", "ok": True})
+                    await broadcast_youtube_status()
+                else:
+                    await websocket.send_json({"type": "yt_stats_updated", "ok": False, "error": "Video not found"})
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")

@@ -3144,6 +3144,188 @@
             font-size: 0.85rem;
         }
 
+        /* --- YouTube Publishing --- */
+        .yt-stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .yt-stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .yt-stat-card .yt-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .yt-stat-card .yt-stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            letter-spacing: 0.5px;
+        }
+        .yt-form-toggle {
+            margin-bottom: 1rem;
+        }
+        .yt-form-toggle summary {
+            cursor: pointer;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .yt-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .yt-form .full-width {
+            grid-column: 1 / -1;
+        }
+        .yt-form label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        .yt-form input, .yt-form select, .yt-form textarea {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .yt-form textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .yt-btn-add {
+            grid-column: 1 / -1;
+            padding: 0.5rem 1rem;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .yt-btn-add:hover { opacity: 0.9; }
+        .yt-video-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .yt-video-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .yt-video-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .yt-video-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            flex: 1;
+            min-width: 200px;
+        }
+        .yt-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .yt-badge-draft { background: var(--bg-tertiary); color: var(--text-secondary); }
+        .yt-badge-queued { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .yt-badge-published { background: rgba(74,222,128,0.15); color: #4ade80; }
+        .yt-badge-failed { background: rgba(239,68,68,0.15); color: var(--danger); }
+        .yt-badge-cat {
+            background: rgba(168,85,247,0.15);
+            color: #a855f7;
+        }
+        .yt-video-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            max-height: 3em;
+            overflow: hidden;
+            line-height: 1.5;
+        }
+        .yt-video-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-bottom: 0.5rem;
+        }
+        .yt-tag-pill {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+        }
+        .yt-video-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .yt-video-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .yt-video-actions button {
+            padding: 0.3rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .yt-video-actions button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .yt-btn-seo {
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+            font-weight: 600;
+        }
+        .yt-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+        }
+
         /* --- Voice Synthesis (TTS) --- */
         .tts-section {
             margin-bottom: 2rem;
@@ -6997,6 +7179,67 @@
             </div>
         </section>
 
+        <section data-panel-id="youtube" style="display:none;">
+            <h2>YouTube Publishing</h2>
+
+            <div class="yt-stats-row" id="yt-stats-row">
+                <div class="yt-stat-card"><div class="yt-stat-value" id="yt-stat-total">0</div><div class="yt-stat-label">Total</div></div>
+                <div class="yt-stat-card"><div class="yt-stat-value" id="yt-stat-queued">0</div><div class="yt-stat-label">Queued</div></div>
+                <div class="yt-stat-card"><div class="yt-stat-value" id="yt-stat-published">0</div><div class="yt-stat-label">Published</div></div>
+                <div class="yt-stat-card"><div class="yt-stat-value" id="yt-stat-views">0</div><div class="yt-stat-label">Total Views</div></div>
+            </div>
+
+            <details class="yt-form-toggle">
+                <summary>+ Add Video</summary>
+                <div class="yt-form" id="yt-add-form">
+                    <div>
+                        <label>Title</label>
+                        <input type="text" id="yt-input-title" placeholder="Video title">
+                    </div>
+                    <div>
+                        <label>Topic (for SEO)</label>
+                        <input type="text" id="yt-input-topic" placeholder="Core subject">
+                    </div>
+                    <div>
+                        <label>Category</label>
+                        <select id="yt-input-category">
+                            <option value="general">General</option>
+                            <option value="diagnostics">Diagnostics</option>
+                            <option value="history">History</option>
+                            <option value="barn_find">Barn Find</option>
+                            <option value="how_to">How-To</option>
+                            <option value="project_build">Project Build</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Scheduled Date</label>
+                        <input type="date" id="yt-input-date">
+                    </div>
+                    <div class="full-width">
+                        <label>Keywords (comma-separated)</label>
+                        <input type="text" id="yt-input-keywords" placeholder="harley, valve adjustment, m-8">
+                    </div>
+                    <div>
+                        <label>Thumbnail Path</label>
+                        <input type="text" id="yt-input-thumb" placeholder="/path/to/thumbnail.jpg">
+                    </div>
+                    <div>
+                        <label>Video Path</label>
+                        <input type="text" id="yt-input-video-path" placeholder="/path/to/video.mp4">
+                    </div>
+                    <div class="full-width">
+                        <label>Chapters (one per line: 0:00 Label)</label>
+                        <textarea id="yt-input-chapters" placeholder="0:00 Intro&#10;1:30 Removing the cover&#10;5:00 Adjusting valves"></textarea>
+                    </div>
+                    <button class="yt-btn-add" onclick="createYtVideo()">Add Draft</button>
+                </div>
+            </details>
+
+            <div class="yt-video-list" id="yt-video-list">
+                <div class="yt-empty">No videos yet. Add a draft above to get started.</div>
+            </div>
+        </section>
+
         <section class="tts-section" data-panel-id="tts">
             <h2>Voice Synthesis</h2>
 
@@ -8369,6 +8612,7 @@
             { id: 'scheduler', name: 'Task Scheduler' },
             { id: 'content', name: 'Content Calendar' },
             { id: 'pipeline', name: 'Content Pipeline' },
+            { id: 'youtube', name: 'YouTube Publishing' },
             { id: 'tts', name: 'Voice Synthesis' },
             { id: 'research', name: 'Research Results' },
             { id: 'business', name: 'Business Operations' },
@@ -8644,6 +8888,29 @@
                     if (!data.ok) console.warn("Pipeline reject failed:", data.error);
                 } else if (data.type === "pipeline_cancelled") {
                     if (!data.ok) console.warn("Pipeline cancel failed:", data.error);
+                } else if (data.type === "youtube_status") {
+                    handleYouTubeStatus(data);
+                } else if (data.type === "yt_created") {
+                    if (!data.ok) console.warn("YT create failed:", data.error);
+                } else if (data.type === "yt_updated") {
+                    if (!data.ok) console.warn("YT update failed:", data.error);
+                } else if (data.type === "yt_deleted") {
+                    if (!data.ok) console.warn("YT delete failed:", data.error);
+                } else if (data.type === "yt_queued") {
+                    if (!data.ok) console.warn("YT queue failed:", data.error);
+                } else if (data.type === "yt_published") {
+                    if (!data.ok) console.warn("YT publish failed:", data.error);
+                } else if (data.type === "yt_failed") {
+                    if (!data.ok) console.warn("YT fail mark failed:", data.error);
+                } else if (data.type === "yt_seo_result") {
+                    if (data.ok) {
+                        console.log("SEO generated:", data.seo);
+                    } else {
+                        console.warn("SEO generation failed:", data.error);
+                        alert("SEO generation failed: " + (data.error || "Unknown error"));
+                    }
+                } else if (data.type === "yt_stats_updated") {
+                    if (!data.ok) console.warn("YT stats update failed:", data.error);
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
                 } else if (data.type === "tts_result") {
@@ -10562,6 +10829,167 @@
             if (!confirm("Cancel this pipeline?")) return;
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: "pipeline_cancel", pipeline_id: pipelineId }));
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // YouTube Publishing
+        // ---------------------------------------------------------------
+
+        let ytVideos = [];
+        let ytStatus = { total: 0, drafts: 0, queued: 0, published: 0, failed: 0 };
+        let ytChannelStats = {};
+
+        function handleYouTubeStatus(data) {
+            ytVideos = data.videos || [];
+            ytStatus = data.status || ytStatus;
+            ytChannelStats = data.channel_stats || {};
+            renderYtStats();
+            renderYtVideos();
+        }
+
+        function renderYtStats() {
+            const el = (id) => document.getElementById(id);
+            if (el("yt-stat-total")) el("yt-stat-total").textContent = ytStatus.total || 0;
+            if (el("yt-stat-queued")) el("yt-stat-queued").textContent = ytStatus.queued || 0;
+            if (el("yt-stat-published")) el("yt-stat-published").textContent = ytStatus.published || 0;
+            if (el("yt-stat-views")) el("yt-stat-views").textContent = (ytChannelStats.total_views || 0).toLocaleString();
+        }
+
+        function renderYtVideos() {
+            const container = document.getElementById("yt-video-list");
+            if (!container) return;
+
+            if (!ytVideos.length) {
+                container.innerHTML = '<div class="yt-empty">No videos yet. Add a draft above to get started.</div>';
+                return;
+            }
+
+            container.innerHTML = ytVideos.map(v => {
+                const statusClass = `yt-badge-${v.status}`;
+                const catLabel = (v.category || "general").replace(/_/g, " ");
+                const tags = (v.tags || []).map(t => `<span class="yt-tag-pill">${escapeHtml(t)}</span>`).join("");
+                const descPreview = v.description ? escapeHtml(v.description.substring(0, 150)) + (v.description.length > 150 ? "..." : "") : "<em>No description</em>";
+
+                let actions = "";
+                if (v.status === "draft") {
+                    actions += `<button class="yt-btn-seo" onclick="generateSeo('${v.video_id}')">Generate SEO</button>`;
+                    actions += `<button onclick="queueVideo('${v.video_id}')">Queue</button>`;
+                }
+                if (v.status === "queued") {
+                    actions += `<button onclick="publishVideo('${v.video_id}')">Publish</button>`;
+                }
+                if (v.status === "published") {
+                    actions += `<button onclick="updateVideoStats('${v.video_id}')">Update Stats</button>`;
+                    if (v.published_url) {
+                        actions += `<button onclick="window.open('${escapeHtml(v.published_url)}','_blank')">View</button>`;
+                    }
+                }
+                actions += `<button onclick="deleteVideo('${v.video_id}')">Delete</button>`;
+
+                let metaItems = [];
+                if (v.scheduled_date) metaItems.push(`Scheduled: ${v.scheduled_date}`);
+                if (v.created_at) metaItems.push(`Created: ${v.created_at.substring(0, 10)}`);
+                if (v.status === "published") {
+                    metaItems.push(`Views: ${(v.view_count || 0).toLocaleString()}`);
+                    metaItems.push(`Likes: ${(v.like_count || 0).toLocaleString()}`);
+                    metaItems.push(`Comments: ${(v.comment_count || 0).toLocaleString()}`);
+                }
+
+                return `<div class="yt-video-card">
+                    <div class="yt-video-header">
+                        <span class="yt-video-title">${escapeHtml(v.title)}</span>
+                        <span class="yt-badge yt-badge-cat">${escapeHtml(catLabel)}</span>
+                        <span class="yt-badge ${statusClass}">${escapeHtml(v.status)}</span>
+                    </div>
+                    <div class="yt-video-desc">${descPreview}</div>
+                    ${tags ? `<div class="yt-video-tags">${tags}</div>` : ""}
+                    ${metaItems.length ? `<div class="yt-video-meta">${metaItems.map(m => `<span>${escapeHtml(m)}</span>`).join("")}</div>` : ""}
+                    <div class="yt-video-actions">${actions}</div>
+                </div>`;
+            }).join("");
+        }
+
+        function createYtVideo() {
+            const title = document.getElementById("yt-input-title")?.value?.trim();
+            if (!title) { alert("Title is required"); return; }
+
+            const topic = document.getElementById("yt-input-topic")?.value?.trim() || "";
+            const category = document.getElementById("yt-input-category")?.value || "general";
+            const date = document.getElementById("yt-input-date")?.value || null;
+            const kwRaw = document.getElementById("yt-input-keywords")?.value?.trim() || "";
+            const keywords = kwRaw ? kwRaw.split(",").map(k => k.trim()).filter(Boolean) : [];
+            const thumbPath = document.getElementById("yt-input-thumb")?.value?.trim() || null;
+            const videoPath = document.getElementById("yt-input-video-path")?.value?.trim() || null;
+
+            // Parse chapters: "0:00 Label" per line
+            const chapRaw = document.getElementById("yt-input-chapters")?.value?.trim() || "";
+            const chapters = chapRaw ? chapRaw.split("\n").map(line => {
+                const match = line.trim().match(/^(\d+:\d{2})\s+(.+)/);
+                return match ? { time: match[1], label: match[2] } : null;
+            }).filter(Boolean) : [];
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "yt_create",
+                    title, topic, category, keywords,
+                    scheduled_date: date,
+                    thumbnail_path: thumbPath,
+                    video_path: videoPath,
+                    chapters,
+                }));
+            }
+
+            // Clear form
+            document.getElementById("yt-input-title").value = "";
+            document.getElementById("yt-input-topic").value = "";
+            document.getElementById("yt-input-category").value = "general";
+            document.getElementById("yt-input-date").value = "";
+            document.getElementById("yt-input-keywords").value = "";
+            document.getElementById("yt-input-thumb").value = "";
+            document.getElementById("yt-input-video-path").value = "";
+            document.getElementById("yt-input-chapters").value = "";
+        }
+
+        function generateSeo(videoId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "yt_generate_seo", video_id: videoId }));
+            }
+        }
+
+        function queueVideo(videoId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "yt_queue", video_id: videoId }));
+            }
+        }
+
+        function publishVideo(videoId) {
+            const url = prompt("YouTube URL (optional):");
+            if (url === null) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "yt_publish", video_id: videoId, published_url: url }));
+            }
+        }
+
+        function updateVideoStats(videoId) {
+            const views = parseInt(prompt("View count:", "0") || "0", 10);
+            const likes = parseInt(prompt("Like count:", "0") || "0", 10);
+            const comments = parseInt(prompt("Comment count:", "0") || "0", 10);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "yt_update_stats",
+                    video_id: videoId,
+                    view_count: views,
+                    like_count: likes,
+                    comment_count: comments,
+                }));
+            }
+        }
+
+        function deleteVideo(videoId) {
+            if (!confirm("Delete this video?")) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "yt_delete", video_id: videoId }));
             }
         }
 
