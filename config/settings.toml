@@ -157,3 +157,6 @@ log_tier1_actions = true                   # log autonomous actions to audit tra
 backup_dir = "data/backups"               # where backup archives are stored
 max_backups = 10                           # number of backups to keep (oldest rotated out)
 daily_backup_time = "03:00"               # time for scheduled daily backup (HH:MM, UTC)
+
+[message_bus]
+max_messages = 500                         # per-channel ring buffer capacity

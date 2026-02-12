@@ -1101,6 +1101,178 @@
             color: var(--text-primary);
         }
 
+        /* --- Message Bus Section --- */
+        .msgbus-section {
+            margin-bottom: 2rem;
+        }
+
+        .msgbus-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .msgbus-header h2 {
+            margin: 0;
+        }
+
+        .msgbus-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .msgbus-total {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .msgbus-filter {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .msgbus-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .msgbus-stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .msgbus-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .msgbus-stat-count {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .msgbus-ch-task_updates { border-left: 3px solid #3b82f6; }
+        .msgbus-ch-content_pipeline { border-left: 3px solid #a855f7; }
+        .msgbus-ch-research_results { border-left: 3px solid #22c55e; }
+        .msgbus-ch-alerts { border-left: 3px solid #ef4444; }
+        .msgbus-ch-system { border-left: 3px solid #6b7280; }
+
+        .msgbus-matrix {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .msgbus-matrix-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .msgbus-matrix-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0;
+            font-size: 0.8rem;
+        }
+
+        .msgbus-matrix-sender {
+            min-width: 100px;
+            font-weight: 500;
+        }
+
+        .msgbus-matrix-channels {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .msgbus-matrix-badge {
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .msgbus-badge-task_updates { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .msgbus-badge-content_pipeline { background: rgba(168,85,247,0.15); color: #c084fc; }
+        .msgbus-badge-research_results { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .msgbus-badge-alerts { background: rgba(239,68,68,0.15); color: #f87171; }
+        .msgbus-badge-system { background: rgba(107,114,128,0.15); color: #9ca3af; }
+
+        .msgbus-log {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .msgbus-log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.8rem;
+        }
+
+        .msgbus-log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .msgbus-log-time {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            min-width: 55px;
+            flex-shrink: 0;
+        }
+
+        .msgbus-log-sender {
+            font-weight: 500;
+            min-width: 90px;
+            flex-shrink: 0;
+        }
+
+        .msgbus-log-channel {
+            padding: 0.05rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .msgbus-log-payload {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .msgbus-empty {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
         /* --- Memory Status Section --- */
         .memory-section {
             margin-bottom: 2rem;
@@ -4616,6 +4788,31 @@
             </div>
         </section>
 
+        <section class="msgbus-section">
+            <div class="msgbus-header">
+                <h2>Message Bus</h2>
+                <div class="msgbus-header-right">
+                    <span class="msgbus-total" id="msgbus-total">0 messages</span>
+                    <select class="msgbus-filter" id="msgbus-filter" onchange="filterBusMessages()">
+                        <option value="">All Channels</option>
+                        <option value="task_updates">task_updates</option>
+                        <option value="content_pipeline">content_pipeline</option>
+                        <option value="research_results">research_results</option>
+                        <option value="alerts">alerts</option>
+                        <option value="system">system</option>
+                    </select>
+                </div>
+            </div>
+            <div class="msgbus-stats" id="msgbus-stats"></div>
+            <div class="msgbus-matrix" id="msgbus-matrix">
+                <div class="msgbus-matrix-title">Agent Communication Flow</div>
+                <div id="msgbus-matrix-rows"><span class="msgbus-empty">No agent activity yet</span></div>
+            </div>
+            <div class="msgbus-log" id="msgbus-log">
+                <div class="msgbus-empty">No messages yet</div>
+            </div>
+        </section>
+
         <section class="memory-section">
             <h2>Memory Status</h2>
             <div class="memory-cards">
@@ -5011,6 +5208,14 @@
                     handleBackupResult(data);
                 } else if (data.type === "backup_restore_result") {
                     handleBackupRestoreResult(data);
+                } else if (data.type === "bus_status") {
+                    handleBusStatus(data);
+                } else if (data.type === "bus_message") {
+                    handleBusMessage(data);
+                } else if (data.type === "bus_publish_result") {
+                    if (data.ok === false) console.warn("Bus publish failed");
+                } else if (data.type === "bus_history_result") {
+                    handleBusStatus(data);
                 } else if (data.type === "memory_status") {
                     handleMemoryStatus(data);
                 } else if (data.type === "episodic_search_results") {
@@ -7941,6 +8146,134 @@
             if (!confirm("Restore from " + filename + "?\n\nThis will overwrite current data. The server will need a restart after restore.")) return;
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
             ws.send(JSON.stringify({ type: "backup_restore", filename: filename }));
+        }
+
+        // ---------------------------------------------------------------
+        // Message Bus
+        // ---------------------------------------------------------------
+        let busMessages = [];
+        let busStats = {};
+        let busMatrix = {};
+
+        const BUS_CHANNEL_COLORS = {
+            task_updates: "#3b82f6",
+            content_pipeline: "#a855f7",
+            research_results: "#22c55e",
+            alerts: "#ef4444",
+            system: "#6b7280",
+        };
+
+        function handleBusStatus(data) {
+            busMessages = data.messages || [];
+            busStats = (data.stats && data.stats.channels) ? data.stats.channels : {};
+            busMatrix = data.matrix || {};
+            renderBusPanel();
+        }
+
+        function handleBusMessage(data) {
+            const msg = data.message;
+            if (msg) {
+                busMessages.unshift(msg);
+                if (busMessages.length > 200) busMessages.length = 200;
+            }
+            if (data.stats && data.stats.channels) {
+                busStats = data.stats.channels;
+            }
+            renderBusPanel();
+        }
+
+        function renderBusPanel() {
+            renderBusStats();
+            renderBusMatrix();
+            renderBusLog();
+        }
+
+        function renderBusStats() {
+            const el = document.getElementById("msgbus-stats");
+            if (!el) return;
+            const channels = ["task_updates", "content_pipeline", "research_results", "alerts", "system"];
+            let total = 0;
+            let html = "";
+            channels.forEach(ch => {
+                const count = busStats[ch] || 0;
+                total += count;
+                const label = ch.replace(/_/g, " ");
+                html += '<div class="msgbus-stat-card msgbus-ch-' + ch + '">' +
+                    '<span class="msgbus-stat-label">' + label + '</span>' +
+                    '<span class="msgbus-stat-count">' + count + '</span></div>';
+            });
+            el.innerHTML = html;
+            const totalEl = document.getElementById("msgbus-total");
+            if (totalEl) totalEl.textContent = total + " messages";
+        }
+
+        function renderBusMatrix() {
+            const el = document.getElementById("msgbus-matrix-rows");
+            if (!el) return;
+            const senders = Object.keys(busMatrix);
+            if (senders.length === 0) {
+                el.innerHTML = '<span class="msgbus-empty">No agent activity yet</span>';
+                return;
+            }
+            // Sort by total messages desc
+            senders.sort((a, b) => {
+                const aTotal = Object.values(busMatrix[a]).reduce((s, v) => s + v, 0);
+                const bTotal = Object.values(busMatrix[b]).reduce((s, v) => s + v, 0);
+                return bTotal - aTotal;
+            });
+            let html = "";
+            senders.forEach(sender => {
+                const channels = busMatrix[sender];
+                let badges = "";
+                Object.keys(channels).sort((a, b) => channels[b] - channels[a]).forEach(ch => {
+                    badges += '<span class="msgbus-matrix-badge msgbus-badge-' + ch + '">' +
+                        ch.replace(/_/g, " ") + ' (' + channels[ch] + ')</span>';
+                });
+                html += '<div class="msgbus-matrix-row">' +
+                    '<span class="msgbus-matrix-sender">' + sender + '</span>' +
+                    '<span class="msgbus-matrix-channels">' + badges + '</span></div>';
+            });
+            el.innerHTML = html;
+        }
+
+        function renderBusLog() {
+            const el = document.getElementById("msgbus-log");
+            if (!el) return;
+            const filter = document.getElementById("msgbus-filter");
+            const selectedChannel = filter ? filter.value : "";
+            let msgs = busMessages;
+            if (selectedChannel) {
+                msgs = msgs.filter(m => m.channel === selectedChannel);
+            }
+            if (msgs.length === 0) {
+                el.innerHTML = '<div class="msgbus-empty">No messages' +
+                    (selectedChannel ? ' on ' + selectedChannel : '') + '</div>';
+                return;
+            }
+            // Show newest first (busMessages is already newest-first from handleBusMessage,
+            // but initial load from bus_status is oldest-first, so reverse if needed)
+            const sorted = msgs.slice(0, 100);
+            if (sorted.length > 1 && sorted[0].timestamp < sorted[sorted.length - 1].timestamp) {
+                sorted.reverse();
+            }
+            let html = "";
+            sorted.forEach(m => {
+                const t = m.timestamp ? new Date(m.timestamp) : new Date();
+                const time = t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                const payloadStr = JSON.stringify(m.payload || {});
+                const shortPayload = payloadStr.length > 80 ? payloadStr.slice(0, 77) + "..." : payloadStr;
+                html += '<div class="msgbus-log-entry">' +
+                    '<span class="msgbus-log-time">' + time + '</span>' +
+                    '<span class="msgbus-log-sender">' + (m.sender || "?") + '</span>' +
+                    '<span class="msgbus-log-channel msgbus-badge-' + m.channel + '">' + (m.channel || "").replace(/_/g, " ") + '</span>' +
+                    '<span class="msgbus-log-payload" title="' + payloadStr.replace(/"/g, '&quot;') + '">' + shortPayload + '</span>' +
+                    '</div>';
+            });
+            el.innerHTML = html;
+        }
+
+        function filterBusMessages() {
+            renderBusLog();
         }
 
         // ---------------------------------------------------------------

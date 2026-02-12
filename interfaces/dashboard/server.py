@@ -27,6 +27,7 @@ from core.agent_registry import AgentRegistry
 from core.config import get_config
 from core.event_logger import EventLogger
 from core.backup import BackupManager
+from core.message_bus import MessageBus
 from core.deployer import Deployer
 from core.file_transfer import FileTransferManager, chunk_file_data, compute_checksum
 from core.health_monitor import HealthMonitor
@@ -90,6 +91,12 @@ health_monitor = HealthMonitor(registry=registry, heartbeat_interval=config.heal
 # Event logger — centralized audit trail for all CAM activity
 # Note: max_events is read at construction — needs restart to change.
 event_logger = EventLogger(max_events=config.events.max_events)
+
+# Message bus — inter-agent pub/sub communication
+message_bus = MessageBus(
+    max_messages=config.message_bus.max_messages,
+    event_logger=event_logger,
+)
 
 # Analytics — SQLite-backed task history and model cost tracking
 # Note: db_path is read at construction — needs restart to change.
@@ -240,6 +247,18 @@ async def broadcast_event_and_evaluate(event_dict: dict):
     notification_manager.evaluate_event(event_dict)
 
 event_logger.set_broadcast_callback(broadcast_event_and_evaluate)
+
+
+# Wire the message bus broadcast callback — pushes bus messages to dashboards
+async def broadcast_bus_message(message_dict):
+    """Push a bus message + stats to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "bus_message",
+        "message": message_dict,
+        "stats": message_bus.get_stats(),
+    })
+
+message_bus.set_broadcast_callback(broadcast_bus_message)
 
 
 async def broadcast_analytics():
@@ -482,6 +501,9 @@ async def on_task_phase_change(task, phase, detail):
     if phase in ("COMPLETED", "FAILED"):
         analytics.record_task(task)
         await broadcast_analytics()
+        await message_bus.publish("system", "task_updates", {
+            "action": "phase_change", "task_id": task.short_id, "phase": phase,
+        })
 
     # Push updated memory status to dashboards (memory changes during OATI)
     await broadcast_memory_status()
@@ -537,6 +559,9 @@ async def dispatch_to_agent(task, plan):
             task.assigned_agent = "content_agent"
             event_logger.info("task", f"Content agent handled {task.short_id}",
                               task_id=task.short_id, agent="content_agent")
+            await message_bus.publish("content_agent", "task_updates", {
+                "action": "task_handled", "task_id": task.short_id,
+            })
             return content_result
     except Exception as e:
         logger.warning("Content agent failed for task %s: %s", task.short_id, e)
@@ -548,6 +573,9 @@ async def dispatch_to_agent(task, plan):
             task.assigned_agent = "research_agent"
             event_logger.info("task", f"Research agent handled {task.short_id}",
                               task_id=task.short_id, agent="research_agent")
+            await message_bus.publish("research_agent", "task_updates", {
+                "action": "task_handled", "task_id": task.short_id,
+            })
             return research_result
     except Exception as e:
         logger.warning("Research agent failed for task %s: %s", task.short_id, e)
@@ -559,6 +587,9 @@ async def dispatch_to_agent(task, plan):
             task.assigned_agent = "business_agent"
             event_logger.info("task", f"Business agent handled {task.short_id}",
                               task_id=task.short_id, agent="business_agent")
+            await message_bus.publish("business_agent", "task_updates", {
+                "action": "task_handled", "task_id": task.short_id,
+            })
             return business_result
     except Exception as e:
         logger.warning("Business agent failed for task %s: %s", task.short_id, e)
@@ -982,6 +1013,7 @@ app.state.security_audit_log = security_audit_log
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
+app.state.message_bus = message_bus
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -1618,6 +1650,17 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                     logger.warning("Error receiving chunk %d of %s: %s", chunk_index, transfer_id, e)
                     await ft_manager.fail_transfer(transfer_id, str(e))
 
+            # --- Message Bus: remote agent publishing ---
+            elif msg_type == "bus_publish":
+                channel = data.get("channel", "")
+                payload = data.get("payload", {})
+                result = await message_bus.publish(agent_id, channel, payload)
+                await websocket.send_json({
+                    "type": "bus_publish_result",
+                    "ok": result is not None,
+                    "message_id": result.message_id if result else None,
+                })
+
     except WebSocketDisconnect:
         logger.info("Agent '%s' disconnected", agent_id)
         event_logger.warn("agent", f"Agent '{agent_id}' disconnected", agent_id=agent_id)
@@ -1732,6 +1775,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "backup_status",
         **backup_manager.get_status(),
+    })
+
+    # Send message bus state
+    await websocket.send_json({
+        "type": "bus_status",
+        **message_bus.to_broadcast_dict(),
     })
 
     # Send current schedule state
@@ -2981,6 +3030,29 @@ async def dashboard_websocket(websocket: WebSocket):
                     "episodes": [ep.to_dict() for ep in results],
                     "keyword": keyword,
                     "count": len(results),
+                })
+
+            # --- Message Bus: publish from dashboard ---
+            elif msg.get("type") == "bus_publish":
+                sender = msg.get("sender", "dashboard")
+                channel = msg.get("channel", "")
+                payload = msg.get("payload", {})
+                result = await message_bus.publish(sender, channel, payload)
+                await websocket.send_json({
+                    "type": "bus_publish_result",
+                    "ok": result is not None,
+                    "message_id": result.message_id if result else None,
+                })
+
+            # --- Message Bus: fetch history ---
+            elif msg.get("type") == "bus_history":
+                channel = msg.get("channel")  # None = all channels
+                count = min(int(msg.get("count", 50)), 200)
+                await websocket.send_json({
+                    "type": "bus_history_result",
+                    "messages": message_bus.get_recent(channel=channel, count=count),
+                    "stats": message_bus.get_stats(),
+                    "matrix": message_bus.get_sender_channel_matrix(),
                 })
 
     except WebSocketDisconnect:

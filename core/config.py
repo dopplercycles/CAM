@@ -181,6 +181,9 @@ _DEFAULTS: dict[str, Any] = {
         "max_backups": 10,
         "daily_backup_time": "03:00",
     },
+    "message_bus": {
+        "max_messages": 500,
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value
