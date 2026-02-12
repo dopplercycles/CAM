@@ -26,6 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from core.agent_registry import AgentRegistry
 from core.config import get_config
 from core.event_logger import EventLogger
+from core.deployer import Deployer
 from core.file_transfer import FileTransferManager, chunk_file_data, compute_checksum
 from core.health_monitor import HealthMonitor
 from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory, EpisodicMemory
@@ -432,6 +433,17 @@ async def relay_file_to_agent(transfer, data: bytes, agent_ws):
     except Exception as e:
         logger.warning("Relay to agent failed for %s: %s", transfer.transfer_id, e)
         await ft_manager.fail_transfer(transfer.transfer_id, f"Relay failed: {e}")
+
+
+# Agent deployer — orchestrates connector updates via existing file transfer + command systems
+deployer = Deployer(
+    ft_manager=ft_manager,
+    event_logger=event_logger,
+    registry=registry,
+    agent_websockets=agent_websockets,
+    relay_fn=relay_file_to_agent,
+    config=config,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -947,6 +959,7 @@ app.state.business_store = business_store
 app.state.business_agent = business_agent
 app.state.security_audit_log = security_audit_log
 app.state.session_manager = session_manager
+app.state.deployer = deployer
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -1247,6 +1260,12 @@ async def get_security_audit():
         "entries": security_audit_log.to_broadcast_list(),
         "status": security_audit_log.get_status(),
     }
+
+
+@app.get("/api/deploy/status")
+async def get_deploy_status():
+    """Return deployer status: local version, agent versions, recent history."""
+    return deployer.get_status()
 
 
 @app.get("/api/config")
@@ -1673,6 +1692,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "file_transfer_history",
         "transfers": ft_manager.get_all_transfers(),
+    })
+
+    # Send deploy status (local version, agent versions, history)
+    await websocket.send_json({
+        "type": "deploy_status",
+        **deployer.get_status(),
     })
 
     # Send current schedule state
@@ -2172,6 +2197,43 @@ async def dashboard_websocket(websocket: WebSocket):
                         except Exception:
                             pass
                     await ft_manager.cancel_transfer(transfer_id)
+
+            elif msg.get("type") == "deploy_check_version":
+                # Check connector version on a single agent
+                target_id = msg.get("agent_id", "")
+                version_info = await deployer.check_version(target_id)
+                local = deployer.get_local_version()
+                match = (version_info.get("hash") == local["hash"]) if version_info.get("hash") else None
+                await websocket.send_json({
+                    "type": "deploy_version_result",
+                    "agent_id": target_id,
+                    "remote": version_info,
+                    "local": local,
+                    "match": match,
+                })
+
+            elif msg.get("type") == "deploy_agent":
+                # Deploy connector to a single agent
+                target_id = msg.get("agent_id", "")
+                result = await deployer.deploy_connector(target_id)
+                await broadcast_to_dashboards({
+                    "type": "deploy_result",
+                    **result.to_dict(),
+                })
+                # Push updated deploy status to all dashboards
+                await broadcast_to_dashboards({
+                    "type": "deploy_status",
+                    **deployer.get_status(),
+                })
+
+            elif msg.get("type") == "deploy_all":
+                # Deploy connector to all online agents sequentially
+                await deployer.deploy_all(broadcast_fn=broadcast_to_dashboards)
+                # Push final status
+                await broadcast_to_dashboards({
+                    "type": "deploy_status",
+                    **deployer.get_status(),
+                })
 
             elif msg.get("type") == "schedule_create":
                 sched_name = (msg.get("name") or "").strip()

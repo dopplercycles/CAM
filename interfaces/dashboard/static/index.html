@@ -3902,6 +3902,178 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* --- Deploy Section --- */
+        .deploy-section {
+            margin-bottom: 2rem;
+        }
+
+        .deploy-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .deploy-local-ver {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .deploy-local-ver code {
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--primary);
+        }
+
+        .deploy-agent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .deploy-agent-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .deploy-agent-row .agent-name {
+            font-weight: 600;
+            min-width: 120px;
+        }
+
+        .deploy-agent-row .agent-ip {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 110px;
+        }
+
+        .deploy-ver-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .deploy-ver-badge.match {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+
+        .deploy-ver-badge.mismatch {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+        }
+
+        .deploy-ver-badge.unknown {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .deploy-agent-row .deploy-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .deploy-btn {
+            padding: 0.3rem 0.7rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: background 0.15s;
+        }
+
+        .deploy-btn:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
+
+        .deploy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .deploy-btn.deploy-btn-primary {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .deploy-btn.deploy-btn-primary:hover {
+            background: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .deploy-history-section {
+            margin-top: 1rem;
+        }
+
+        .deploy-history-toggle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .deploy-history-toggle:hover {
+            color: var(--text-primary);
+        }
+
+        .deploy-history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .deploy-history-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.4rem 0.6rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border);
+        }
+
+        .deploy-history-item .deploy-ok {
+            color: #22c55e;
+        }
+
+        .deploy-history-item .deploy-fail {
+            color: #ef4444;
+        }
+
+        .deploy-history-item .deploy-time {
+            color: var(--text-secondary);
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -4290,6 +4462,25 @@
             <div class="ft-history" id="ft-history"></div>
         </section>
 
+        <section class="deploy-section">
+            <div class="deploy-header">
+                <h2>Connector Deploy</h2>
+                <div class="deploy-local-ver">
+                    Local: <code id="deploy-local-hash">--</code>
+                    <button class="deploy-btn deploy-btn-primary" onclick="deployAll()" id="deploy-all-btn">Deploy All</button>
+                </div>
+            </div>
+            <div class="deploy-agent-list" id="deploy-agent-list">
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">No agents connected</div>
+            </div>
+            <div class="deploy-history-section">
+                <div class="deploy-history-toggle" onclick="toggleDeployHistory()">
+                    <span id="deploy-history-arrow">&#9654;</span> Recent Deploys
+                </div>
+                <div class="deploy-history-list" id="deploy-history-list" style="display: none;"></div>
+            </div>
+        </section>
+
         <section class="memory-section">
             <h2>Memory Status</h2>
             <div class="memory-cards">
@@ -4671,6 +4862,14 @@
                     handleTransferProgress(data);
                 } else if (data.type === "file_transfer_history") {
                     handleTransferHistory(data);
+                } else if (data.type === "deploy_status") {
+                    handleDeployStatus(data);
+                } else if (data.type === "deploy_version_result") {
+                    handleDeployVersionResult(data);
+                } else if (data.type === "deploy_result") {
+                    handleDeployResult(data);
+                } else if (data.type === "deploy_progress") {
+                    handleDeployProgress(data);
                 } else if (data.type === "memory_status") {
                     handleMemoryStatus(data);
                 } else if (data.type === "episodic_search_results") {
@@ -7338,7 +7537,178 @@
         renderAgents = function() {
             _origRenderAgents2();
             renderFtAgentSelects();
+            renderDeployPanel();
         };
+
+        // ---------------------------------------------------------------
+        // Connector Deploy
+        // ---------------------------------------------------------------
+
+        let deployLocalVersion = null;
+        let deployAgentVersions = {};
+        let deployHistory = [];
+        let deployHistoryVisible = false;
+
+        function handleDeployStatus(data) {
+            deployLocalVersion = data.local_version || null;
+            deployAgentVersions = data.agent_versions || {};
+            deployHistory = data.history || [];
+            renderDeployPanel();
+            renderDeployHistory();
+        }
+
+        function handleDeployVersionResult(data) {
+            if (data.agent_id) {
+                deployAgentVersions[data.agent_id] = data.remote;
+            }
+            if (data.local) {
+                deployLocalVersion = data.local;
+            }
+            renderDeployPanel();
+        }
+
+        function handleDeployResult(data) {
+            // Add to history
+            deployHistory.unshift(data);
+            if (deployHistory.length > 10) deployHistory.length = 10;
+            renderDeployHistory();
+            renderDeployPanel();
+            // Re-enable buttons
+            document.querySelectorAll(".deploy-btn").forEach(b => b.disabled = false);
+        }
+
+        function handleDeployProgress(data) {
+            // Update the row to show "deploying..." status
+            const row = document.getElementById("deploy-row-" + data.agent_id);
+            if (row) {
+                const badge = row.querySelector(".deploy-ver-badge");
+                if (badge) {
+                    badge.className = "deploy-ver-badge unknown";
+                    badge.textContent = "deploying...";
+                }
+            }
+        }
+
+        function renderDeployPanel() {
+            // Update local version display
+            const hashEl = document.getElementById("deploy-local-hash");
+            if (deployLocalVersion) {
+                hashEl.textContent = deployLocalVersion.short || "--";
+                hashEl.title = deployLocalVersion.hash || "";
+            }
+
+            // Build agent rows
+            const container = document.getElementById("deploy-agent-list");
+            const online = agents.filter(a => a.status === "online" || a.status === "busy");
+
+            if (online.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.85rem;">No agents connected</div>';
+                return;
+            }
+
+            container.innerHTML = online.map(a => {
+                const ver = deployAgentVersions[a.agent_id];
+                const localHash = deployLocalVersion ? deployLocalVersion.hash : "";
+                let badgeClass = "unknown";
+                let badgeText = "unchecked";
+
+                if (ver) {
+                    if (ver.error && !ver.hash) {
+                        badgeText = ver.short || "error";
+                        badgeClass = "unknown";
+                    } else if (ver.hash && localHash && ver.hash === localHash) {
+                        badgeText = ver.short;
+                        badgeClass = "match";
+                    } else if (ver.hash) {
+                        badgeText = ver.short;
+                        badgeClass = "mismatch";
+                    } else {
+                        badgeText = ver.short || "unknown";
+                        badgeClass = "unknown";
+                    }
+                }
+
+                return `<div class="deploy-agent-row" id="deploy-row-${a.agent_id}">
+                    <span class="status-dot ${a.status === 'online' ? 'online' : 'warning'}"></span>
+                    <span class="agent-name">${a.name}</span>
+                    <span class="agent-ip">${a.ip || ''}</span>
+                    <span class="deploy-ver-badge ${badgeClass}" title="${ver && ver.hash ? ver.hash : ''}">${badgeText}</span>
+                    <div class="deploy-actions">
+                        <button class="deploy-btn" onclick="checkAgentVersion('${a.agent_id}')">Check</button>
+                        <button class="deploy-btn" onclick="deployToAgent('${a.agent_id}')">Deploy</button>
+                    </div>
+                </div>`;
+            }).join("");
+        }
+
+        function checkAgentVersion(agentId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            // Update badge to show checking
+            const row = document.getElementById("deploy-row-" + agentId);
+            if (row) {
+                const badge = row.querySelector(".deploy-ver-badge");
+                if (badge) {
+                    badge.className = "deploy-ver-badge unknown";
+                    badge.textContent = "checking...";
+                }
+            }
+            ws.send(JSON.stringify({ type: "deploy_check_version", agent_id: agentId }));
+        }
+
+        function deployToAgent(agentId) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const agent = agents.find(a => a.agent_id === agentId);
+            const name = agent ? agent.name : agentId;
+            if (!confirm("Deploy connector to " + name + "?\n\nThis will push the updated file and restart the agent service.")) return;
+            // Disable buttons during deploy
+            const row = document.getElementById("deploy-row-" + agentId);
+            if (row) {
+                row.querySelectorAll(".deploy-btn").forEach(b => b.disabled = true);
+                const badge = row.querySelector(".deploy-ver-badge");
+                if (badge) {
+                    badge.className = "deploy-ver-badge unknown";
+                    badge.textContent = "deploying...";
+                }
+            }
+            ws.send(JSON.stringify({ type: "deploy_agent", agent_id: agentId }));
+        }
+
+        function deployAll() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const online = agents.filter(a => a.status === "online" || a.status === "busy");
+            if (online.length === 0) { alert("No agents online"); return; }
+            if (!confirm("Deploy connector to all " + online.length + " online agent(s)?\n\nAgents will be updated one at a time.")) return;
+            document.getElementById("deploy-all-btn").disabled = true;
+            ws.send(JSON.stringify({ type: "deploy_all" }));
+        }
+
+        function toggleDeployHistory() {
+            deployHistoryVisible = !deployHistoryVisible;
+            document.getElementById("deploy-history-list").style.display = deployHistoryVisible ? "flex" : "none";
+            document.getElementById("deploy-history-arrow").innerHTML = deployHistoryVisible ? "&#9660;" : "&#9654;";
+        }
+
+        function renderDeployHistory() {
+            const container = document.getElementById("deploy-history-list");
+            if (!deployHistory.length) {
+                container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.8rem;">No deploys yet</div>';
+                return;
+            }
+            container.innerHTML = deployHistory.slice(0, 10).map(d => {
+                const icon = d.ok ? '<span class="deploy-ok">&#10003;</span>' : '<span class="deploy-fail">&#10007;</span>';
+                const ver = d.old_version && d.new_version
+                    ? `${d.old_version} &rarr; ${d.new_version}`
+                    : (d.new_version || "");
+                const time = d.completed_at ? new Date(d.completed_at).toLocaleTimeString() : "";
+                return `<div class="deploy-history-item">
+                    ${icon}
+                    <span>${d.agent_name || d.agent_id}</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary);">${ver}</span>
+                    <span>${d.message || ""}</span>
+                    <span class="deploy-time">${time}</span>
+                </div>`;
+            }).join("");
+        }
 
         // ---------------------------------------------------------------
         // Start

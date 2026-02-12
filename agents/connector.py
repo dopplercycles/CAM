@@ -395,6 +395,22 @@ async def handle_capture_sensor_data(params: dict[str, str]) -> str:
         return f"Error capturing sensor data: {e}"
 
 
+async def handle_connector_version() -> str:
+    """Return this connector file's SHA-256 hash for version tracking.
+
+    The deployer on the dashboard uses this to check whether an agent
+    is running the latest connector before deciding to push an update.
+    """
+    try:
+        connector_path = os.path.abspath(__file__)
+        with open(connector_path, "rb") as f:
+            data = f.read()
+        file_hash = hashlib.sha256(data).hexdigest()
+        return f"hash={file_hash} size={len(data)} path={connector_path}"
+    except Exception as e:
+        return f"Error reading connector version: {e}"
+
+
 # Map command names to their async handler functions.
 # Handlers that need params take a dict; those that don't take no args.
 COMMAND_HANDLERS = {
@@ -403,6 +419,7 @@ COMMAND_HANDLERS = {
     "restart_service":     lambda params: handle_restart_service(params),
     "run_diagnostic":      lambda params: handle_run_diagnostic(),
     "capture_sensor_data": lambda params: handle_capture_sensor_data(params),
+    "connector_version":   lambda params: handle_connector_version(),
 }
 
 
