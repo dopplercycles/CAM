@@ -6594,6 +6594,113 @@
         }
         .ms-bar-value { width: 50px; font-size: 0.75rem; color: var(--text-secondary); }
 
+        /* Plugin Manager */
+        .pm-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .pm-stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .pm-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .pm-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .pm-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .pm-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .pm-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.5rem;
+        }
+        .pm-card-title { font-weight: 600; font-size: 0.95rem; }
+        .pm-card-version { font-size: 0.7rem; color: var(--text-secondary); }
+        .pm-card-badge {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .pm-badge-enabled { background: #e8f5e9; color: #2e7d32; }
+        .pm-badge-disabled { background: #fce4ec; color: #c62828; }
+        .pm-badge-loaded { background: #e3f2fd; color: #1565c0; }
+        .pm-badge-error { background: #fff3e0; color: #e65100; }
+        .pm-card-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0.5rem 0;
+            line-height: 1.4;
+        }
+        .pm-card-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .pm-card-error {
+            font-size: 0.75rem;
+            color: #c62828;
+            background: #ffebee;
+            padding: 0.3rem 0.5rem;
+            border-radius: 3px;
+            margin: 0.5rem 0;
+        }
+        .pm-card-actions {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 0.75rem;
+        }
+        .pm-card-actions button {
+            flex: 1;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .pm-card-actions button:hover {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+        .pm-card-actions button.pm-btn-danger:hover {
+            background: #c62828;
+            border-color: #c62828;
+        }
+        .pm-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            grid-column: 1 / -1;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -10561,6 +10668,28 @@
             </div>
         </section>
 
+        <section data-panel-id="plugin-manager" style="display:none;">
+            <h2>Plugin Manager</h2>
+
+            <!-- Stats Row -->
+            <div class="pm-stats-row">
+                <div class="pm-stat-card"><div class="pm-stat-value" id="pm-stat-total">0</div><div class="pm-stat-label">Plugins</div></div>
+                <div class="pm-stat-card"><div class="pm-stat-value" id="pm-stat-enabled">0</div><div class="pm-stat-label">Enabled</div></div>
+                <div class="pm-stat-card"><div class="pm-stat-value" id="pm-stat-loaded">0</div><div class="pm-stat-label">Loaded</div></div>
+                <div class="pm-stat-card"><div class="pm-stat-value" id="pm-stat-errors">0</div><div class="pm-stat-label">Errors</div></div>
+            </div>
+
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">
+                Plugins extend CAM without modifying core code. Drop a plugin folder with a
+                <code>manifest.yaml</code> into the <code>plugins/</code> directory and it will be auto-discovered.
+            </p>
+
+            <!-- Plugin Cards -->
+            <div class="pm-list" id="pm-plugin-list">
+                <div class="pm-empty">No plugins discovered. Add plugins to the plugins/ directory.</div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -11270,6 +11399,7 @@
             { id: 'feedback', name: 'Feedback' },
             { id: 'warranty-recall', name: 'Warranty & Recalls' },
             { id: 'maintenance-scheduler', name: 'Maintenance Calendar' },
+            { id: 'plugin-manager', name: 'Plugins' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -11794,6 +11924,15 @@
                 } else if (data.type === "maintenance_forecast_result") {
                     msForecast = data;
                     renderMsForecast();
+
+                } else if (data.type === "plugin_status") {
+                    pmPlugins = data.plugins || [];
+                    pmStatus = data.status || {};
+                    renderPmAll();
+                } else if (data.type === "plugin_enabled" || data.type === "plugin_disabled" ||
+                           data.type === "plugin_loaded" || data.type === "plugin_unloaded" ||
+                           data.type === "plugin_config_updated") {
+                    // refreshed via broadcast
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -15904,6 +16043,110 @@
                 window.renderAgents = function() {
                     origRender.apply(this, arguments);
                     renderMsAll();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Plugin Manager
+        // ---------------------------------------------------------------
+
+        var pmPlugins = [];
+        var pmStatus = {};
+
+        function renderPmAll() {
+            renderPmStats();
+            renderPmList();
+        }
+
+        function renderPmStats() {
+            var s = pmStatus || {};
+            var el;
+            el = document.getElementById("pm-stat-total"); if (el) el.textContent = s.total_plugins ?? 0;
+            el = document.getElementById("pm-stat-enabled"); if (el) el.textContent = s.enabled ?? 0;
+            el = document.getElementById("pm-stat-loaded"); if (el) el.textContent = s.loaded ?? 0;
+            el = document.getElementById("pm-stat-errors"); if (el) el.textContent = s.errors ?? 0;
+        }
+
+        function renderPmList() {
+            var container = document.getElementById("pm-plugin-list");
+            if (!container) return;
+            if (pmPlugins.length === 0) {
+                container.innerHTML = '<div class="pm-empty">No plugins discovered. Add plugins to the plugins/ directory.</div>';
+                return;
+            }
+            container.innerHTML = pmPlugins.map(function(p) { return pmCard(p); }).join("");
+        }
+
+        function pmCard(p) {
+            var enableBadge = p.enabled ? "pm-badge-enabled" : "pm-badge-disabled";
+            var enableLabel = p.enabled ? "Enabled" : "Disabled";
+            var loadBadge = p.loaded ? "pm-badge-loaded" : "";
+            var loadLabel = p.loaded ? "Loaded" : "";
+
+            var badges = '<span class="pm-card-badge ' + enableBadge + '">' + enableLabel + '</span>';
+            if (p.loaded) {
+                badges += ' <span class="pm-card-badge ' + loadBadge + '">' + loadLabel + '</span>';
+            }
+            if (p.error) {
+                badges += ' <span class="pm-card-badge pm-badge-error">Error</span>';
+            }
+
+            var html = '<div class="pm-card">' +
+                '<div class="pm-card-header">' +
+                    '<div>' +
+                        '<div class="pm-card-title">' + esc(p.name || p.plugin_id) + '</div>' +
+                        '<div class="pm-card-version">v' + esc(p.version || "?") +
+                            (p.author ? ' by ' + esc(p.author) : '') + '</div>' +
+                    '</div>' +
+                    '<div>' + badges + '</div>' +
+                '</div>' +
+                '<div class="pm-card-desc">' + esc(p.description || "No description") + '</div>';
+
+            if (p.error) {
+                html += '<div class="pm-card-error">' + esc(p.error) + '</div>';
+            }
+
+            if (p.loaded_at) {
+                html += '<div class="pm-card-meta">Loaded: ' + esc(p.loaded_at) + '</div>';
+            }
+
+            html += '<div class="pm-card-actions">';
+            if (p.enabled) {
+                html += '<button class="pm-btn-danger" onclick="pmDisable(\'' + esc(p.plugin_id) + '\')">Disable</button>';
+            } else {
+                html += '<button onclick="pmEnable(\'' + esc(p.plugin_id) + '\')">Enable</button>';
+            }
+            if (p.loaded) {
+                html += '<button onclick="pmUnload(\'' + esc(p.plugin_id) + '\')">Unload</button>';
+            } else {
+                html += '<button onclick="pmLoad(\'' + esc(p.plugin_id) + '\')">Load</button>';
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        function pmEnable(pid) {
+            ws.send(JSON.stringify({ type: "plugin_enable", plugin_id: pid }));
+        }
+        function pmDisable(pid) {
+            if (!confirm("Disable plugin " + pid + "?")) return;
+            ws.send(JSON.stringify({ type: "plugin_disable", plugin_id: pid }));
+        }
+        function pmLoad(pid) {
+            ws.send(JSON.stringify({ type: "plugin_load", plugin_id: pid }));
+        }
+        function pmUnload(pid) {
+            ws.send(JSON.stringify({ type: "plugin_unload", plugin_id: pid }));
+        }
+
+        // Hook into renderAgents
+        (function() {
+            var origRender = window.renderAgents;
+            if (origRender) {
+                window.renderAgents = function() {
+                    origRender.apply(this, arguments);
+                    renderPmAll();
                 };
             }
         })();

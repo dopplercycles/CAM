@@ -1,0 +1,12 @@
+name: Hello World
+version: "0.1.0"
+description: Example plugin that demonstrates the CAM plugin architecture. Logs lifecycle events and adds a simple API endpoint.
+author: Doppler Cycles
+entry_point: "main:HelloWorldPlugin"
+dependencies: []
+cam_version: "0.1.0"
+config_schema:
+  greeting:
+    type: string
+    default: "Hello from the plugin system!"
+    description: "Custom greeting message"

@@ -59,6 +59,7 @@ from tools.doppler.market_monitor import MarketMonitor
 from tools.doppler.feedback import FeedbackManager
 from tools.doppler.warranty import WarrantyRecallManager
 from tools.doppler.maintenance_scheduler import MaintenanceSchedulerManager
+from core.plugins import PluginManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -485,6 +486,14 @@ async def broadcast_maintenance_status():
     await broadcast_to_dashboards({
         "type": "maintenance_status",
         **maintenance_scheduler.to_broadcast_dict(),
+    })
+
+
+async def broadcast_plugin_status():
+    """Push current plugin manager state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "plugin_status",
+        **plugin_manager.to_broadcast_dict(),
     })
 
 
@@ -1336,6 +1345,13 @@ maintenance_scheduler = MaintenanceSchedulerManager(
     on_change=broadcast_maintenance_status,
 )
 
+# Plugin Manager — extensible plugin system
+plugin_manager = PluginManager(
+    plugins_dir="plugins",
+    db_path="data/plugins.db",
+    on_change=broadcast_plugin_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1602,6 +1618,10 @@ async def lifespan(app: FastAPI):
     await telegram_bot.start()
     app.state.telegram_bot = telegram_bot
 
+    # Initialize plugin system — load enabled plugins and fire on_startup hooks
+    plugin_manager.set_app(app)
+    plugin_manager.on_startup()
+
     # Boot complete — log and notify
     event_logger.info("system", f"CAM Online (boot: {boot_duration}s)")
     logger.info("CAM Online — boot completed in %.2fs", boot_duration)
@@ -1611,6 +1631,9 @@ async def lifespan(app: FastAPI):
     # --- Graceful shutdown ---
     logger.info("CAM shutdown initiated")
     event_logger.info("system", "CAM shutting down")
+
+    # 0. Shut down plugins first
+    plugin_manager.on_shutdown()
 
     # 1. Notify connected agents
     shutdown_msg = {"type": "shutdown", "reason": "cam_shutdown"}
@@ -1667,6 +1690,7 @@ async def lifespan(app: FastAPI):
     feedback_manager.close()
     warranty_manager.close()
     maintenance_scheduler.close()
+    plugin_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1733,6 +1757,7 @@ app.state.market_monitor = market_monitor
 app.state.feedback_manager = feedback_manager
 app.state.warranty_manager = warranty_manager
 app.state.maintenance_scheduler = maintenance_scheduler
+app.state.plugin_manager = plugin_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2519,6 +2544,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
 
     # Start health tracking for this connection session
     health_monitor.on_agent_connected(agent_id)
+    plugin_manager.on_agent_connected(agent_id)
 
     try:
         while True:
@@ -2719,6 +2745,7 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
         agent_websockets.pop(agent_id, None)
         # Accumulate uptime in health monitor before marking offline
         health_monitor.on_agent_disconnected(agent_id)
+        plugin_manager.on_agent_disconnected(agent_id)
         # Mark offline in registry (keeps the record for dashboard display)
         registry.deregister(agent_id)
         await broadcast_agent_status()
@@ -2931,6 +2958,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "maintenance_status",
         **maintenance_scheduler.to_broadcast_dict(),
+    })
+
+    # Send current plugin manager status
+    await websocket.send_json({
+        "type": "plugin_status",
+        **plugin_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4804,6 +4837,70 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "maintenance_forecast_result",
                     "ok": True,
                     **forecast,
+                })
+
+            # ================================================================
+            # PLUGIN MANAGER
+            # ================================================================
+
+            elif msg.get("type") == "plugin_enable":
+                pid = msg.get("plugin_id", "")
+                ok = plugin_manager.enable_plugin(pid)
+                await websocket.send_json({
+                    "type": "plugin_enabled",
+                    "ok": ok,
+                    "plugin_id": pid,
+                })
+                await broadcast_plugin_status()
+
+            elif msg.get("type") == "plugin_disable":
+                pid = msg.get("plugin_id", "")
+                ok = plugin_manager.disable_plugin(pid)
+                await websocket.send_json({
+                    "type": "plugin_disabled",
+                    "ok": ok,
+                    "plugin_id": pid,
+                })
+                await broadcast_plugin_status()
+
+            elif msg.get("type") == "plugin_load":
+                pid = msg.get("plugin_id", "")
+                instance = plugin_manager.load_plugin(pid)
+                await websocket.send_json({
+                    "type": "plugin_loaded",
+                    "ok": instance is not None,
+                    "plugin_id": pid,
+                })
+                await broadcast_plugin_status()
+
+            elif msg.get("type") == "plugin_unload":
+                pid = msg.get("plugin_id", "")
+                ok = plugin_manager.unload_plugin(pid)
+                await websocket.send_json({
+                    "type": "plugin_unloaded",
+                    "ok": ok,
+                    "plugin_id": pid,
+                })
+                await broadcast_plugin_status()
+
+            elif msg.get("type") == "plugin_config":
+                pid = msg.get("plugin_id", "")
+                config_data = msg.get("config", {})
+                ok = plugin_manager.update_config(pid, config_data)
+                await websocket.send_json({
+                    "type": "plugin_config_updated",
+                    "ok": ok,
+                    "plugin_id": pid,
+                })
+                await broadcast_plugin_status()
+
+            elif msg.get("type") == "plugin_status_get":
+                pid = msg.get("plugin_id", "")
+                status = plugin_manager.plugin_status(pid)
+                await websocket.send_json({
+                    "type": "plugin_status_result",
+                    "ok": status is not None,
+                    "plugin": status,
                 })
 
             elif msg.get("type") == "research_result_delete":
