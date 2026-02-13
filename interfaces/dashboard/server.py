@@ -52,6 +52,7 @@ from tools.content.youtube import YouTubeManager
 from tools.content.video_processor import VideoProcessor
 from tools.content.social_media import SocialMediaManager
 from tools.doppler.email_templates import EmailTemplateManager
+from tools.doppler.photo_docs import PhotoDocManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -422,6 +423,14 @@ async def broadcast_email_status():
     await broadcast_to_dashboards({
         "type": "email_status",
         **email_template_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_photo_docs_status():
+    """Push current photo documentation state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "photo_docs_status",
+        **photo_doc_manager.to_broadcast_dict(),
     })
 
 
@@ -1210,6 +1219,15 @@ email_template_manager = EmailTemplateManager(
     config=config,
 )
 
+# Photo documentation manager — service photography pipeline
+photo_doc_manager = PhotoDocManager(
+    db_path="data/photo_docs.db",
+    photos_dir="data/photos",
+    on_change=broadcast_photo_docs_status,
+    service_store=service_store,
+    crm_store=crm_store,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1534,6 +1552,7 @@ async def lifespan(app: FastAPI):
     video_processor.close()
     social_media_manager.close()
     email_template_manager.close()
+    photo_doc_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1593,6 +1612,7 @@ app.state.youtube_manager = youtube_manager
 app.state.video_processor = video_processor
 app.state.social_media_manager = social_media_manager
 app.state.email_template_manager = email_template_manager
+app.state.photo_doc_manager = photo_doc_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2022,6 +2042,85 @@ async def download_report_pdf(report_id: str):
         media_type="application/pdf",
         filename=f"doppler-report-{safe_id[:8]}.pdf",
     )
+
+
+# ---------------------------------------------------------------------------
+# Photo Documentation endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/photo/{photo_id}")
+async def serve_photo(photo_id: str):
+    """Serve original photo file."""
+    try:
+        uuid_obj = __import__("uuid").UUID(photo_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid photo ID"})
+
+    photo = photo_doc_manager.get_photo(str(uuid_obj))
+    if not photo or not photo.original_path:
+        return JSONResponse(status_code=404, content={"error": "Photo not found"})
+
+    photo_path = Path(photo.original_path)
+    if not photo_path.exists():
+        return JSONResponse(status_code=404, content={"error": "Photo file not found"})
+
+    # Determine media type from extension
+    ext = photo_path.suffix.lower()
+    media_types = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    media_type = media_types.get(ext, "image/jpeg")
+
+    return FileResponse(str(photo_path), media_type=media_type)
+
+
+@app.get("/api/photo/{photo_id}/thumb")
+async def serve_photo_thumb(photo_id: str):
+    """Serve photo thumbnail."""
+    try:
+        uuid_obj = __import__("uuid").UUID(photo_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid photo ID"})
+
+    photo = photo_doc_manager.get_photo(str(uuid_obj))
+    if not photo or not photo.thumbnail_path:
+        return JSONResponse(status_code=404, content={"error": "Thumbnail not found"})
+
+    thumb_path = Path(photo.thumbnail_path)
+    if not thumb_path.exists():
+        return JSONResponse(status_code=404, content={"error": "Thumbnail file not found"})
+
+    return FileResponse(str(thumb_path), media_type="image/jpeg")
+
+
+@app.get("/api/photo/composite/{service_record_id}")
+async def serve_composite(service_record_id: str):
+    """Serve before/after composite image."""
+    try:
+        uuid_obj = __import__("uuid").UUID(service_record_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid service record ID"})
+
+    safe_id = str(uuid_obj)
+    composite_path = Path("data/photos/composites") / f"{safe_id}.jpg"
+    if not composite_path.exists():
+        return JSONResponse(status_code=404, content={"error": "Composite not found"})
+
+    return FileResponse(str(composite_path), media_type="image/jpeg")
+
+
+@app.get("/api/photo/gallery/{service_record_id}")
+async def serve_gallery(service_record_id: str):
+    """Serve photo gallery HTML."""
+    try:
+        uuid_obj = __import__("uuid").UUID(service_record_id)
+    except (ValueError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid service record ID"})
+
+    safe_id = str(uuid_obj)
+    gallery_path = Path("data/photos/galleries") / f"{safe_id}.html"
+    if not gallery_path.exists():
+        return JSONResponse(status_code=404, content={"error": "Gallery not found"})
+
+    return FileResponse(str(gallery_path), media_type="text/html")
 
 
 # ---------------------------------------------------------------------------
@@ -2670,6 +2769,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "email_status",
         **email_template_manager.to_broadcast_dict(),
+    })
+
+    # Send current photo documentation status
+    await websocket.send_json({
+        "type": "photo_docs_status",
+        **photo_doc_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -3925,6 +4030,100 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "email_customer_history_result",
                     "customer_id": cust_id,
                     "emails": history,
+                })
+
+            # ── Photo Documentation handlers ──────────────────────
+            elif msg.get("type") == "photo_import":
+                imported = photo_doc_manager.import_photos()
+                await websocket.send_json({
+                    "type": "photo_imported",
+                    "ok": True,
+                    "count": len(imported),
+                    "photos": [p.to_dict() for p in imported],
+                })
+                await broadcast_photo_docs_status()
+
+            elif msg.get("type") == "photo_tag":
+                pid = msg.get("photo_id", "")
+                rec = photo_doc_manager.tag_photo(
+                    pid,
+                    service_record_id=msg.get("service_record_id", ""),
+                    stage=msg.get("stage", ""),
+                    description=msg.get("description", ""),
+                    content_worthy=int(msg.get("content_worthy", 0)),
+                )
+                await websocket.send_json({
+                    "type": "photo_tagged",
+                    "ok": rec is not None,
+                    "photo": rec.to_dict() if rec else None,
+                })
+                await broadcast_photo_docs_status()
+
+            elif msg.get("type") == "photo_tag_batch":
+                pids = msg.get("photo_ids", [])
+                results = photo_doc_manager.tag_photos_batch(
+                    pids,
+                    service_record_id=msg.get("service_record_id", ""),
+                    stage=msg.get("stage", ""),
+                )
+                await websocket.send_json({
+                    "type": "photo_batch_tagged",
+                    "ok": True,
+                    "count": len(results),
+                })
+                await broadcast_photo_docs_status()
+
+            elif msg.get("type") == "photo_generate_comparison":
+                srid = msg.get("service_record_id", "")
+                comp_path = photo_doc_manager.generate_comparison(srid)
+                await websocket.send_json({
+                    "type": "photo_comparison_result",
+                    "ok": comp_path is not None,
+                    "path": comp_path or "",
+                    "url": f"/api/photo/composite/{srid}" if comp_path else "",
+                })
+
+            elif msg.get("type") == "photo_build_gallery":
+                srid = msg.get("service_record_id", "")
+                gal_path = photo_doc_manager.build_gallery(srid)
+                await websocket.send_json({
+                    "type": "photo_gallery_result",
+                    "ok": gal_path is not None,
+                    "path": gal_path or "",
+                    "url": f"/api/photo/gallery/{srid}" if gal_path else "",
+                })
+
+            elif msg.get("type") == "photo_update":
+                pid = msg.get("photo_id", "")
+                updates = {k: v for k, v in msg.items() if k not in ("type", "photo_id")}
+                rec = photo_doc_manager.update_photo(pid, **updates)
+                await websocket.send_json({
+                    "type": "photo_updated",
+                    "ok": rec is not None,
+                    "photo": rec.to_dict() if rec else None,
+                })
+                await broadcast_photo_docs_status()
+
+            elif msg.get("type") == "photo_delete":
+                pid = msg.get("photo_id", "")
+                ok = photo_doc_manager.delete_photo(pid)
+                await websocket.send_json({"type": "photo_deleted", "ok": ok, "photo_id": pid})
+                await broadcast_photo_docs_status()
+
+            elif msg.get("type") == "photo_list_service":
+                srid = msg.get("service_record_id", "")
+                photos = photo_doc_manager.get_service_photos(srid)
+                await websocket.send_json({
+                    "type": "photo_service_list",
+                    "service_record_id": srid,
+                    "photos": [p.to_dict() for p in photos],
+                })
+
+            elif msg.get("type") == "photo_content_worthy":
+                photos = photo_doc_manager.get_content_worthy()
+                await websocket.send_json({
+                    "type": "photo_content_worthy_list",
+                    "photos": [p.to_dict() for p in photos],
                 })
 
             elif msg.get("type") == "research_result_delete":

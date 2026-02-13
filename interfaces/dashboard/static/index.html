@@ -4993,6 +4993,243 @@
             font-size: 0.78rem;
         }
 
+        /* Photo Documentation */
+        .pd-stats-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .pd-stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            min-width: 100px;
+            text-align: center;
+            flex: 1;
+        }
+        .pd-stat-card .pd-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .pd-stat-card .pd-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+        }
+        .pd-import-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .pd-import-bar .pd-folder-path {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-family: monospace;
+        }
+        .pd-import-bar button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .pd-import-bar button:hover { opacity: 0.85; }
+        .pd-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .pd-filter-bar select {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.82rem;
+        }
+        .pd-filter-btn {
+            padding: 0.3rem 0.7rem;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .pd-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .pd-filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .pd-cw-toggle {
+            padding: 0.3rem 0.7rem;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .pd-cw-toggle.active { background: #f0ad4e; color: #000; border-color: #f0ad4e; }
+        .pd-photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .pd-photo-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .pd-photo-card:hover { border-color: var(--accent); }
+        .pd-photo-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+        .pd-photo-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+        }
+        .pd-photo-card .pd-card-info {
+            padding: 0.5rem 0.6rem;
+        }
+        .pd-photo-card .pd-card-filename {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pd-photo-card .pd-card-meta {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+        .pd-stage-badge {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .pd-stage-before { background: #1e3a5f; color: #5b9bd5; }
+        .pd-stage-during { background: #3d2e00; color: #f0ad4e; }
+        .pd-stage-after { background: #1a3e1a; color: #5cb85c; }
+        .pd-stage-imported { background: #333; color: #999; }
+        .pd-content-star {
+            color: #f0ad4e;
+            font-size: 0.85rem;
+            margin-left: 0.3rem;
+        }
+        .pd-detail-panel {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .pd-detail-panel .pd-detail-header {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .pd-detail-panel .pd-detail-thumb {
+            max-width: 400px;
+            max-height: 300px;
+            border-radius: 6px;
+            object-fit: contain;
+        }
+        .pd-detail-panel .pd-detail-info {
+            flex: 1;
+            min-width: 200px;
+        }
+        .pd-detail-panel .pd-detail-info p {
+            margin: 0.3rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .pd-detail-panel .pd-detail-info p span {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .pd-tag-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .pd-tag-form label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+        .pd-tag-form select,
+        .pd-tag-form input,
+        .pd-tag-form textarea {
+            width: 100%;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .pd-tag-form .pd-form-full { grid-column: 1 / -1; }
+        .pd-action-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .pd-action-row button {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.82rem;
+        }
+        .pd-action-row button:hover { border-color: var(--accent); color: var(--accent); }
+        .pd-action-row button.pd-save-btn { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .pd-action-row button.pd-delete-btn { border-color: #d9534f; color: #d9534f; }
+        .pd-action-row button.pd-delete-btn:hover { background: #d9534f; color: #fff; }
+        .pd-composite-viewer {
+            margin-top: 1rem;
+            text-align: center;
+        }
+        .pd-composite-viewer img {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .pd-empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -8353,6 +8590,98 @@
             </div>
         </section>
 
+        <section data-panel-id="photo-docs" style="display:none;">
+            <h2>Photo Documentation</h2>
+
+            <!-- Stats row -->
+            <div class="pd-stats-row" id="pd-stats-row">
+                <div class="pd-stat-card"><div class="pd-stat-value" id="pd-stat-total">0</div><div class="pd-stat-label">Total</div></div>
+                <div class="pd-stat-card"><div class="pd-stat-value" id="pd-stat-imported">0</div><div class="pd-stat-label">Imported</div></div>
+                <div class="pd-stat-card"><div class="pd-stat-value" id="pd-stat-tagged">0</div><div class="pd-stat-label">Tagged</div></div>
+                <div class="pd-stat-card"><div class="pd-stat-value" id="pd-stat-before">0</div><div class="pd-stat-label">Before</div></div>
+                <div class="pd-stat-card"><div class="pd-stat-value" id="pd-stat-after">0</div><div class="pd-stat-label">After</div></div>
+                <div class="pd-stat-card"><div class="pd-stat-value" id="pd-stat-cw">0</div><div class="pd-stat-label">Content-Worthy</div></div>
+            </div>
+
+            <!-- Import bar -->
+            <div class="pd-import-bar">
+                <button id="pd-scan-btn" onclick="pdImportPhotos()">Scan &amp; Import</button>
+                <span class="pd-folder-path">data/photos/import/</span>
+                <span id="pd-import-status" style="color:var(--text-secondary);font-size:0.82rem;"></span>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="pd-filter-bar">
+                <select id="pd-filter-customer" onchange="pdFilterChanged()">
+                    <option value="">All Customers</option>
+                </select>
+                <select id="pd-filter-service" onchange="pdFilterChanged()">
+                    <option value="">All Service Records</option>
+                </select>
+                <div id="pd-stage-filters">
+                    <button class="pd-filter-btn active" onclick="pdFilterByStage('')">All</button>
+                    <button class="pd-filter-btn" onclick="pdFilterByStage('before')">Before</button>
+                    <button class="pd-filter-btn" onclick="pdFilterByStage('during')">During</button>
+                    <button class="pd-filter-btn" onclick="pdFilterByStage('after')">After</button>
+                </div>
+                <button class="pd-cw-toggle" id="pd-cw-toggle" onclick="pdToggleContentWorthy()">&#9733; Content-Worthy</button>
+            </div>
+
+            <!-- Photo grid -->
+            <div class="pd-photo-grid" id="pd-photo-grid">
+                <div class="pd-empty">No photos yet. Drop images in <code>data/photos/import/</code> and click Scan.</div>
+            </div>
+
+            <!-- Detail / tag panel (hidden by default) -->
+            <div class="pd-detail-panel" id="pd-detail-panel" style="display:none;">
+                <div class="pd-detail-header">
+                    <img id="pd-detail-thumb" class="pd-detail-thumb" src="" alt="Photo preview">
+                    <div class="pd-detail-info">
+                        <p>File: <span id="pd-detail-filename"></span></p>
+                        <p>Dimensions: <span id="pd-detail-dims"></span></p>
+                        <p>Size: <span id="pd-detail-size"></span></p>
+                        <p>Taken: <span id="pd-detail-taken"></span></p>
+                        <p>Camera: <span id="pd-detail-camera"></span></p>
+                        <p>Status: <span id="pd-detail-status"></span></p>
+                    </div>
+                </div>
+                <div class="pd-tag-form">
+                    <div>
+                        <label>Service Record</label>
+                        <select id="pd-tag-service"></select>
+                    </div>
+                    <div>
+                        <label>Stage</label>
+                        <select id="pd-tag-stage">
+                            <option value="">-- Select --</option>
+                            <option value="before">Before</option>
+                            <option value="during">During</option>
+                            <option value="after">After</option>
+                        </select>
+                    </div>
+                    <div class="pd-form-full">
+                        <label>Description</label>
+                        <input type="text" id="pd-tag-description" placeholder="Brief description of what the photo shows">
+                    </div>
+                    <div>
+                        <label><input type="checkbox" id="pd-tag-cw"> Content-Worthy (flag for content pipeline)</label>
+                    </div>
+                </div>
+                <div class="pd-action-row">
+                    <button class="pd-save-btn" onclick="pdTagPhoto()">Save Tags</button>
+                    <button onclick="pdGenerateComparison()">Generate Comparison</button>
+                    <button onclick="pdBuildGallery()">Build Gallery</button>
+                    <button class="pd-delete-btn" onclick="pdDeletePhoto()">Delete</button>
+                </div>
+            </div>
+
+            <!-- Composite viewer -->
+            <div class="pd-composite-viewer" id="pd-composite-viewer" style="display:none;">
+                <h3 style="margin-bottom:0.5rem;color:var(--text-secondary);font-size:0.9rem;">Before / After Comparison</h3>
+                <img id="pd-composite-img" src="" alt="Before/After comparison">
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -9055,6 +9384,7 @@
             { id: 'email-templates', name: 'Email Templates' },
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
+            { id: 'photo-docs', name: 'Photo Docs' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -9407,6 +9737,46 @@
                 } else if (data.type === "email_customer_history_result") {
                     emHistory = data.emails || [];
                     renderEmHistory();
+
+                // Photo Documentation
+                } else if (data.type === "photo_docs_status") {
+                    handlePdStatus(data);
+                } else if (data.type === "photo_imported") {
+                    const btn = document.getElementById("pd-scan-btn");
+                    if (btn) { btn.disabled = false; btn.textContent = "Scan & Import"; }
+                    const statusEl = document.getElementById("pd-import-status");
+                    if (statusEl) statusEl.textContent = data.ok ? `Imported ${data.count} photo(s)` : "Import failed";
+                } else if (data.type === "photo_tagged") {
+                    // refreshed via broadcast
+                } else if (data.type === "photo_batch_tagged") {
+                    // refreshed via broadcast
+                } else if (data.type === "photo_comparison_result") {
+                    const viewer = document.getElementById("pd-composite-viewer");
+                    const img = document.getElementById("pd-composite-img");
+                    if (data.ok && data.url) {
+                        img.src = data.url + "?t=" + Date.now();
+                        viewer.style.display = "block";
+                    } else {
+                        viewer.style.display = "none";
+                        console.warn("Comparison generation failed");
+                    }
+                } else if (data.type === "photo_gallery_result") {
+                    if (data.ok && data.url) {
+                        window.open(data.url, "_blank");
+                    } else {
+                        console.warn("Gallery generation failed");
+                    }
+                } else if (data.type === "photo_deleted") {
+                    if (data.ok && pdSelectedPhoto && data.photo_id === pdSelectedPhoto.photo_id) {
+                        pdSelectedPhoto = null;
+                        document.getElementById("pd-detail-panel").style.display = "none";
+                    }
+                } else if (data.type === "photo_updated") {
+                    // refreshed via broadcast
+                } else if (data.type === "photo_service_list") {
+                    // optional: could show service photos in detail
+                } else if (data.type === "photo_content_worthy_list") {
+                    // optional: could display content-worthy list
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -12032,6 +12402,238 @@
                 window.renderCrmCustomerList = function() {
                     origRenderCrm.apply(this, arguments);
                     populateEmCustomerDropdown();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Photo Documentation
+        // ---------------------------------------------------------------
+
+        let pdPhotos = [];
+        let pdStatus = {};
+        let pdSelectedPhoto = null;
+        let pdFilter = { customer_id: '', service_record_id: '', stage: '', content_worthy: null };
+
+        function handlePdStatus(data) {
+            pdPhotos = data.photos || [];
+            pdStatus = data.status || {};
+            renderPdStats();
+            renderPdGrid();
+            populatePdCustomerDropdown();
+        }
+
+        function renderPdStats() {
+            const s = pdStatus;
+            const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+            el('pd-stat-total', s.total || 0);
+            el('pd-stat-imported', s.imported || 0);
+            el('pd-stat-tagged', s.tagged || 0);
+            el('pd-stat-before', (s.by_stage || {}).before || 0);
+            el('pd-stat-after', (s.by_stage || {}).after || 0);
+            el('pd-stat-cw', s.content_worthy || 0);
+        }
+
+        function renderPdGrid() {
+            const grid = document.getElementById('pd-photo-grid');
+            if (!grid) return;
+
+            // Apply filters
+            let filtered = pdPhotos;
+            if (pdFilter.customer_id) {
+                filtered = filtered.filter(p => p.customer_id === pdFilter.customer_id);
+            }
+            if (pdFilter.service_record_id) {
+                filtered = filtered.filter(p => p.service_record_id === pdFilter.service_record_id);
+            }
+            if (pdFilter.stage) {
+                filtered = filtered.filter(p => p.stage === pdFilter.stage);
+            }
+            if (pdFilter.content_worthy !== null) {
+                filtered = filtered.filter(p => p.content_worthy === 1);
+            }
+
+            if (!filtered.length) {
+                grid.innerHTML = '<div class="pd-empty">No photos match the current filters.</div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => {
+                const stageBadge = p.stage
+                    ? `<span class="pd-stage-badge pd-stage-${p.stage}">${p.stage}</span>`
+                    : '<span class="pd-stage-badge pd-stage-imported">new</span>';
+                const cwStar = p.content_worthy ? '<span class="pd-content-star">&#9733;</span>' : '';
+                const selected = pdSelectedPhoto && pdSelectedPhoto.photo_id === p.photo_id ? ' selected' : '';
+                const custLabel = p.customer_name ? `<span style="color:var(--text-secondary);font-size:0.7rem;">${p.customer_name}</span>` : '';
+                return `<div class="pd-photo-card${selected}" onclick="pdSelectPhoto('${p.photo_id}')">
+                    <img src="/api/photo/${p.photo_id}/thumb" alt="${p.filename}" onerror="this.style.display='none'">
+                    <div class="pd-card-info">
+                        <div class="pd-card-filename">${p.filename}${cwStar}</div>
+                        <div class="pd-card-meta">${stageBadge} ${custLabel}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function pdSelectPhoto(photoId) {
+            pdSelectedPhoto = pdPhotos.find(p => p.photo_id === photoId) || null;
+            renderPdDetail();
+            renderPdGrid();  // refresh selection highlight
+        }
+
+        function renderPdDetail() {
+            const panel = document.getElementById('pd-detail-panel');
+            if (!panel) return;
+
+            if (!pdSelectedPhoto) {
+                panel.style.display = 'none';
+                return;
+            }
+            panel.style.display = 'block';
+            const p = pdSelectedPhoto;
+
+            document.getElementById('pd-detail-thumb').src = `/api/photo/${p.photo_id}/thumb`;
+            document.getElementById('pd-detail-filename').textContent = p.filename;
+            document.getElementById('pd-detail-dims').textContent = p.width && p.height ? `${p.width} x ${p.height}` : 'Unknown';
+            const sizeKb = p.file_size / 1024;
+            document.getElementById('pd-detail-size').textContent = sizeKb > 1024 ? `${(sizeKb/1024).toFixed(1)} MB` : `${sizeKb.toFixed(0)} KB`;
+            document.getElementById('pd-detail-taken').textContent = p.taken_at || 'Unknown';
+            document.getElementById('pd-detail-camera').textContent = (p.metadata || {}).camera || 'Unknown';
+            document.getElementById('pd-detail-status').textContent = p.status;
+
+            // Populate tag form
+            populatePdServiceRecords();
+            const svcSel = document.getElementById('pd-tag-service');
+            if (svcSel) svcSel.value = p.service_record_id || '';
+            const stageSel = document.getElementById('pd-tag-stage');
+            if (stageSel) stageSel.value = p.stage || '';
+            const descInput = document.getElementById('pd-tag-description');
+            if (descInput) descInput.value = p.description || '';
+            const cwCheck = document.getElementById('pd-tag-cw');
+            if (cwCheck) cwCheck.checked = !!p.content_worthy;
+        }
+
+        function populatePdCustomerDropdown() {
+            const sel = document.getElementById('pd-filter-customer');
+            if (!sel) return;
+            const current = sel.value;
+            const customers = typeof crmCustomers !== 'undefined' ? crmCustomers : [];
+            sel.innerHTML = '<option value="">All Customers</option>' +
+                customers.map(c => `<option value="${c.customer_id}">${c.name || c.customer_id.slice(0,8)}</option>`).join('');
+            sel.value = current;
+        }
+
+        function populatePdServiceRecords() {
+            const sel = document.getElementById('pd-tag-service');
+            if (!sel) return;
+            const current = sel.value;
+            const records = typeof svcRecords !== 'undefined' ? svcRecords : [];
+            sel.innerHTML = '<option value="">-- Select --</option>' +
+                records.map(r => {
+                    const label = `${r.customer_name || 'Customer'} — ${r.vehicle_name || 'Vehicle'} (${(r.date || '').slice(0,10)})`;
+                    return `<option value="${r.record_id}">${label}</option>`;
+                }).join('');
+            sel.value = current;
+
+            // Also populate the filter dropdown
+            const filterSel = document.getElementById('pd-filter-service');
+            if (filterSel) {
+                const filterCurrent = filterSel.value;
+                filterSel.innerHTML = '<option value="">All Service Records</option>' +
+                    records.map(r => {
+                        const label = `${r.customer_name || 'Customer'} — ${r.vehicle_name || 'Vehicle'}`;
+                        return `<option value="${r.record_id}">${label}</option>`;
+                    }).join('');
+                filterSel.value = filterCurrent;
+            }
+        }
+
+        function pdFilterByStage(stage) {
+            pdFilter.stage = stage;
+            // Update active button state
+            document.querySelectorAll('#pd-stage-filters .pd-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            renderPdGrid();
+        }
+
+        function pdToggleContentWorthy() {
+            const btn = document.getElementById('pd-cw-toggle');
+            if (pdFilter.content_worthy !== null) {
+                pdFilter.content_worthy = null;
+                btn.classList.remove('active');
+            } else {
+                pdFilter.content_worthy = 1;
+                btn.classList.add('active');
+            }
+            renderPdGrid();
+        }
+
+        function pdFilterChanged() {
+            pdFilter.customer_id = document.getElementById('pd-filter-customer').value;
+            pdFilter.service_record_id = document.getElementById('pd-filter-service').value;
+            renderPdGrid();
+        }
+
+        function pdImportPhotos() {
+            const btn = document.getElementById('pd-scan-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Scanning...'; }
+            document.getElementById('pd-import-status').textContent = '';
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'photo_import' }));
+            }
+        }
+
+        function pdTagPhoto() {
+            if (!pdSelectedPhoto) return;
+            const svcId = document.getElementById('pd-tag-service').value;
+            const stage = document.getElementById('pd-tag-stage').value;
+            const desc = document.getElementById('pd-tag-description').value;
+            const cw = document.getElementById('pd-tag-cw').checked ? 1 : 0;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'photo_tag',
+                    photo_id: pdSelectedPhoto.photo_id,
+                    service_record_id: svcId,
+                    stage: stage,
+                    description: desc,
+                    content_worthy: cw,
+                }));
+            }
+        }
+
+        function pdGenerateComparison() {
+            const svcId = pdSelectedPhoto ? pdSelectedPhoto.service_record_id : '';
+            if (!svcId) { alert('Select a photo with a service record first.'); return; }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'photo_generate_comparison', service_record_id: svcId }));
+            }
+        }
+
+        function pdBuildGallery() {
+            const svcId = pdSelectedPhoto ? pdSelectedPhoto.service_record_id : '';
+            if (!svcId) { alert('Select a photo with a service record first.'); return; }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'photo_build_gallery', service_record_id: svcId }));
+            }
+        }
+
+        function pdDeletePhoto() {
+            if (!pdSelectedPhoto) return;
+            if (!confirm('Delete this photo permanently?')) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'photo_delete', photo_id: pdSelectedPhoto.photo_id }));
+            }
+        }
+
+        // Hook into service records handler to refresh dropdowns when data updates
+        (function() {
+            const origRenderSvc = window.handleServiceRecordsStatus;
+            if (origRenderSvc) {
+                window.handleServiceRecordsStatus = function() {
+                    origRenderSvc.apply(this, arguments);
+                    populatePdServiceRecords();
                 };
             }
         })();
