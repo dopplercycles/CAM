@@ -6880,6 +6880,152 @@
             font-size: 0.85rem;
         }
 
+        /* Offline Mode */
+        .ol-banner {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+        .ol-banner.ol-online { background: #0d2818; color: #4ade80; border: 1px solid #166534; }
+        .ol-banner.ol-degraded { background: #2a1f00; color: #fbbf24; border: 1px solid #854d0e; }
+        .ol-banner.ol-offline { background: #2a0a0a; color: #f87171; border: 1px solid #991b1b; }
+        .ol-banner .ol-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .ol-online .ol-dot { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+        .ol-degraded .ol-dot { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; animation: ol-pulse 2s infinite; }
+        .ol-offline .ol-dot { background: #f87171; box-shadow: 0 0 6px #f87171; animation: ol-pulse 1s infinite; }
+        @keyframes ol-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .ol-banner .ol-state-label { font-size: 1.1rem; }
+        .ol-banner .ol-since {
+            margin-left: auto;
+            font-size: 0.8rem;
+            font-weight: 400;
+            opacity: 0.7;
+        }
+        .ol-stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+        .ol-stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            min-width: 140px;
+            text-align: center;
+        }
+        .ol-stat-card .ol-stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .ol-stat-card .ol-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .ol-svc-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .ol-svc-card {
+            flex: 1;
+            min-width: 180px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .ol-svc-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .ol-svc-dot.ol-up { background: #4ade80; }
+        .ol-svc-dot.ol-down { background: #f87171; }
+        .ol-svc-name { font-weight: 600; font-size: 0.9rem; }
+        .ol-svc-status { font-size: 0.8rem; color: var(--text-secondary); margin-left: auto; }
+        .ol-section {
+            margin-top: 1.5rem;
+        }
+        .ol-section h3 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding-bottom: 0.4rem;
+        }
+        .ol-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .ol-queue-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        .ol-queue-table th,
+        .ol-queue-table td {
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .ol-queue-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+        }
+        .ol-op-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .ol-op-pending { background: #1a2a3a; color: #60a5fa; }
+        .ol-op-completed { background: #1a3a2a; color: #4ade80; }
+        .ol-op-failed { background: #3a1a1a; color: #f87171; }
+        .ol-op-processing { background: #2a2a1a; color: #fbbf24; }
+        .ol-history-list {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+        }
+        .ol-history-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .ol-history-item .ol-arrow { color: var(--text-secondary); }
+        .ol-empty {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -11022,6 +11168,88 @@
             </div>
         </section>
 
+        <section data-panel-id="offline-mode" style="display:none;">
+            <h2>Connectivity &amp; Offline Mode</h2>
+
+            <!-- State banner -->
+            <div class="ol-banner ol-online" id="ol-banner">
+                <span class="ol-dot"></span>
+                <span class="ol-state-label" id="ol-state-label">Online</span>
+                <span class="ol-since" id="ol-since"></span>
+            </div>
+
+            <!-- Service status cards -->
+            <div class="ol-svc-row">
+                <div class="ol-svc-card">
+                    <span class="ol-svc-dot ol-up" id="ol-internet-dot"></span>
+                    <span class="ol-svc-name">Internet</span>
+                    <span class="ol-svc-status" id="ol-internet-status">Connected</span>
+                </div>
+                <div class="ol-svc-card">
+                    <span class="ol-svc-dot ol-up" id="ol-ollama-dot"></span>
+                    <span class="ol-svc-name">Ollama (Local AI)</span>
+                    <span class="ol-svc-status" id="ol-ollama-status">Available</span>
+                </div>
+            </div>
+
+            <!-- Stats bar -->
+            <div class="ol-stats-bar">
+                <div class="ol-stat-card">
+                    <div class="ol-stat-value" id="ol-stat-checks">0</div>
+                    <div class="ol-stat-label">Checks Run</div>
+                </div>
+                <div class="ol-stat-card">
+                    <div class="ol-stat-value" id="ol-stat-interval">30s</div>
+                    <div class="ol-stat-label">Check Interval</div>
+                </div>
+                <div class="ol-stat-card">
+                    <div class="ol-stat-value" id="ol-stat-queue">0</div>
+                    <div class="ol-stat-label">Queued Ops</div>
+                </div>
+                <div class="ol-stat-card">
+                    <div class="ol-stat-value" id="ol-stat-cached">0</div>
+                    <div class="ol-stat-label">Cached Sections</div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="ol-section">
+                <h3>Actions</h3>
+                <div class="ol-actions">
+                    <button class="btn btn-primary" onclick="olForceCheck()">Check Now</button>
+                    <button class="btn btn-ghost" onclick="olProcessQueue()">Process Queue</button>
+                    <button class="btn btn-ghost" onclick="olClearQueue()">Clear Queue</button>
+                </div>
+            </div>
+
+            <!-- Operation Queue -->
+            <div class="ol-section">
+                <h3>Operation Queue</h3>
+                <div id="ol-queue-container">
+                    <div class="ol-empty">No queued operations.</div>
+                </div>
+            </div>
+
+            <!-- State History -->
+            <div class="ol-section">
+                <h3>State Transition History</h3>
+                <div class="ol-history-list" id="ol-history-container">
+                    <div class="ol-empty">No state transitions recorded.</div>
+                </div>
+            </div>
+
+            <div class="ol-section" style="margin-top:2rem;padding:1rem;background:var(--bg-tertiary);border-radius:8px;border:1px solid var(--border-primary);">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;">
+                    <strong style="color:var(--text-primary);">How it works:</strong>
+                    CAM checks internet (dns.google:443) and Ollama (/api/tags) every
+                    <span id="ol-info-interval">30</span> seconds.
+                    When offline, local operations (service records, CRM, inventory, scheduling)
+                    continue normally. Operations requiring connectivity are queued and processed
+                    automatically when the connection returns.
+                </p>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -11733,6 +11961,7 @@
             { id: 'maintenance-scheduler', name: 'Maintenance Calendar' },
             { id: 'plugin-manager', name: 'Plugins' },
             { id: 'export', name: 'Data Export' },
+            { id: 'offline-mode', name: 'Offline Mode' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -12278,6 +12507,20 @@
                 } else if (data.type === "export_history_cleared") {
                     exHistory = [];
                     renderExHistory();
+
+                // ── Offline Mode ──
+                } else if (data.type === "offline_status") {
+                    olStatus = data.status || {};
+                    olQueue = data.queue || [];
+                    olHistory = data.state_history || [];
+                    renderOlAll();
+                } else if (data.type === "offline_check_result") {
+                    // Status broadcast follows, just show toast
+                    olLastCheckResult = data;
+                } else if (data.type === "offline_queue_processed") {
+                    // Broadcast follows
+                } else if (data.type === "offline_queue_cleared" || data.type === "offline_op_removed") {
+                    // Broadcast follows
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -18819,6 +19062,160 @@
             window.renderAgents = function() {
                 _origRender();
                 renderExAll();
+            };
+        })();
+
+        // ---------------------------------------------------------------
+        // Offline Mode
+        // ---------------------------------------------------------------
+        let olStatus = {};
+        let olQueue = [];
+        let olHistory = [];
+        let olLastCheckResult = null;
+
+        function renderOlAll() {
+            renderOlBanner();
+            renderOlServices();
+            renderOlStats();
+            renderOlQueue();
+            renderOlHistory();
+        }
+
+        function renderOlBanner() {
+            const banner = document.getElementById('ol-banner');
+            const label = document.getElementById('ol-state-label');
+            const since = document.getElementById('ol-since');
+            const state = olStatus.state || 'online';
+
+            banner.className = 'ol-banner ol-' + state;
+            const labels = { online: 'Online', degraded: 'Degraded', offline: 'Offline' };
+            label.textContent = labels[state] || state;
+
+            if (olStatus.state_since) {
+                const d = new Date(olStatus.state_since);
+                const ago = Math.round((Date.now() - d.getTime()) / 60000);
+                if (ago < 1) since.textContent = 'just now';
+                else if (ago < 60) since.textContent = ago + 'm ago';
+                else since.textContent = Math.round(ago / 60) + 'h ago';
+            } else {
+                since.textContent = '';
+            }
+        }
+
+        function renderOlServices() {
+            const iDot = document.getElementById('ol-internet-dot');
+            const iStat = document.getElementById('ol-internet-status');
+            const oDot = document.getElementById('ol-ollama-dot');
+            const oStat = document.getElementById('ol-ollama-status');
+
+            if (olStatus.internet) {
+                iDot.className = 'ol-svc-dot ol-up';
+                iStat.textContent = 'Connected';
+            } else {
+                iDot.className = 'ol-svc-dot ol-down';
+                iStat.textContent = 'Disconnected';
+            }
+            if (olStatus.ollama) {
+                oDot.className = 'ol-svc-dot ol-up';
+                oStat.textContent = 'Available';
+            } else {
+                oDot.className = 'ol-svc-dot ol-down';
+                oStat.textContent = 'Unavailable';
+            }
+        }
+
+        function renderOlStats() {
+            const el = (id) => document.getElementById(id);
+            el('ol-stat-checks').textContent = olStatus.check_count || 0;
+            el('ol-stat-interval').textContent = (olStatus.check_interval || 30) + 's';
+            el('ol-stat-queue').textContent = olStatus.queue_depth || 0;
+            el('ol-stat-cached').textContent = (olStatus.cached_sections || []).length;
+            const info = document.getElementById('ol-info-interval');
+            if (info) info.textContent = olStatus.check_interval || 30;
+        }
+
+        function renderOlQueue() {
+            const container = document.getElementById('ol-queue-container');
+            if (!olQueue.length) {
+                container.innerHTML = '<div class="ol-empty">No queued operations.</div>';
+                return;
+            }
+            let html = '<table class="ol-queue-table"><thead><tr>' +
+                '<th>Time</th><th>Type</th><th>Status</th><th>Details</th><th></th>' +
+                '</tr></thead><tbody>';
+            olQueue.forEach(op => {
+                const cls = 'ol-op-' + (op.status || 'pending');
+                const detail = op.error
+                    ? '<span style="color:#f87171;">' + op.error.slice(0, 60) + '</span>'
+                    : (op.payload && op.payload.description ? op.payload.description.slice(0, 60) : '');
+                html += '<tr>' +
+                    '<td>' + (op.created_at || '').slice(11, 19) + '</td>' +
+                    '<td>' + (op.op_type || '').replace(/_/g, ' ') + '</td>' +
+                    '<td><span class="ol-op-badge ' + cls + '">' + (op.status || '').toUpperCase() + '</span></td>' +
+                    '<td>' + detail + '</td>' +
+                    '<td><button class="btn btn-ghost" style="font-size:0.7rem;padding:0.2rem 0.5rem;" ' +
+                    'onclick="olRemoveOp(\'' + op.queue_id + '\')">x</button></td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function renderOlHistory() {
+            const container = document.getElementById('ol-history-container');
+            if (!olHistory.length) {
+                container.innerHTML = '<div class="ol-empty">No state transitions recorded.</div>';
+                return;
+            }
+            let html = '';
+            olHistory.forEach(h => {
+                const time = (h.timestamp || '').slice(0, 19).replace('T', ' ');
+                const svcInfo = 'internet=' + (h.internet ? 'up' : 'down') +
+                    ', ollama=' + (h.ollama ? 'up' : 'down');
+                html += '<div class="ol-history-item">' +
+                    '<span class="ol-op-badge ol-op-' + (h.old_state === 'online' ? 'completed' : 'failed') + '">' +
+                    h.old_state + '</span>' +
+                    '<span class="ol-arrow">&rarr;</span>' +
+                    '<span class="ol-op-badge ol-op-' + (h.new_state === 'online' ? 'completed' : 'failed') + '">' +
+                    h.new_state + '</span>' +
+                    '<span style="font-size:0.75rem;color:var(--text-secondary);margin-left:0.5rem;">' +
+                    time + ' (' + svcInfo + ')</span>' +
+                    '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        function olForceCheck() {
+            if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({ type: 'offline_force_check' }));
+            }
+        }
+
+        function olProcessQueue() {
+            if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({ type: 'offline_process_queue' }));
+            }
+        }
+
+        function olClearQueue() {
+            if (!confirm('Clear all queued operations?')) return;
+            if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({ type: 'offline_clear_queue' }));
+            }
+        }
+
+        function olRemoveOp(queueId) {
+            if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({ type: 'offline_remove_op', queue_id: queueId }));
+            }
+        }
+
+        // Hook into renderAgents for panel refresh
+        (function() {
+            const _origRender = window.renderAgents || function(){};
+            window.renderAgents = function() {
+                _origRender();
+                renderOlAll();
             };
         })();
 

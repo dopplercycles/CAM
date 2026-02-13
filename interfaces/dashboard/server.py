@@ -61,6 +61,7 @@ from tools.doppler.warranty import WarrantyRecallManager
 from tools.doppler.maintenance_scheduler import MaintenanceSchedulerManager
 from core.plugins import PluginManager
 from api.export import ExportManager
+from core.offline import OfflineManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -751,6 +752,14 @@ async def broadcast_export_status():
     })
 
 
+async def broadcast_offline_status():
+    """Push current offline/connectivity state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "offline_status",
+        **offline_manager.to_broadcast_dict(),
+    })
+
+
 # Security audit log — SQLite-backed persistent audit trail
 security_audit_log = SecurityAuditLog(
     db_path=getattr(getattr(config, 'security', None),
@@ -1368,6 +1377,15 @@ export_manager = ExportManager(
     on_change=broadcast_export_status,
 )
 
+# Offline Manager — connectivity monitoring and graceful degradation
+offline_manager = OfflineManager(
+    cache_dir="data/cache",
+    db_path="data/offline.db",
+    ollama_url=getattr(getattr(config, 'models', None), 'ollama_url', 'http://localhost:11434'),
+    check_interval=30,
+    on_change=broadcast_offline_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1606,9 +1624,11 @@ async def lifespan(app: FastAPI):
     knowledge_inbox_task = asyncio.create_task(knowledge_inbox_loop())
     appt_reminder_task = asyncio.create_task(appointment_reminder_loop())
     invoice_overdue_task = asyncio.create_task(invoice_overdue_loop())
+    offline_monitor_task = asyncio.create_task(offline_manager.start_monitoring())
     logger.info("Orchestrator loop started as background task")
     logger.info("Appointment reminder loop started")
     logger.info("Invoice overdue loop started")
+    logger.info("Offline monitoring loop started")
     logger.info("Scheduler loop started as background task")
     logger.info("Pipeline progress loop started as background task")
     logger.info("Webhook retry loop started as background task")
@@ -1689,6 +1709,8 @@ async def lifespan(app: FastAPI):
     knowledge_inbox_task.cancel()
     appt_reminder_task.cancel()
     invoice_overdue_task.cancel()
+    offline_manager.stop_monitoring()
+    offline_monitor_task.cancel()
 
     # 7. Close all databases
     knowledge_ingest.close()
@@ -1708,6 +1730,7 @@ async def lifespan(app: FastAPI):
     maintenance_scheduler.close()
     plugin_manager.close()
     export_manager.close()
+    offline_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1776,6 +1799,7 @@ app.state.warranty_manager = warranty_manager
 app.state.maintenance_scheduler = maintenance_scheduler
 app.state.plugin_manager = plugin_manager
 app.state.export_manager = export_manager
+app.state.offline_manager = offline_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -3000,6 +3024,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "export_status",
         **export_manager.to_broadcast_dict(),
+    })
+
+    # Send current offline/connectivity status
+    await websocket.send_json({
+        "type": "offline_status",
+        **offline_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4962,6 +4992,48 @@ async def dashboard_websocket(websocket: WebSocket):
                     "count": count,
                 })
                 await broadcast_export_status()
+
+            # ── Offline mode handlers ────────────────────────
+            elif msg.get("type") == "offline_get_status":
+                await websocket.send_json({
+                    "type": "offline_status",
+                    **offline_manager.to_broadcast_dict(),
+                })
+
+            elif msg.get("type") == "offline_force_check":
+                result = await offline_manager.check_connectivity()
+                await websocket.send_json({
+                    "type": "offline_check_result",
+                    **result,
+                })
+                await broadcast_offline_status()
+
+            elif msg.get("type") == "offline_process_queue":
+                count = await offline_manager.force_process_queue()
+                await websocket.send_json({
+                    "type": "offline_queue_processed",
+                    "count": count,
+                })
+                await broadcast_offline_status()
+
+            elif msg.get("type") == "offline_clear_queue":
+                status_filter = msg.get("status", "")
+                count = offline_manager.clear_queue(status=status_filter)
+                await websocket.send_json({
+                    "type": "offline_queue_cleared",
+                    "count": count,
+                })
+                await broadcast_offline_status()
+
+            elif msg.get("type") == "offline_remove_op":
+                queue_id = msg.get("queue_id", "")
+                ok = offline_manager.remove_operation(queue_id)
+                await websocket.send_json({
+                    "type": "offline_op_removed",
+                    "ok": ok,
+                    "queue_id": queue_id,
+                })
+                await broadcast_offline_status()
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")
