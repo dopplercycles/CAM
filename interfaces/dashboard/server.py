@@ -62,6 +62,7 @@ from tools.doppler.maintenance_scheduler import MaintenanceSchedulerManager
 from core.plugins import PluginManager
 from api.export import ExportManager
 from core.offline import OfflineManager
+from core.performance import PerformanceMonitor
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -760,6 +761,14 @@ async def broadcast_offline_status():
     })
 
 
+async def broadcast_performance_status():
+    """Push current performance metrics to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "performance_status",
+        **performance_monitor.to_broadcast_dict(),
+    })
+
+
 # Security audit log — SQLite-backed persistent audit trail
 security_audit_log = SecurityAuditLog(
     db_path=getattr(getattr(config, 'security', None),
@@ -1386,6 +1395,17 @@ offline_manager = OfflineManager(
     on_change=broadcast_offline_status,
 )
 
+# Performance Monitor — system metrics, alerts, optimization recommendations
+performance_monitor = PerformanceMonitor(
+    db_path="data/performance.db",
+    sample_interval=15,
+    analytics_db=getattr(getattr(config, 'analytics', None), 'db_path', 'data/analytics.db'),
+    on_change=broadcast_performance_status,
+    health_monitor=health_monitor,
+    registry=registry,
+    task_queue=task_queue if 'task_queue' in dir() else None,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1625,10 +1645,12 @@ async def lifespan(app: FastAPI):
     appt_reminder_task = asyncio.create_task(appointment_reminder_loop())
     invoice_overdue_task = asyncio.create_task(invoice_overdue_loop())
     offline_monitor_task = asyncio.create_task(offline_manager.start_monitoring())
+    performance_monitor_task = asyncio.create_task(performance_monitor.start_monitoring())
     logger.info("Orchestrator loop started as background task")
     logger.info("Appointment reminder loop started")
     logger.info("Invoice overdue loop started")
     logger.info("Offline monitoring loop started")
+    logger.info("Performance monitoring loop started")
     logger.info("Scheduler loop started as background task")
     logger.info("Pipeline progress loop started as background task")
     logger.info("Webhook retry loop started as background task")
@@ -1711,6 +1733,8 @@ async def lifespan(app: FastAPI):
     invoice_overdue_task.cancel()
     offline_manager.stop_monitoring()
     offline_monitor_task.cancel()
+    performance_monitor.stop_monitoring()
+    performance_monitor_task.cancel()
 
     # 7. Close all databases
     knowledge_ingest.close()
@@ -1731,6 +1755,7 @@ async def lifespan(app: FastAPI):
     plugin_manager.close()
     export_manager.close()
     offline_manager.close()
+    performance_monitor.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1804,6 +1829,7 @@ app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
 app.state.message_bus = message_bus
+app.state.performance_monitor = performance_monitor
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -3030,6 +3056,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "offline_status",
         **offline_manager.to_broadcast_dict(),
+    })
+
+    # Send current performance metrics
+    await websocket.send_json({
+        "type": "performance_status",
+        **performance_monitor.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -5034,6 +5066,45 @@ async def dashboard_websocket(websocket: WebSocket):
                     "queue_id": queue_id,
                 })
                 await broadcast_offline_status()
+
+            # ── Performance Monitor handlers ──────────────────────
+            elif msg.get("type") == "performance_get_status":
+                await websocket.send_json({
+                    "type": "performance_status",
+                    **performance_monitor.to_broadcast_dict(),
+                })
+
+            elif msg.get("type") == "performance_apply_rec":
+                rec_id = msg.get("rec_id", "")
+                result = performance_monitor.apply_recommendation(rec_id)
+                await websocket.send_json({
+                    "type": "performance_rec_applied",
+                    "rec_id": rec_id,
+                    **result,
+                })
+                await broadcast_performance_status()
+
+            elif msg.get("type") == "performance_dismiss_rec":
+                rec_id = msg.get("rec_id", "")
+                ok = performance_monitor.dismiss_recommendation(rec_id)
+                await websocket.send_json({
+                    "type": "performance_rec_dismissed",
+                    "rec_id": rec_id,
+                    "ok": ok,
+                })
+                await broadcast_performance_status()
+
+            elif msg.get("type") == "performance_update_threshold":
+                key = msg.get("key", "")
+                value = float(msg.get("value", 0))
+                ok = performance_monitor.set_threshold(key, value)
+                await websocket.send_json({
+                    "type": "performance_threshold_updated",
+                    "key": key,
+                    "value": value,
+                    "ok": ok,
+                })
+                await broadcast_performance_status()
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")

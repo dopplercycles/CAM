@@ -7143,6 +7143,193 @@
             font-size: 0.85rem;
         }
 
+        /* Performance Monitor */
+        .pf-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .pf-stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .pf-stat-card .pf-stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .pf-stat-card .pf-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+        }
+        .pf-stat-card.pf-ok .pf-stat-value { color: var(--success); }
+        .pf-stat-card.pf-warning .pf-stat-value { color: var(--warning, #f59e0b); }
+        .pf-stat-card.pf-critical .pf-stat-value { color: var(--error); }
+        .pf-section {
+            margin-bottom: 1.25rem;
+        }
+        .pf-section h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .pf-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .pf-bar-label {
+            width: 80px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+        .pf-bar-track {
+            flex: 1;
+            height: 18px;
+            background: var(--bg-tertiary, var(--bg-secondary));
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .pf-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+        .pf-bar-fill.pf-ok { background: var(--success); }
+        .pf-bar-fill.pf-warning { background: var(--warning, #f59e0b); }
+        .pf-bar-fill.pf-critical { background: var(--error); }
+        .pf-bar-pct {
+            width: 48px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+        .pf-sparkline {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 40px;
+        }
+        .pf-spark-bar {
+            flex: 1;
+            min-width: 4px;
+            background: var(--accent);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.3s ease;
+        }
+        .pf-spark-bar.pf-warning { background: var(--warning, #f59e0b); }
+        .pf-spark-bar.pf-critical { background: var(--error); }
+        .pf-latency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.5rem;
+        }
+        .pf-latency-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+        }
+        .pf-latency-card .pf-lc-name {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.2rem;
+        }
+        .pf-latency-card .pf-lc-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .pf-latency-card .pf-lc-sub {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .pf-db-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid var(--border-primary);
+            font-size: 0.8rem;
+        }
+        .pf-db-name { color: var(--text-primary); }
+        .pf-db-size { color: var(--text-secondary); }
+        .pf-alert-item {
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.4rem;
+            border-radius: 6px;
+            border-left: 4px solid var(--warning, #f59e0b);
+            background: var(--bg-secondary);
+            font-size: 0.8rem;
+        }
+        .pf-alert-item.pf-alert-critical {
+            border-left-color: var(--error);
+        }
+        .pf-alert-type {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .pf-alert-msg {
+            color: var(--text-secondary);
+            margin-top: 0.15rem;
+        }
+        .pf-rec-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .pf-rec-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        .pf-rec-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+        }
+        .pf-rec-impact {
+            font-size: 0.75rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .pf-rec-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .pf-rec-actions button {
+            padding: 0.3rem 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-primary);
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+        .pf-btn-apply {
+            background: var(--success);
+            color: #fff;
+            border-color: var(--success) !important;
+        }
+        .pf-btn-dismiss {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+        .pf-empty {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -11478,6 +11665,72 @@
             </div>
         </section>
 
+        <section data-panel-id="performance" style="display:none;">
+            <h2>Performance Monitor</h2>
+
+            <div class="pf-stats-grid" id="pf-stats-grid">
+                <div class="pf-stat-card" id="pf-card-cpu">
+                    <div class="pf-stat-value" id="pf-val-cpu">--</div>
+                    <div class="pf-stat-label">CPU %</div>
+                </div>
+                <div class="pf-stat-card" id="pf-card-mem">
+                    <div class="pf-stat-value" id="pf-val-mem">--</div>
+                    <div class="pf-stat-label">Memory %</div>
+                </div>
+                <div class="pf-stat-card" id="pf-card-disk">
+                    <div class="pf-stat-value" id="pf-val-disk">--</div>
+                    <div class="pf-stat-label">Disk %</div>
+                </div>
+                <div class="pf-stat-card" id="pf-card-pcpu">
+                    <div class="pf-stat-value" id="pf-val-pcpu">--</div>
+                    <div class="pf-stat-label">CAM CPU %</div>
+                </div>
+                <div class="pf-stat-card" id="pf-card-pmem">
+                    <div class="pf-stat-value" id="pf-val-pmem">--</div>
+                    <div class="pf-stat-label">CAM RSS (MB)</div>
+                </div>
+                <div class="pf-stat-card" id="pf-card-agents">
+                    <div class="pf-stat-value" id="pf-val-agents">--</div>
+                    <div class="pf-stat-label">Active Agents</div>
+                </div>
+            </div>
+
+            <div class="pf-section">
+                <h3>Resource Usage</h3>
+                <div id="pf-resource-bars"></div>
+            </div>
+
+            <div class="pf-section">
+                <h3>CPU History (last 5 min)</h3>
+                <div class="pf-sparkline" id="pf-cpu-sparkline"></div>
+            </div>
+
+            <div class="pf-section">
+                <h3>Model Response Times</h3>
+                <div class="pf-latency-grid" id="pf-model-latency"></div>
+            </div>
+
+            <div class="pf-section">
+                <h3>Agent WebSocket Latency</h3>
+                <div class="pf-latency-grid" id="pf-ws-latency"></div>
+            </div>
+
+            <div class="pf-section">
+                <h3>Database Sizes</h3>
+                <div id="pf-db-sizes"></div>
+            </div>
+
+            <div class="pf-section">
+                <h3>Alerts</h3>
+                <div id="pf-alerts"></div>
+            </div>
+
+            <div class="pf-section">
+                <h3>Optimization Recommendations</h3>
+                <div id="pf-recommendations"></div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -12212,6 +12465,7 @@
             { id: 'persona', name: 'Persona' },
             { id: 'settings', name: 'Settings' },
             { id: 'agents', name: 'Agent Status Board' },
+            { id: 'performance', name: 'Performance Monitor' },
         ];
 
         function loadPrefs() {
@@ -12854,6 +13108,12 @@
                 } else if (data.type === "route_day_plan") {
                     if (data.route) handleRouteStatus({ today_route: data.route, status: routeStatus, route_history: routeHistory, accuracy_stats: routeAccuracy });
 
+                } else if (data.type === "performance_status") {
+                    handlePerformanceStatus(data);
+                } else if (data.type === "performance_rec_applied" ||
+                           data.type === "performance_rec_dismissed" ||
+                           data.type === "performance_threshold_updated") {
+                    // Broadcast will trigger a full status update
                 } else if (data.type === "knowledge_status") {
                     handleKnowledgeStatus(data);
                 } else if (data.type === "knowledge_scan_result") {
@@ -19555,6 +19815,202 @@
                     ipField.value = '192.168.88.4';
                 }
             }
+        })();
+
+        // ---------------------------------------------------------------
+        // Performance Monitor
+        // ---------------------------------------------------------------
+        let pfStatus = {};
+        let pfSamples = [];
+        let pfAlerts = [];
+        let pfRecommendations = [];
+        let pfModelLatency = {};
+        let pfWsLatency = {};
+        let pfDbSizes = [];
+
+        function handlePerformanceStatus(data) {
+            pfStatus = data.status || {};
+            pfSamples = data.recent_samples || [];
+            pfAlerts = data.alerts || [];
+            pfRecommendations = data.recommendations || [];
+            pfModelLatency = data.model_latency || {};
+            pfWsLatency = data.ws_latency || {};
+            pfDbSizes = data.db_sizes || [];
+            renderPerformancePanel();
+        }
+
+        function pfThresholdClass(value, threshold) {
+            if (!threshold) return 'pf-ok';
+            if (value >= threshold) return 'pf-critical';
+            if (value >= threshold * 0.8) return 'pf-warning';
+            return 'pf-ok';
+        }
+
+        function renderPerformancePanel() {
+            const t = (pfStatus.thresholds || {});
+            const s = pfSamples.length ? pfSamples[pfSamples.length - 1] : null;
+
+            // Stat cards
+            if (s) {
+                const cards = [
+                    { id: 'cpu', val: s.cpu_percent, unit: '%', thresh: t.cpu_percent },
+                    { id: 'mem', val: s.memory_percent, unit: '%', thresh: t.memory_percent },
+                    { id: 'disk', val: s.disk_percent, unit: '%', thresh: t.disk_percent },
+                    { id: 'pcpu', val: s.process_cpu, unit: '%', thresh: null },
+                    { id: 'pmem', val: s.process_memory_mb, unit: '', thresh: null },
+                    { id: 'agents', val: s.active_agents, unit: '', thresh: null },
+                ];
+                cards.forEach(c => {
+                    const el = document.getElementById('pf-val-' + c.id);
+                    const card = document.getElementById('pf-card-' + c.id);
+                    if (el) el.textContent = c.val != null ? (c.unit ? c.val + c.unit : Math.round(c.val)) : '--';
+                    if (card) {
+                        card.className = 'pf-stat-card ' + (c.thresh ? pfThresholdClass(c.val, c.thresh) : 'pf-ok');
+                    }
+                });
+            }
+
+            renderResourceBars();
+            renderCpuSparkline();
+            renderModelLatency();
+            renderWsLatency();
+            renderDbSizes();
+            renderPfAlerts();
+            renderPfRecommendations();
+        }
+
+        function renderResourceBars() {
+            const el = document.getElementById('pf-resource-bars');
+            if (!el) return;
+            const s = pfSamples.length ? pfSamples[pfSamples.length - 1] : null;
+            if (!s) { el.innerHTML = '<div class="pf-empty">Waiting for data...</div>'; return; }
+            const t = (pfStatus.thresholds || {});
+            const bars = [
+                { label: 'CPU', pct: s.cpu_percent, thresh: t.cpu_percent },
+                { label: 'Memory', pct: s.memory_percent, thresh: t.memory_percent },
+                { label: 'Disk', pct: s.disk_percent, thresh: t.disk_percent },
+            ];
+            el.innerHTML = bars.map(b => {
+                const cls = pfThresholdClass(b.pct, b.thresh);
+                const w = Math.min(b.pct, 100);
+                return `<div class="pf-bar-row">
+                    <span class="pf-bar-label">${b.label}</span>
+                    <div class="pf-bar-track">
+                        <div class="pf-bar-fill ${cls}" style="width:${w}%"></div>
+                    </div>
+                    <span class="pf-bar-pct">${b.pct.toFixed(1)}%</span>
+                </div>`;
+            }).join('');
+        }
+
+        function renderCpuSparkline() {
+            const el = document.getElementById('pf-cpu-sparkline');
+            if (!el) return;
+            const samples = pfSamples.slice(-20);
+            if (!samples.length) { el.innerHTML = '<div class="pf-empty">No data yet</div>'; return; }
+            const max = Math.max(...samples.map(s => s.cpu_percent), 1);
+            const t = (pfStatus.thresholds || {}).cpu_percent || 85;
+            el.innerHTML = samples.map(s => {
+                const h = Math.max((s.cpu_percent / max) * 100, 2);
+                const cls = pfThresholdClass(s.cpu_percent, t);
+                return `<div class="pf-spark-bar ${cls}" style="height:${h}%" title="${s.cpu_percent.toFixed(1)}%"></div>`;
+            }).join('');
+        }
+
+        function renderModelLatency() {
+            const el = document.getElementById('pf-model-latency');
+            if (!el) return;
+            const models = Object.entries(pfModelLatency);
+            if (!models.length) { el.innerHTML = '<div class="pf-empty">No model call data</div>'; return; }
+            el.innerHTML = models.map(([name, d]) => {
+                const avg1h = d.avg_1h != null ? d.avg_1h.toFixed(0) + ' ms' : 'n/a';
+                const avg24h = d.avg_24h != null ? d.avg_24h.toFixed(0) + ' ms' : 'n/a';
+                return `<div class="pf-latency-card">
+                    <div class="pf-lc-name">${name}</div>
+                    <div class="pf-lc-value">${avg1h}</div>
+                    <div class="pf-lc-sub">1h avg &middot; 24h: ${avg24h} &middot; ${d.calls_24h || 0} calls</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderWsLatency() {
+            const el = document.getElementById('pf-ws-latency');
+            if (!el) return;
+            const agents = Object.entries(pfWsLatency);
+            if (!agents.length) { el.innerHTML = '<div class="pf-empty">No agent connections</div>'; return; }
+            const t = (pfStatus.thresholds || {}).ws_latency_ms || 500;
+            el.innerHTML = agents.map(([id, rtt]) => {
+                const val = rtt != null ? rtt.toFixed(1) + ' ms' : 'n/a';
+                const cls = rtt != null ? pfThresholdClass(rtt, t) : '';
+                return `<div class="pf-latency-card">
+                    <div class="pf-lc-name">${id}</div>
+                    <div class="pf-lc-value ${cls}">${val}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderDbSizes() {
+            const el = document.getElementById('pf-db-sizes');
+            if (!el) return;
+            if (!pfDbSizes.length) { el.innerHTML = '<div class="pf-empty">No databases found</div>'; return; }
+            el.innerHTML = pfDbSizes.map(d => {
+                const size = d.size_mb >= 1 ? d.size_mb.toFixed(1) + ' MB' : (d.size_bytes / 1024).toFixed(0) + ' KB';
+                return `<div class="pf-db-row">
+                    <span class="pf-db-name">${d.name}</span>
+                    <span class="pf-db-size">${size}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function renderPfAlerts() {
+            const el = document.getElementById('pf-alerts');
+            if (!el) return;
+            if (!pfAlerts.length) { el.innerHTML = '<div class="pf-empty">No active alerts</div>'; return; }
+            el.innerHTML = pfAlerts.map(a => {
+                const cls = a.severity === 'critical' ? 'pf-alert-critical' : '';
+                return `<div class="pf-alert-item ${cls}">
+                    <div class="pf-alert-type">${a.severity.toUpperCase()}: ${a.alert_type}</div>
+                    <div class="pf-alert-msg">${a.message}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderPfRecommendations() {
+            const el = document.getElementById('pf-recommendations');
+            if (!el) return;
+            if (!pfRecommendations.length) { el.innerHTML = '<div class="pf-empty">No recommendations</div>'; return; }
+            el.innerHTML = pfRecommendations.map(r => {
+                return `<div class="pf-rec-card">
+                    <div class="pf-rec-title">${r.title}</div>
+                    <div class="pf-rec-desc">${r.description}</div>
+                    <div class="pf-rec-impact">${r.impact}</div>
+                    <div class="pf-rec-actions">
+                        <button class="pf-btn-apply" onclick="pfApplyRec('${r.rec_id}')">Apply</button>
+                        <button class="pf-btn-dismiss" onclick="pfDismissRec('${r.rec_id}')">Dismiss</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function pfApplyRec(recId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'performance_apply_rec', rec_id: recId }));
+            }
+        }
+
+        function pfDismissRec(recId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'performance_dismiss_rec', rec_id: recId }));
+            }
+        }
+
+        // Hook into renderAgents to also update performance panel
+        (function() {
+            const origRenderAgents = window.renderAgents || function(){};
+            window.renderAgents = function() {
+                origRenderAgents.apply(this, arguments);
+                renderPerformancePanel();
+            };
         })();
 
         // ---------------------------------------------------------------
