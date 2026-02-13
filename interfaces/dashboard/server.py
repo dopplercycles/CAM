@@ -56,6 +56,7 @@ from tools.doppler.photo_docs import PhotoDocManager
 from core.training import TrainingManager
 from tools.doppler.ride_log import RideLogManager
 from tools.doppler.market_monitor import MarketMonitor
+from tools.doppler.feedback import FeedbackManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -458,6 +459,14 @@ async def broadcast_market_monitor_status():
     await broadcast_to_dashboards({
         "type": "market_monitor_status",
         **market_monitor.to_broadcast_dict(),
+    })
+
+
+async def broadcast_feedback_status():
+    """Push current feedback state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "feedback_status",
+        **feedback_manager.to_broadcast_dict(),
     })
 
 
@@ -1280,6 +1289,16 @@ market_monitor = MarketMonitor(
     on_change=broadcast_market_monitor_status,
 )
 
+# Customer feedback manager — ratings, NPS, sentiment analysis
+feedback_manager = FeedbackManager(
+    db_path="data/feedback.db",
+    router=orchestrator.router,
+    crm_store=crm_store,
+    service_store=service_store,
+    notification_manager=notification_manager,
+    on_change=broadcast_feedback_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1608,6 +1627,7 @@ async def lifespan(app: FastAPI):
     training_manager.close()
     ride_log_manager.close()
     market_monitor.close()
+    feedback_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1671,6 +1691,7 @@ app.state.photo_doc_manager = photo_doc_manager
 app.state.training_manager = training_manager
 app.state.ride_log_manager = ride_log_manager
 app.state.market_monitor = market_monitor
+app.state.feedback_manager = feedback_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2851,6 +2872,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "market_monitor_status",
         **market_monitor.to_broadcast_dict(),
+    })
+
+    # Send current feedback status
+    await websocket.send_json({
+        "type": "feedback_status",
+        **feedback_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4430,6 +4457,91 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "market_pricing_result",
                     **matrix,
                 })
+
+            # ================================================================
+            # CUSTOMER FEEDBACK
+            # ================================================================
+
+            elif msg.get("type") == "feedback_submit":
+                fb = feedback_manager.submit_feedback(
+                    customer_id=msg.get("customer_id", ""),
+                    customer_name=msg.get("customer_name", ""),
+                    service_record_id=msg.get("service_record_id", ""),
+                    date=msg.get("date", ""),
+                    overall_rating=int(msg.get("overall_rating", 0)),
+                    service_quality=int(msg.get("service_quality", 0)),
+                    communication=int(msg.get("communication", 0)),
+                    timeliness=int(msg.get("timeliness", 0)),
+                    value=int(msg.get("value", 0)),
+                    comments=msg.get("comments", ""),
+                    testimonial_approved=bool(msg.get("testimonial_approved", False)),
+                )
+                await websocket.send_json({
+                    "type": "feedback_submitted",
+                    "ok": True,
+                    "feedback": fb.to_dict(),
+                })
+                await broadcast_feedback_status()
+
+            elif msg.get("type") == "feedback_update":
+                fid = msg.get("feedback_id", "")
+                fields = {k: v for k, v in msg.items()
+                          if k not in ("type", "feedback_id")}
+                for int_f in ("overall_rating", "service_quality",
+                              "communication", "timeliness", "value"):
+                    if int_f in fields:
+                        fields[int_f] = int(fields[int_f])
+                fb = feedback_manager.update_feedback(fid, **fields)
+                await websocket.send_json({
+                    "type": "feedback_updated",
+                    "ok": fb is not None,
+                    "feedback": fb.to_dict() if fb else None,
+                })
+                await broadcast_feedback_status()
+
+            elif msg.get("type") == "feedback_delete":
+                fid = msg.get("feedback_id", "")
+                ok = feedback_manager.delete_feedback(fid)
+                await websocket.send_json({
+                    "type": "feedback_deleted",
+                    "ok": ok,
+                    "feedback_id": fid,
+                })
+                await broadcast_feedback_status()
+
+            elif msg.get("type") == "feedback_analyze":
+                fid = msg.get("feedback_id", "")
+                result = await feedback_manager.analyze_sentiment(fid)
+                await websocket.send_json({
+                    "type": "feedback_analyzed",
+                    "ok": "error" not in result,
+                    "feedback_id": fid,
+                    **result,
+                })
+                await broadcast_feedback_status()
+
+            elif msg.get("type") == "feedback_request":
+                result = feedback_manager.request_feedback(
+                    customer_id=msg.get("customer_id", ""),
+                    service_record_id=msg.get("service_record_id", ""),
+                    service_date=msg.get("service_date", ""),
+                    delay_days=int(msg.get("delay_days", 3)),
+                )
+                await websocket.send_json({
+                    "type": "feedback_request_created",
+                    "ok": True,
+                    **result,
+                })
+
+            elif msg.get("type") == "feedback_testimonial":
+                fid = msg.get("feedback_id", "")
+                fb = feedback_manager.queue_testimonial(fid)
+                await websocket.send_json({
+                    "type": "feedback_testimonial_queued",
+                    "ok": fb is not None,
+                    "feedback_id": fid,
+                })
+                await broadcast_feedback_status()
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")

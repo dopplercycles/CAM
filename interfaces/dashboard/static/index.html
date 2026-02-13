@@ -6083,6 +6083,228 @@
             font-size: 0.85rem;
         }
 
+        /* Customer Feedback */
+        .fb-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .fb-stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .fb-stat-card .fb-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .fb-stat-card .fb-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .fb-nps-positive { color: #2e7d32; }
+        .fb-nps-negative { color: #c62828; }
+        .fb-form-wrap { margin-bottom: 1rem; }
+        .fb-form-wrap summary {
+            cursor: pointer;
+            font-weight: 600;
+            padding: 0.5rem 0;
+            color: var(--primary-color);
+        }
+        .fb-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .fb-form label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .fb-form input, .fb-form select, .fb-form textarea {
+            padding: 0.4rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 0.85rem;
+        }
+        .fb-form .fb-full { grid-column: 1 / -1; }
+        .fb-form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 0.25rem;
+        }
+        .fb-form-actions button {
+            padding: 0.4rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .fb-section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 1rem 0 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .fb-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .fb-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        .fb-card-flagged {
+            border-left: 3px solid #f44336;
+        }
+        .fb-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .fb-card-name { font-weight: 600; flex: 1; }
+        .fb-card-date { color: var(--text-secondary); font-size: 0.75rem; }
+        .fb-stars { color: #ffa726; letter-spacing: 1px; }
+        .fb-sentiment {
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .fb-sentiment-positive { background: #e8f5e9; color: #2e7d32; }
+        .fb-sentiment-neutral { background: #fff3e0; color: #e65100; }
+        .fb-sentiment-negative { background: #fce4ec; color: #c62828; }
+        .fb-card-comments {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+            font-style: italic;
+        }
+        .fb-card-cats {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.3rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .fb-card-actions {
+            display: flex;
+            gap: 0.3rem;
+        }
+        .fb-card-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            color: var(--text-secondary);
+        }
+        .fb-card-actions button:hover { color: var(--primary-color); }
+        .fb-sat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .fb-sat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem;
+            text-align: center;
+        }
+        .fb-sat-card .fb-sat-val {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .fb-sat-card .fb-sat-lbl {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .fb-trend-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+        }
+        .fb-trend-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .fb-trend-label {
+            min-width: 65px;
+            text-align: right;
+            color: var(--text-secondary);
+        }
+        .fb-trend-bar {
+            flex: 1;
+            height: 18px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .fb-trend-fill {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .fb-trend-val {
+            min-width: 55px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        .fb-nps-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .fb-nps-score {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .fb-nps-breakdown {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .fb-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -9797,6 +10019,74 @@
             </div>
         </section>
 
+        <section data-panel-id="feedback" style="display:none;">
+            <h2>Customer Feedback</h2>
+
+            <!-- Stats Row -->
+            <div class="fb-stats-row" id="fb-stats-row">
+                <div class="fb-stat-card"><div class="fb-stat-value" id="fb-stat-total">0</div><div class="fb-stat-label">Total</div></div>
+                <div class="fb-stat-card"><div class="fb-stat-value" id="fb-stat-avg">—</div><div class="fb-stat-label">Avg Rating</div></div>
+                <div class="fb-stat-card"><div class="fb-stat-value" id="fb-stat-nps">—</div><div class="fb-stat-label">NPS Score</div></div>
+                <div class="fb-stat-card"><div class="fb-stat-value" id="fb-stat-month">0</div><div class="fb-stat-label">This Month</div></div>
+                <div class="fb-stat-card"><div class="fb-stat-value" id="fb-stat-flagged">0</div><div class="fb-stat-label">Flagged</div></div>
+                <div class="fb-stat-card"><div class="fb-stat-value" id="fb-stat-testimonials">0</div><div class="fb-stat-label">Testimonials</div></div>
+            </div>
+
+            <!-- Submit Feedback Form -->
+            <details class="fb-form-wrap" id="fb-form-details">
+                <summary>Submit Feedback</summary>
+                <div class="fb-form" id="fb-new-form">
+                    <label>Customer Name <input type="text" id="fb-customer-name" placeholder="Customer name"></label>
+                    <label>Date <input type="date" id="fb-date"></label>
+                    <label>Overall Rating (1-5) <input type="number" id="fb-overall" min="1" max="5" step="1"></label>
+                    <label>Service Quality (1-5) <input type="number" id="fb-quality" min="1" max="5" step="1"></label>
+                    <label>Communication (1-5) <input type="number" id="fb-communication" min="1" max="5" step="1"></label>
+                    <label>Timeliness (1-5) <input type="number" id="fb-timeliness" min="1" max="5" step="1"></label>
+                    <label>Value (1-5) <input type="number" id="fb-value" min="1" max="5" step="1"></label>
+                    <label>
+                        <span style="display:flex;align-items:center;gap:0.3rem">
+                            <input type="checkbox" id="fb-testimonial" style="width:auto"> OK to use as testimonial
+                        </span>
+                    </label>
+                    <label class="fb-full">Comments <textarea id="fb-comments" rows="3" placeholder="Customer feedback..."></textarea></label>
+                    <div class="fb-form-actions">
+                        <button style="background:var(--border-color);color:var(--text-color)" onclick="fbClearForm()">Clear</button>
+                        <button style="background:var(--primary-color);color:#fff" onclick="fbSubmit()">Submit Feedback</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- NPS Score -->
+            <div class="fb-section-title">Net Promoter Score</div>
+            <div class="fb-nps-box" id="fb-nps-box">
+                <div class="fb-empty">No feedback data yet.</div>
+            </div>
+
+            <!-- Satisfaction Averages -->
+            <div class="fb-section-title">Satisfaction Averages</div>
+            <div class="fb-sat-grid" id="fb-sat-grid">
+                <div class="fb-empty">No ratings yet.</div>
+            </div>
+
+            <!-- Satisfaction Trend -->
+            <div class="fb-section-title">Satisfaction Trend</div>
+            <div class="fb-trend-chart" id="fb-trend-chart">
+                <div class="fb-empty">No trend data yet.</div>
+            </div>
+
+            <!-- Flagged Items -->
+            <div class="fb-section-title">Flagged — Needs Response</div>
+            <div class="fb-list" id="fb-flagged-list">
+                <div class="fb-empty">No flagged items.</div>
+            </div>
+
+            <!-- Recent Reviews -->
+            <div class="fb-section-title">Recent Reviews</div>
+            <div class="fb-list" id="fb-reviews-list">
+                <div class="fb-empty">No reviews yet.</div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -10503,6 +10793,7 @@
             { id: 'training', name: 'Training Mode' },
             { id: 'ride-log', name: 'Ride Log' },
             { id: 'market-monitor', name: 'Market Intel' },
+            { id: 'feedback', name: 'Feedback' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -10971,6 +11262,22 @@
                 } else if (data.type === "market_pricing_result") {
                     mmPricingMatrix = data;
                     renderMmPricing();
+
+                // --- Feedback dispatch ---
+                } else if (data.type === "feedback_status") {
+                    fbFeedback = data.feedback || [];
+                    fbStatus = data.status || {};
+                    fbNps = data.nps || {};
+                    fbSatisfaction = data.satisfaction || {};
+                    fbTrend = data.trend || [];
+                    fbTestimonials = data.testimonials || [];
+                    renderFbAll();
+                } else if (data.type === "feedback_submitted" || data.type === "feedback_updated" || data.type === "feedback_deleted") {
+                    // refreshed via broadcast
+                } else if (data.type === "feedback_analyzed") {
+                    // refreshed via broadcast
+                } else if (data.type === "feedback_testimonial_queued") {
+                    // refreshed via broadcast
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -14484,6 +14791,210 @@
                 window.renderAgents = function() {
                     origRender.apply(this, arguments);
                     renderMmAll();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Customer Feedback
+        // ---------------------------------------------------------------
+
+        let fbFeedback = [];
+        let fbStatus = {};
+        let fbNps = {};
+        let fbSatisfaction = {};
+        let fbTrend = [];
+        let fbTestimonials = [];
+
+        function renderFbAll() {
+            renderFbStats();
+            renderFbNps();
+            renderFbSatisfaction();
+            renderFbTrend();
+            renderFbFlagged();
+            renderFbReviews();
+        }
+
+        function renderFbStats() {
+            const s = fbStatus;
+            const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+            el("fb-stat-total", s.total_feedback ?? 0);
+            el("fb-stat-avg", s.avg_rating ? s.avg_rating.toFixed(1) : "—");
+            const npsEl = document.getElementById("fb-stat-nps");
+            if (npsEl) {
+                const nps = s.nps ?? 0;
+                npsEl.textContent = nps;
+                npsEl.className = "fb-stat-value " + (nps >= 0 ? "fb-nps-positive" : "fb-nps-negative");
+            }
+            el("fb-stat-month", s.this_month ?? 0);
+            el("fb-stat-flagged", s.flagged ?? 0);
+            el("fb-stat-testimonials", s.testimonials ?? 0);
+        }
+
+        function renderFbNps() {
+            const el = document.getElementById("fb-nps-box");
+            if (!el) return;
+            if (!fbNps.total) {
+                el.innerHTML = '<div class="fb-empty">No feedback data yet.</div>';
+                return;
+            }
+            const n = fbNps;
+            const color = n.nps >= 50 ? "#2e7d32" : n.nps >= 0 ? "#e65100" : "#c62828";
+            el.innerHTML = `
+                <div class="fb-nps-score" style="color:${color}">${n.nps}</div>
+                <div style="font-size:0.75rem;color:var(--text-secondary)">Net Promoter Score (${n.total} responses)</div>
+                <div class="fb-nps-breakdown">
+                    <span style="color:#2e7d32">Promoters: ${n.promoters} (${n.promoter_pct}%)</span>
+                    <span style="color:#e65100">Passives: ${n.passives}</span>
+                    <span style="color:#c62828">Detractors: ${n.detractors} (${n.detractor_pct}%)</span>
+                </div>`;
+        }
+
+        function renderFbSatisfaction() {
+            const el = document.getElementById("fb-sat-grid");
+            if (!el) return;
+            const s = fbSatisfaction;
+            if (!s.total_responses) {
+                el.innerHTML = '<div class="fb-empty">No ratings yet.</div>';
+                return;
+            }
+            const cats = [
+                ["Overall", s.overall],
+                ["Service Quality", s.service_quality],
+                ["Communication", s.communication],
+                ["Timeliness", s.timeliness],
+                ["Value", s.value],
+            ];
+            el.innerHTML = cats.map(([lbl, val]) =>
+                `<div class="fb-sat-card"><div class="fb-sat-val">${val ? val.toFixed(1) : "—"}</div><div class="fb-sat-lbl">${lbl}</div></div>`
+            ).join("") + `<div class="fb-sat-card"><div class="fb-sat-val">${s.total_responses}</div><div class="fb-sat-lbl">Responses</div></div>`;
+        }
+
+        function renderFbTrend() {
+            const el = document.getElementById("fb-trend-chart");
+            if (!el) return;
+            if (!fbTrend.length) {
+                el.innerHTML = '<div class="fb-empty">No trend data yet.</div>';
+                return;
+            }
+            el.innerHTML = fbTrend.map(t => {
+                const pct = (t.avg_rating / 5 * 100).toFixed(0);
+                return `<div class="fb-trend-row">
+                    <span class="fb-trend-label">${t.month}</span>
+                    <div class="fb-trend-bar"><div class="fb-trend-fill" style="width:${pct}%"></div></div>
+                    <span class="fb-trend-val">${t.avg_rating}/5 (${t.count})</span>
+                </div>`;
+            }).join("");
+        }
+
+        function fbRenderCard(f, showActions) {
+            const stars = "★".repeat(f.overall_rating) + "☆".repeat(5 - f.overall_rating);
+            const sentClass = f.sentiment ? "fb-sentiment-" + f.sentiment : "";
+            const sentLabel = f.sentiment ? `<span class="fb-sentiment ${sentClass}">${f.sentiment}</span>` : "";
+            const flagged = f.follow_up_needed && !f.resolved ? " fb-card-flagged" : "";
+            const cats = [
+                f.service_quality ? `Quality: ${f.service_quality}/5` : "",
+                f.communication ? `Comm: ${f.communication}/5` : "",
+                f.timeliness ? `Time: ${f.timeliness}/5` : "",
+                f.value ? `Value: ${f.value}/5` : "",
+            ].filter(Boolean);
+            let actions = "";
+            if (showActions) {
+                actions = `<span class="fb-card-actions">
+                    <button onclick="fbAnalyze('${f.feedback_id}')" title="Analyze sentiment">&#x1F50D;</button>
+                    ${f.testimonial_approved && f.overall_rating >= 4 && !f.testimonial_queued ? `<button onclick="fbQueueTestimonial('${f.feedback_id}')" title="Queue as testimonial">&#x2B50;</button>` : ""}
+                    ${f.follow_up_needed && !f.resolved ? `<button onclick="fbResolve('${f.feedback_id}')" title="Mark resolved">&#x2713;</button>` : ""}
+                    <button onclick="fbDelete('${f.feedback_id}')" title="Delete">&#x2715;</button>
+                </span>`;
+            }
+            return `<div class="fb-card${flagged}">
+                <div class="fb-card-header">
+                    <span class="fb-card-name">${f.customer_name || "Anonymous"}</span>
+                    <span class="fb-stars">${stars}</span>
+                    ${sentLabel}
+                    <span class="fb-card-date">${f.date}</span>
+                    ${actions}
+                </div>
+                ${cats.length ? '<div class="fb-card-cats">' + cats.join(" · ") + '</div>' : ""}
+                ${f.comments ? '<div class="fb-card-comments">"' + f.comments + '"</div>' : ""}
+            </div>`;
+        }
+
+        function renderFbFlagged() {
+            const el = document.getElementById("fb-flagged-list");
+            if (!el) return;
+            const flagged = fbFeedback.filter(f => f.follow_up_needed && !f.resolved);
+            if (!flagged.length) {
+                el.innerHTML = '<div class="fb-empty">No flagged items. All clear!</div>';
+                return;
+            }
+            el.innerHTML = flagged.map(f => fbRenderCard(f, true)).join("");
+        }
+
+        function renderFbReviews() {
+            const el = document.getElementById("fb-reviews-list");
+            if (!el) return;
+            if (!fbFeedback.length) {
+                el.innerHTML = '<div class="fb-empty">No reviews yet.</div>';
+                return;
+            }
+            el.innerHTML = fbFeedback.slice(0, 20).map(f => fbRenderCard(f, true)).join("");
+        }
+
+        // --- Actions ---
+
+        function fbSubmit() {
+            const name = document.getElementById("fb-customer-name")?.value;
+            const overall = parseInt(document.getElementById("fb-overall")?.value) || 0;
+            if (!overall) { alert("Overall rating is required."); return; }
+            ws.send(JSON.stringify({
+                type: "feedback_submit",
+                customer_name: name || "",
+                date: document.getElementById("fb-date")?.value || "",
+                overall_rating: overall,
+                service_quality: parseInt(document.getElementById("fb-quality")?.value) || 0,
+                communication: parseInt(document.getElementById("fb-communication")?.value) || 0,
+                timeliness: parseInt(document.getElementById("fb-timeliness")?.value) || 0,
+                value: parseInt(document.getElementById("fb-value")?.value) || 0,
+                comments: document.getElementById("fb-comments")?.value || "",
+                testimonial_approved: document.getElementById("fb-testimonial")?.checked || false,
+            }));
+            fbClearForm();
+            document.getElementById("fb-form-details").removeAttribute("open");
+        }
+
+        function fbClearForm() {
+            ["fb-customer-name","fb-date","fb-overall","fb-quality","fb-communication",
+             "fb-timeliness","fb-value","fb-comments"
+            ].forEach(id => { const e = document.getElementById(id); if (e) e.value = ""; });
+            const cb = document.getElementById("fb-testimonial");
+            if (cb) cb.checked = false;
+        }
+
+        function fbDelete(id) {
+            if (!confirm("Delete this feedback?")) return;
+            ws.send(JSON.stringify({ type: "feedback_delete", feedback_id: id }));
+        }
+
+        function fbAnalyze(id) {
+            ws.send(JSON.stringify({ type: "feedback_analyze", feedback_id: id }));
+        }
+
+        function fbResolve(id) {
+            ws.send(JSON.stringify({ type: "feedback_update", feedback_id: id, resolved: true, status: "responded" }));
+        }
+
+        function fbQueueTestimonial(id) {
+            ws.send(JSON.stringify({ type: "feedback_testimonial", feedback_id: id }));
+        }
+
+        // Hook into renderAgents
+        (function() {
+            const origRender = window.renderAgents;
+            if (origRender) {
+                window.renderAgents = function() {
+                    origRender.apply(this, arguments);
+                    renderFbAll();
                 };
             }
         })();
