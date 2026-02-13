@@ -63,6 +63,7 @@ from core.plugins import PluginManager
 from api.export import ExportManager
 from core.offline import OfflineManager
 from core.performance import PerformanceMonitor
+from core.access_control import AccessControl, Role, WS_PERMISSIONS
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -189,7 +190,8 @@ knowledge_ingest = KnowledgeIngest(
 agent_websockets: dict[str, WebSocket] = {}
 
 # Browser clients watching the dashboard (receive status pushes)
-dashboard_clients: dict[WebSocket, str] = {}   # ws → "full" | "compact"
+# Value is a dict with mode, username, and role for permission tracking
+dashboard_clients: dict[WebSocket, dict] = {}   # ws → {mode, username, role}
 
 # Task queue — shared between dashboard and orchestrator
 task_queue = TaskQueue()
@@ -234,8 +236,8 @@ async def broadcast_to_dashboards(message: dict, skip_compact: bool = False):
     If skip_compact is True, clients in compact mode won't receive this message.
     """
     disconnected = []
-    for client, mode in dashboard_clients.items():
-        if skip_compact and mode == "compact":
+    for client, info in list(dashboard_clients.items()):
+        if skip_compact and info.get("mode", "full") == "compact":
             continue
         try:
             await client.send_json(message)
@@ -785,6 +787,17 @@ session_manager = SessionManager(
     max_login_attempts=getattr(getattr(config, 'auth', None), 'max_login_attempts', 5),
     lockout_duration=getattr(getattr(config, 'auth', None), 'lockout_duration', 300),
 )
+
+# Access control — multi-user role-based permissions
+access_control = AccessControl(
+    db_path="data/access_control.db",
+    audit_log=security_audit_log,
+)
+access_control.ensure_default_admin(
+    username=getattr(getattr(config, 'auth', None), 'username', 'george'),
+    password_hash=getattr(getattr(config, 'auth', None), 'password_hash', ''),
+)
+session_manager.set_access_control(access_control)
 
 
 # Task scheduler — persists schedules to JSON, submits due tasks to the queue
@@ -1830,6 +1843,7 @@ app.state.deployer = deployer
 app.state.backup_manager = backup_manager
 app.state.message_bus = message_bus
 app.state.performance_monitor = performance_monitor
+app.state.access_control = access_control
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
 
@@ -1986,11 +2000,21 @@ async def auth_lock(request: Request):
 async def auth_status(request: Request):
     """Check if the current session is still valid."""
     if not session_manager.auth_enabled:
-        return {"authenticated": True, "auth_enabled": False}
+        default_user = getattr(getattr(config, 'auth', None), 'username', 'george')
+        return {
+            "authenticated": True,
+            "auth_enabled": False,
+            **access_control.get_role_info(default_user),
+        }
 
     token = request.cookies.get("cam_session")
     valid = session_manager.validate_session(token)
-    return {"authenticated": valid, "auth_enabled": True}
+    result = {"authenticated": valid, "auth_enabled": True}
+    if valid:
+        session = session_manager.get_session(token)
+        if session:
+            result.update(access_control.get_role_info(session.username))
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -2832,6 +2856,25 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Helper: extract username from WS session cookie
+# ---------------------------------------------------------------------------
+
+def get_ws_username(websocket: WebSocket) -> str:
+    """Get the authenticated username from a WebSocket's session cookie.
+
+    Returns the default admin username if auth is disabled or session
+    lookup fails (backward compatible — single-user mode).
+    """
+    if not session_manager.auth_enabled:
+        return getattr(getattr(config, 'auth', None), 'username', 'george')
+    token = websocket.cookies.get("cam_session")
+    session = session_manager.get_session(token)
+    if session:
+        return session.username
+    return getattr(getattr(config, 'auth', None), 'username', 'george')
+
+
+# ---------------------------------------------------------------------------
 # WebSocket: browser clients connect here to watch agent status
 # ---------------------------------------------------------------------------
 
@@ -2856,11 +2899,34 @@ async def dashboard_websocket(websocket: WebSocket):
     global last_self_test_results, last_launch_readiness_results
 
     await websocket.accept()
-    dashboard_clients[websocket] = "full"
+
+    # Identify the connected user for permission enforcement
+    ws_username = get_ws_username(websocket)
+    ws_role = access_control.get_user_role(ws_username)
+    role_str = ws_role.value if ws_role else "viewer"
+    dashboard_clients[websocket] = {
+        "mode": "full",
+        "username": ws_username,
+        "role": role_str,
+    }
     logger.info(
-        "Dashboard client connected from %s",
+        "Dashboard client connected from %s (user=%s, role=%s)",
         websocket.client.host if websocket.client else "unknown",
+        ws_username, role_str,
     )
+
+    # Send role info so the client can enforce panel visibility
+    await websocket.send_json({
+        "type": "role_info",
+        **access_control.get_role_info(ws_username),
+    })
+
+    # Send user list to admins for the user management panel
+    if ws_role == Role.ADMIN:
+        await websocket.send_json({
+            "type": "user_list",
+            "users": access_control.to_broadcast_list(),
+        })
 
     # Send current state right away so the page doesn't start blank
     await websocket.send_json({
@@ -3220,6 +3286,25 @@ async def dashboard_websocket(websocket: WebSocket):
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError:
+                continue
+
+            # Permission gate — check role before handling any message
+            msg_type = msg.get("type", "")
+            if msg_type and not access_control.check_ws_permission(ws_username, msg_type):
+                required = WS_PERMISSIONS.get(msg_type, Role.ADMIN)
+                await websocket.send_json({
+                    "type": "permission_denied",
+                    "denied_action": msg_type,
+                    "required_role": required.value if isinstance(required, Role) else required,
+                    "your_role": role_str,
+                })
+                security_audit_log.log_action(
+                    action_type="permission_denied",
+                    actor=ws_username,
+                    target=msg_type,
+                    result="blocked",
+                    risk_level="medium",
+                )
                 continue
 
             if msg.get("type") == "kill_switch":
@@ -5106,6 +5191,113 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
                 await broadcast_performance_status()
 
+            # --- User Management ---
+            elif msg.get("type") == "user_list":
+                await websocket.send_json({
+                    "type": "user_list",
+                    "users": access_control.to_broadcast_list(),
+                })
+
+            elif msg.get("type") == "user_add":
+                from security.auth import hash_password as _hash_pw
+                new_username = msg.get("username", "").strip().lower()
+                display_name = msg.get("display_name", "").strip()
+                password = msg.get("password", "")
+                new_role = msg.get("role", "viewer")
+                telegram_id = msg.get("telegram_chat_id")
+                if not new_username or not display_name:
+                    await websocket.send_json({
+                        "type": "user_add_result",
+                        "ok": False,
+                        "error": "Username and display name are required",
+                    })
+                else:
+                    pw_hash = _hash_pw(password) if password else ""
+                    user = access_control.add_user(
+                        username=new_username,
+                        display_name=display_name,
+                        role=new_role,
+                        password_hash=pw_hash,
+                        telegram_chat_id=int(telegram_id) if telegram_id else None,
+                        created_by=ws_username,
+                    )
+                    if user:
+                        await websocket.send_json({"type": "user_add_result", "ok": True})
+                        await broadcast_to_dashboards({
+                            "type": "user_list",
+                            "users": access_control.to_broadcast_list(),
+                        })
+                    else:
+                        await websocket.send_json({
+                            "type": "user_add_result",
+                            "ok": False,
+                            "error": f"User '{new_username}' already exists",
+                        })
+
+            elif msg.get("type") == "user_set_role":
+                target_user = msg.get("username", "")
+                new_role = msg.get("role", "")
+                ok = access_control.set_role(target_user, new_role, changed_by=ws_username)
+                await websocket.send_json({
+                    "type": "user_set_role_result",
+                    "ok": ok,
+                    "username": target_user,
+                })
+                if ok:
+                    await broadcast_to_dashboards({
+                        "type": "user_list",
+                        "users": access_control.to_broadcast_list(),
+                    })
+
+            elif msg.get("type") == "user_revoke":
+                target_user = msg.get("username", "")
+                ok = access_control.revoke_access(target_user, revoked_by=ws_username)
+                await websocket.send_json({
+                    "type": "user_revoke_result",
+                    "ok": ok,
+                    "username": target_user,
+                })
+                if ok:
+                    await broadcast_to_dashboards({
+                        "type": "user_list",
+                        "users": access_control.to_broadcast_list(),
+                    })
+
+            elif msg.get("type") == "user_restore":
+                target_user = msg.get("username", "")
+                ok = access_control.restore_access(target_user, restored_by=ws_username)
+                await websocket.send_json({
+                    "type": "user_restore_result",
+                    "ok": ok,
+                    "username": target_user,
+                })
+                if ok:
+                    await broadcast_to_dashboards({
+                        "type": "user_list",
+                        "users": access_control.to_broadcast_list(),
+                    })
+
+            elif msg.get("type") == "user_delete":
+                target_user = msg.get("username", "")
+                if target_user == ws_username:
+                    await websocket.send_json({
+                        "type": "user_delete_result",
+                        "ok": False,
+                        "error": "Cannot delete your own account",
+                    })
+                else:
+                    ok = access_control.delete_user(target_user, deleted_by=ws_username)
+                    await websocket.send_json({
+                        "type": "user_delete_result",
+                        "ok": ok,
+                        "username": target_user,
+                    })
+                    if ok:
+                        await broadcast_to_dashboards({
+                            "type": "user_list",
+                            "users": access_control.to_broadcast_list(),
+                        })
+
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")
                 removed = research_store.remove_entry(entry_id)
@@ -6422,7 +6614,7 @@ async def dashboard_websocket(websocket: WebSocket):
             elif msg.get("type") == "set_client_mode":
                 mode = msg.get("mode", "full")
                 if mode in ("compact", "full"):
-                    dashboard_clients[websocket] = mode
+                    dashboard_clients[websocket]["mode"] = mode
                     logger.info("Dashboard client switched to %s mode", mode)
 
             elif msg.get("type") == "security_audit_filter":

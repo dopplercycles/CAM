@@ -7330,6 +7330,121 @@
             font-size: 0.85rem;
         }
 
+        /* User Management */
+        .um-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .um-table th, .um-table td {
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .um-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .um-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        .um-role-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .um-role-admin { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .um-role-operator { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .um-role-viewer { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .um-role-api_client { background: rgba(168,85,247,0.15); color: #a855f7; }
+        .um-status-active { color: #22c55e; }
+        .um-status-inactive { color: #ef4444; }
+        .um-actions button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            margin-right: 0.25rem;
+        }
+        .um-actions button:hover { background: var(--accent); }
+        .um-actions button.um-danger { border-color: #ef4444; color: #ef4444; }
+        .um-actions button.um-danger:hover { background: rgba(239,68,68,0.15); }
+        .um-add-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.75rem;
+            padding: 1rem 0;
+            border-top: 1px solid var(--border);
+            margin-top: 1rem;
+        }
+        .um-add-form label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        .um-add-form input, .um-add-form select {
+            width: 100%;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .um-add-form button {
+            align-self: end;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .um-add-form button:hover { opacity: 0.9; }
+        .um-user-indicator {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .um-user-indicator .um-role-badge { font-size: 0.65rem; padding: 0.1rem 0.35rem; }
+        .um-empty {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        /* Permission denied toast */
+        .um-toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: rgba(239,68,68,0.95);
+            color: #fff;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            z-index: 10000;
+            animation: umToastIn 0.3s ease, umToastOut 0.3s ease 3.7s forwards;
+            max-width: 350px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        @keyframes umToastIn { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes umToastOut { from { opacity: 1; } to { opacity: 0; } }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -12257,6 +12372,43 @@
             </div>
         </section>
 
+        <section data-panel-id="user-management">
+            <h2>User Management</h2>
+            <div id="um-table-wrap">
+                <table class="um-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Display Name</th>
+                            <th>Role</th>
+                            <th>Telegram</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="um-tbody">
+                        <tr><td colspan="6" class="um-empty">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <h3 style="margin-top:1.5rem;font-size:0.9rem;">Add User</h3>
+            <div class="um-add-form">
+                <div><label>Username</label><input type="text" id="um-add-username" placeholder="jdoe"></div>
+                <div><label>Display Name</label><input type="text" id="um-add-display" placeholder="Jane Doe"></div>
+                <div><label>Password</label><input type="password" id="um-add-password" placeholder="password"></div>
+                <div><label>Role</label>
+                    <select id="um-add-role">
+                        <option value="viewer">Viewer</option>
+                        <option value="operator">Operator</option>
+                        <option value="admin">Admin</option>
+                        <option value="api_client">API Client</option>
+                    </select>
+                </div>
+                <div><label>Telegram Chat ID</label><input type="text" id="um-add-telegram" placeholder="optional"></div>
+                <div><button onclick="addUser()">Add User</button></div>
+            </div>
+        </section>
+
         <section class="self-test-section" data-panel-id="self-test">
             <div class="self-test-header">
                 <h2>System Self-Test</h2>
@@ -12466,6 +12618,7 @@
             { id: 'settings', name: 'Settings' },
             { id: 'agents', name: 'Agent Status Board' },
             { id: 'performance', name: 'Performance Monitor' },
+            { id: 'user-management', name: 'User Management' },
         ];
 
         function loadPrefs() {
@@ -12500,8 +12653,17 @@
 
         function applyPanelVisibility() {
             const hidden = getPref('hiddenPanels', []);
+            const roleFiltered = (typeof allowedPanels !== 'undefined') ? allowedPanels : [];
             document.querySelectorAll('[data-panel-id]').forEach(el => {
-                el.style.display = hidden.includes(el.dataset.panelId) ? 'none' : '';
+                const pid = el.dataset.panelId;
+                // Hide if user-hidden OR if role doesn't permit
+                if (hidden.includes(pid)) {
+                    el.style.display = 'none';
+                } else if (roleFiltered.length && !roleFiltered.includes(pid)) {
+                    el.style.display = 'none';
+                } else {
+                    el.style.display = '';
+                }
             });
         }
 
@@ -13255,6 +13417,23 @@
                     bootTime = new Date(data.boot_time);
                     bootDuration = data.boot_duration;
                     startUptimeTimer();
+                } else if (data.type === "role_info") {
+                    handleRoleInfo(data);
+                } else if (data.type === "user_list") {
+                    allUsers = data.users || [];
+                    renderUserManagement();
+                } else if (data.type === "user_add_result") {
+                    if (!data.ok) alert("Add user failed: " + (data.error || "unknown error"));
+                } else if (data.type === "user_set_role_result") {
+                    if (!data.ok) alert("Set role failed for " + data.username);
+                } else if (data.type === "user_revoke_result") {
+                    if (!data.ok) alert("Revoke failed for " + data.username);
+                } else if (data.type === "user_restore_result") {
+                    if (!data.ok) alert("Restore failed for " + data.username);
+                } else if (data.type === "user_delete_result") {
+                    if (!data.ok) alert("Delete failed: " + (data.error || data.username));
+                } else if (data.type === "permission_denied") {
+                    showPermissionDenied(data.denied_action, data.required_role);
                 }
             };
 
@@ -13284,6 +13463,140 @@
                 ws.close();
             };
         }
+
+        // ---------------------------------------------------------------
+        // User Management — state + functions
+        // ---------------------------------------------------------------
+
+        var currentUserRole = 'admin';
+        var currentUsername = '';
+        var allowedPanels = [];
+        var allUsers = [];
+
+        function handleRoleInfo(data) {
+            currentUserRole = data.role || 'viewer';
+            currentUsername = data.username || '';
+            allowedPanels = data.allowed_panels || [];
+
+            applyRolePanelVisibility();
+
+            // Render user indicator in header
+            const headerFlex = document.querySelector('header > div:last-child');
+            if (headerFlex) {
+                let indicator = document.getElementById('um-header-indicator');
+                if (!indicator) {
+                    indicator = document.createElement('div');
+                    indicator.id = 'um-header-indicator';
+                    indicator.className = 'um-user-indicator';
+                    headerFlex.insertBefore(indicator, headerFlex.firstChild);
+                }
+                const roleClass = 'um-role-' + currentUserRole;
+                indicator.innerHTML = '<span>' + (data.display_name || currentUsername) + '</span>' +
+                    '<span class="um-role-badge ' + roleClass + '">' + currentUserRole + '</span>';
+            }
+        }
+
+        function applyRolePanelVisibility() {
+            if (!allowedPanels.length) return;
+            document.querySelectorAll('[data-panel-id]').forEach(el => {
+                const panelId = el.dataset.panelId;
+                // Never hide panels that are in the user-hidden prefs (let applyPanelVisibility handle those)
+                // Only enforce role-based hiding for panels not in allowedPanels
+                if (!allowedPanels.includes(panelId)) {
+                    el.style.display = 'none';
+                }
+            });
+        }
+
+        function renderUserManagement() {
+            const tbody = document.getElementById('um-tbody');
+            if (!tbody) return;
+            if (!allUsers.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="um-empty">No users found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = allUsers.map(u => {
+                const roleClass = 'um-role-' + u.role;
+                const statusClass = u.is_active ? 'um-status-active' : 'um-status-inactive';
+                const statusText = u.is_active ? 'Active' : 'Inactive';
+                const isSelf = u.username === currentUsername;
+
+                let actions = '';
+                // Role change dropdown
+                actions += '<select onchange="setUserRole(\'' + u.username + '\', this.value)" ' +
+                    (isSelf ? 'disabled' : '') + '>' +
+                    ['admin','operator','viewer','api_client'].map(r =>
+                        '<option value="' + r + '"' + (r === u.role ? ' selected' : '') + '>' + r + '</option>'
+                    ).join('') + '</select> ';
+
+                // Revoke / Restore button
+                if (u.is_active) {
+                    actions += '<button class="um-danger" onclick="revokeUser(\'' + u.username + '\')"' +
+                        (isSelf ? ' disabled' : '') + '>Revoke</button>';
+                } else {
+                    actions += '<button onclick="restoreUser(\'' + u.username + '\')">Restore</button>';
+                }
+
+                // Delete button (never for self)
+                if (!isSelf) {
+                    actions += ' <button class="um-danger" onclick="if(confirm(\'Delete ' + u.username + '?\')) deleteUser(\'' + u.username + '\')">Delete</button>';
+                }
+
+                return '<tr>' +
+                    '<td>' + u.username + '</td>' +
+                    '<td>' + (u.display_name || '') + '</td>' +
+                    '<td><span class="um-role-badge ' + roleClass + '">' + u.role + '</span></td>' +
+                    '<td>' + (u.telegram_chat_id || '—') + '</td>' +
+                    '<td><span class="' + statusClass + '">' + statusText + '</span></td>' +
+                    '<td class="um-actions">' + actions + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        function addUser() {
+            const username = document.getElementById('um-add-username').value.trim();
+            const display_name = document.getElementById('um-add-display').value.trim();
+            const password = document.getElementById('um-add-password').value;
+            const role = document.getElementById('um-add-role').value;
+            const telegram = document.getElementById('um-add-telegram').value.trim();
+            if (!username || !display_name) { alert('Username and display name are required'); return; }
+            ws.send(JSON.stringify({
+                type: 'user_add', username, display_name, password, role,
+                telegram_chat_id: telegram || null,
+            }));
+            // Clear form
+            document.getElementById('um-add-username').value = '';
+            document.getElementById('um-add-display').value = '';
+            document.getElementById('um-add-password').value = '';
+            document.getElementById('um-add-telegram').value = '';
+        }
+
+        function setUserRole(username, role) {
+            ws.send(JSON.stringify({ type: 'user_set_role', username, role }));
+        }
+
+        function revokeUser(username) {
+            if (!confirm('Revoke access for ' + username + '?')) return;
+            ws.send(JSON.stringify({ type: 'user_revoke', username }));
+        }
+
+        function restoreUser(username) {
+            ws.send(JSON.stringify({ type: 'user_restore', username }));
+        }
+
+        function deleteUser(username) {
+            ws.send(JSON.stringify({ type: 'user_delete', username }));
+        }
+
+        function showPermissionDenied(action, requiredRole) {
+            const toast = document.createElement('div');
+            toast.className = 'um-toast';
+            toast.textContent = 'Permission denied: "' + action + '" requires ' + (requiredRole || 'admin') + ' role';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // Kill switch admin check is enforced server-side via WS permission gate
 
         // ---------------------------------------------------------------
         // Render agent cards

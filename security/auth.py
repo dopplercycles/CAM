@@ -117,10 +117,32 @@ class SessionManager:
         # Rate limiting: IP → _LoginAttempts
         self._attempts: dict[str, _LoginAttempts] = {}
 
+        # Multi-user access control (set via set_access_control)
+        self._access_control = None
+
     @property
     def auth_enabled(self) -> bool:
         """True if a password hash is configured (auth is active)."""
         return bool(self.password_hash)
+
+    def set_access_control(self, ac):
+        """Attach an AccessControl instance for multi-user login delegation."""
+        self._access_control = ac
+
+    def get_session(self, token: str | None) -> Session | None:
+        """Return the Session for a token without touching it.
+
+        Useful for extracting the username from a WS cookie.
+        Returns None if the token is invalid or expired.
+        """
+        if not token:
+            return None
+        session = self._sessions.get(token)
+        if not session:
+            return None
+        if time.time() - session.last_activity > self.session_timeout:
+            return None
+        return session
 
     def _check_password(self, plain: str) -> bool:
         """Verify a plaintext password against the stored bcrypt hash."""
@@ -169,8 +191,23 @@ class SessionManager:
             logger.warning("Login attempt from locked-out IP %s (%ds remaining)", client_ip, remaining)
             return None
 
-        # Verify credentials
-        if username != self.username or not self._check_password(password):
+        # Verify credentials — multi-user path if access_control is attached
+        auth_ok = False
+        if self._access_control:
+            user = self._access_control.get_user(username)
+            if user and user.is_active and user.password_hash:
+                try:
+                    auth_ok = bcrypt.checkpw(
+                        password.encode("utf-8"),
+                        user.password_hash.encode("utf-8"),
+                    )
+                except Exception as e:
+                    logger.warning("Multi-user password check error: %s", e)
+        # Fall back to single-user path
+        if not auth_ok:
+            auth_ok = (username == self.username and self._check_password(password))
+
+        if not auth_ok:
             # Record failed attempt
             if client_ip not in self._attempts:
                 self._attempts[client_ip] = _LoginAttempts()
