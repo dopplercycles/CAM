@@ -6701,6 +6701,185 @@
             grid-column: 1 / -1;
         }
 
+        /* Export Panel */
+        .ex-stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+        .ex-stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            min-width: 140px;
+        }
+        .ex-stat-card .ex-stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .ex-stat-card .ex-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .ex-section {
+            margin-top: 1.5rem;
+        }
+        .ex-section h3 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding-bottom: 0.4rem;
+        }
+        .ex-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+        .ex-quick-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        .ex-quick-btn:hover {
+            border-color: var(--accent);
+            background: var(--bg-secondary);
+        }
+        .ex-quick-btn .ex-btn-icon {
+            font-size: 1.5rem;
+        }
+        .ex-quick-btn .ex-btn-label {
+            font-weight: 600;
+        }
+        .ex-quick-btn .ex-btn-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .ex-builder {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+        .ex-builder-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .ex-builder-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .ex-builder-row select,
+        .ex-builder-row input[type="date"] {
+            padding: 0.4rem 0.6rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .ex-fields-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            border: 1px solid var(--border-primary);
+        }
+        .ex-fields-grid label {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            white-space: nowrap;
+        }
+        .ex-fields-grid input[type="checkbox"] {
+            accent-color: var(--accent);
+        }
+        .ex-history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        .ex-history-table th,
+        .ex-history-table td {
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .ex-history-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+        }
+        .ex-fmt-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .ex-fmt-csv { background: #1a3a2a; color: #4ade80; }
+        .ex-fmt-json { background: #1a2a3a; color: #60a5fa; }
+        .ex-fmt-zip { background: #3a2a1a; color: #fbbf24; }
+        .ex-monthly-form {
+            display: flex;
+            gap: 0.75rem;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+        .ex-monthly-form label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .ex-monthly-form select {
+            padding: 0.4rem 0.6rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .ex-empty {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -10690,6 +10869,159 @@
             </div>
         </section>
 
+        <section data-panel-id="export" style="display:none;">
+            <h2>Data Export</h2>
+
+            <!-- Stats bar -->
+            <div class="ex-stats-bar" id="ex-stats-bar">
+                <div class="ex-stat-card">
+                    <div class="ex-stat-value" id="ex-stat-total">0</div>
+                    <div class="ex-stat-label">Total Exports</div>
+                </div>
+                <div class="ex-stat-card">
+                    <div class="ex-stat-value" id="ex-stat-types">8</div>
+                    <div class="ex-stat-label">Data Types</div>
+                </div>
+                <div class="ex-stat-card">
+                    <div class="ex-stat-value" id="ex-stat-last">Never</div>
+                    <div class="ex-stat-label">Last Export</div>
+                </div>
+            </div>
+
+            <!-- Quick Exports -->
+            <div class="ex-section">
+                <h3>Quick Export</h3>
+                <div class="ex-quick-grid">
+                    <div class="ex-quick-btn" onclick="exQuickExport('customers','csv')">
+                        <span class="ex-btn-icon">&#128101;</span>
+                        <span class="ex-btn-label">Customers CSV</span>
+                        <span class="ex-btn-desc">All customer data</span>
+                    </div>
+                    <div class="ex-quick-btn" onclick="exQuickExport('service_records','csv')">
+                        <span class="ex-btn-icon">&#128295;</span>
+                        <span class="ex-btn-label">Service Records CSV</span>
+                        <span class="ex-btn-desc">All service history</span>
+                    </div>
+                    <div class="ex-quick-btn" onclick="exQuickExport('invoices','csv')">
+                        <span class="ex-btn-icon">&#128196;</span>
+                        <span class="ex-btn-label">Invoices CSV</span>
+                        <span class="ex-btn-desc">All invoices</span>
+                    </div>
+                    <div class="ex-quick-btn" onclick="exQuickExport('financials','csv')">
+                        <span class="ex-btn-icon">&#128176;</span>
+                        <span class="ex-btn-label">Financials CSV</span>
+                        <span class="ex-btn-desc">Income &amp; expenses</span>
+                    </div>
+                    <div class="ex-quick-btn" onclick="exQuickExport('ride_logs','csv')">
+                        <span class="ex-btn-icon">&#127956;</span>
+                        <span class="ex-btn-label">Ride Logs CSV</span>
+                        <span class="ex-btn-desc">IRS mileage / tax prep</span>
+                    </div>
+                    <div class="ex-quick-btn" onclick="exQuickExport('scout_listings','csv')">
+                        <span class="ex-btn-icon">&#128269;</span>
+                        <span class="ex-btn-label">Scout Listings CSV</span>
+                        <span class="ex-btn-desc">All scouted deals</span>
+                    </div>
+                    <div class="ex-quick-btn" onclick="exBackup()">
+                        <span class="ex-btn-icon">&#128190;</span>
+                        <span class="ex-btn-label">Full Backup</span>
+                        <span class="ex-btn-desc">All databases (ZIP)</span>
+                    </div>
+                    <div class="ex-quick-btn" onclick="exMonthlyBtn()">
+                        <span class="ex-btn-icon">&#128202;</span>
+                        <span class="ex-btn-label">Monthly Report</span>
+                        <span class="ex-btn-desc">Business package (ZIP)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Report Form -->
+            <div class="ex-section" id="ex-monthly-section" style="display:none;">
+                <h3>Monthly Business Report</h3>
+                <div class="ex-monthly-form">
+                    <label>
+                        Year
+                        <select id="ex-monthly-year"></select>
+                    </label>
+                    <label>
+                        Month
+                        <select id="ex-monthly-month">
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </label>
+                    <button class="btn btn-primary" onclick="exDownloadMonthly()">Download Report</button>
+                    <button class="btn btn-ghost" onclick="document.getElementById('ex-monthly-section').style.display='none'">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Custom Export Builder -->
+            <details class="ex-section">
+                <summary style="cursor:pointer;font-weight:600;font-size:1rem;color:var(--text-primary);">
+                    Custom Export Builder
+                </summary>
+                <div class="ex-builder" style="margin-top:0.75rem;">
+                    <div class="ex-builder-row">
+                        <label>
+                            Data Type
+                            <select id="ex-build-type" onchange="exUpdateFields()">
+                                <option value="customers">Customer Data</option>
+                                <option value="vehicles">Vehicles</option>
+                                <option value="service_records">Service Records</option>
+                                <option value="invoices">Invoices</option>
+                                <option value="financials">Financial Transactions</option>
+                                <option value="scout_listings">Scout Listings</option>
+                                <option value="ride_logs">Ride Logs</option>
+                                <option value="content_pipeline">Content Pipeline</option>
+                            </select>
+                        </label>
+                        <label>
+                            Format
+                            <select id="ex-build-format">
+                                <option value="csv">CSV</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </label>
+                        <label>
+                            Date From
+                            <input type="date" id="ex-build-from">
+                        </label>
+                        <label>
+                            Date To
+                            <input type="date" id="ex-build-to">
+                        </label>
+                    </div>
+                    <div style="margin-bottom:0.5rem;font-size:0.8rem;color:var(--text-secondary);">
+                        Fields (uncheck to exclude):
+                    </div>
+                    <div class="ex-fields-grid" id="ex-fields-grid">
+                    </div>
+                    <button class="btn btn-primary" onclick="exCustomExport()">Export</button>
+                </div>
+            </details>
+
+            <!-- Export History -->
+            <div class="ex-section">
+                <h3 style="display:flex;justify-content:space-between;align-items:center;">
+                    Export History
+                    <button class="btn btn-ghost" style="font-size:0.75rem;" onclick="exClearHistory()">Clear</button>
+                </h3>
+                <div id="ex-history-container">
+                    <div class="ex-empty">No exports yet.</div>
+                </div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -11400,6 +11732,7 @@
             { id: 'warranty-recall', name: 'Warranty & Recalls' },
             { id: 'maintenance-scheduler', name: 'Maintenance Calendar' },
             { id: 'plugin-manager', name: 'Plugins' },
+            { id: 'export', name: 'Data Export' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -11933,6 +12266,18 @@
                            data.type === "plugin_loaded" || data.type === "plugin_unloaded" ||
                            data.type === "plugin_config_updated") {
                     // refreshed via broadcast
+
+                // ── Export ──
+                } else if (data.type === "export_status") {
+                    exHistory = data.history || [];
+                    exStatus = data.status || {};
+                    exTypes = data.export_types || {};
+                    renderExAll();
+                } else if (data.type === "export_fields_result") {
+                    exRenderFieldCheckboxes(data.fields || []);
+                } else if (data.type === "export_history_cleared") {
+                    exHistory = [];
+                    renderExHistory();
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -18310,6 +18655,172 @@
             }
             renderApptCalendar();
         }
+
+        // ---------------------------------------------------------------
+        // Data Export
+        // ---------------------------------------------------------------
+        let exHistory = [];
+        let exStatus = {};
+        let exTypes = {};
+
+        function renderExAll() {
+            renderExStats();
+            renderExHistory();
+            exPopulateMonthlyYear();
+            // Populate field checkboxes for the currently selected type
+            exUpdateFields();
+        }
+
+        function renderExStats() {
+            const el = (id) => document.getElementById(id);
+            el('ex-stat-total').textContent = exStatus.total_exports || 0;
+            el('ex-stat-types').textContent = (exStatus.available_types || []).length || 8;
+            if (exStatus.last_export) {
+                const d = exStatus.last_export.created_at || '';
+                el('ex-stat-last').textContent = d ? d.slice(0, 10) : 'Never';
+            } else {
+                el('ex-stat-last').textContent = 'Never';
+            }
+        }
+
+        function renderExHistory() {
+            const container = document.getElementById('ex-history-container');
+            if (!exHistory.length) {
+                container.innerHTML = '<div class="ex-empty">No exports yet.</div>';
+                return;
+            }
+            let html = '<table class="ex-history-table"><thead><tr>' +
+                '<th>Date</th><th>Type</th><th>Format</th><th>Rows</th><th>Size</th>' +
+                '</tr></thead><tbody>';
+            exHistory.forEach(r => {
+                const fmtClass = 'ex-fmt-' + (r.format || 'csv');
+                const size = r.file_size > 1024
+                    ? (r.file_size / 1024).toFixed(1) + ' KB'
+                    : r.file_size + ' B';
+                html += '<tr>' +
+                    '<td>' + (r.created_at || '').slice(0, 10) + '</td>' +
+                    '<td>' + (r.data_type_label || r.data_type) + '</td>' +
+                    '<td><span class="ex-fmt-badge ' + fmtClass + '">' + (r.format || '').toUpperCase() + '</span></td>' +
+                    '<td>' + (r.row_count || 0) + '</td>' +
+                    '<td>' + size + '</td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function exPopulateMonthlyYear() {
+            const sel = document.getElementById('ex-monthly-year');
+            if (sel.options.length > 0) return;
+            const now = new Date();
+            for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                sel.appendChild(opt);
+            }
+            document.getElementById('ex-monthly-month').value = now.getMonth() + 1;
+        }
+
+        function exUpdateFields() {
+            const dtype = document.getElementById('ex-build-type').value;
+            const info = exTypes[dtype];
+            if (info && info.fields) {
+                exRenderFieldCheckboxes(info.fields);
+            } else {
+                // Request from server
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'export_get_fields', data_type: dtype }));
+                }
+            }
+        }
+
+        function exRenderFieldCheckboxes(fields) {
+            const grid = document.getElementById('ex-fields-grid');
+            grid.innerHTML = fields.map(f =>
+                '<label><input type="checkbox" value="' + f + '" checked> ' + f + '</label>'
+            ).join('');
+        }
+
+        function exGetSelectedFields() {
+            const checkboxes = document.querySelectorAll('#ex-fields-grid input[type="checkbox"]');
+            const selected = [];
+            const total = checkboxes.length;
+            checkboxes.forEach(cb => { if (cb.checked) selected.push(cb.value); });
+            // If all selected, return empty (no filter)
+            return selected.length === total ? [] : selected;
+        }
+
+        function exQuickExport(dtype, fmt) {
+            const url = '/api/export/' + dtype + '?format=' + fmt;
+            window.open(url, '_blank');
+            // Refresh status after a short delay
+            setTimeout(() => {
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'export_get_status' }));
+                }
+            }, 1000);
+        }
+
+        function exBackup() {
+            window.open('/api/export-backup/full', '_blank');
+            setTimeout(() => {
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'export_get_status' }));
+                }
+            }, 2000);
+        }
+
+        function exMonthlyBtn() {
+            const section = document.getElementById('ex-monthly-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function exDownloadMonthly() {
+            const year = document.getElementById('ex-monthly-year').value;
+            const month = document.getElementById('ex-monthly-month').value;
+            window.open('/api/export-report/monthly?year=' + year + '&month=' + month, '_blank');
+            document.getElementById('ex-monthly-section').style.display = 'none';
+            setTimeout(() => {
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'export_get_status' }));
+                }
+            }, 2000);
+        }
+
+        function exCustomExport() {
+            const dtype = document.getElementById('ex-build-type').value;
+            const fmt = document.getElementById('ex-build-format').value;
+            const dateFrom = document.getElementById('ex-build-from').value || '';
+            const dateTo = document.getElementById('ex-build-to').value || '';
+            const fields = exGetSelectedFields();
+            let url = '/api/export/' + dtype + '?format=' + fmt;
+            if (dateFrom) url += '&date_from=' + dateFrom;
+            if (dateTo) url += '&date_to=' + dateTo;
+            if (fields.length) url += '&fields=' + encodeURIComponent(fields.join(','));
+            window.open(url, '_blank');
+            setTimeout(() => {
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'export_get_status' }));
+                }
+            }, 1000);
+        }
+
+        function exClearHistory() {
+            if (!confirm('Clear all export history?')) return;
+            if (ws && ws.readyState === 1) {
+                ws.send(JSON.stringify({ type: 'export_clear_history' }));
+            }
+        }
+
+        // Hook into renderAgents for panel refresh
+        (function() {
+            const _origRender = window.renderAgents || function(){};
+            window.renderAgents = function() {
+                _origRender();
+                renderExAll();
+            };
+        })();
 
         // ---------------------------------------------------------------
         // Knowledge Ingestion

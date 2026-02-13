@@ -60,6 +60,7 @@ from tools.doppler.feedback import FeedbackManager
 from tools.doppler.warranty import WarrantyRecallManager
 from tools.doppler.maintenance_scheduler import MaintenanceSchedulerManager
 from core.plugins import PluginManager
+from api.export import ExportManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -742,6 +743,14 @@ async def broadcast_security_audit_status():
     })
 
 
+async def broadcast_export_status():
+    """Push current export state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "export_status",
+        **export_manager.to_broadcast_dict(),
+    })
+
+
 # Security audit log — SQLite-backed persistent audit trail
 security_audit_log = SecurityAuditLog(
     db_path=getattr(getattr(config, 'security', None),
@@ -1352,6 +1361,13 @@ plugin_manager = PluginManager(
     on_change=broadcast_plugin_status,
 )
 
+# Export Manager — data export and reporting API
+export_manager = ExportManager(
+    export_dir="data/exports",
+    db_path="data/exports.db",
+    on_change=broadcast_export_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1691,6 +1707,7 @@ async def lifespan(app: FastAPI):
     warranty_manager.close()
     maintenance_scheduler.close()
     plugin_manager.close()
+    export_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1758,12 +1775,25 @@ app.state.feedback_manager = feedback_manager
 app.state.warranty_manager = warranty_manager
 app.state.maintenance_scheduler = maintenance_scheduler
 app.state.plugin_manager = plugin_manager
+app.state.export_manager = export_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
 app.state.message_bus = message_bus
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
+
+# Wire up export manager with all data sources and register HTTP routes
+export_manager.set_managers(
+    crm=crm_store,
+    service_records=service_store,
+    invoices=invoice_manager,
+    finances=finance_tracker,
+    scout=scout_store,
+    ride_log=ride_log_manager,
+    content_pipeline=pipeline_manager,
+)
+export_manager.register_routes(app)
 
 # Mount versioned REST API
 from interfaces.api.routes import router as api_router
@@ -2964,6 +2994,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "plugin_status",
         **plugin_manager.to_broadcast_dict(),
+    })
+
+    # Send current export status
+    await websocket.send_json({
+        "type": "export_status",
+        **export_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4902,6 +4938,30 @@ async def dashboard_websocket(websocket: WebSocket):
                     "ok": status is not None,
                     "plugin": status,
                 })
+
+            # ── Export handlers ──────────────────────────────
+            elif msg.get("type") == "export_get_status":
+                await websocket.send_json({
+                    "type": "export_status",
+                    **export_manager.to_broadcast_dict(),
+                })
+
+            elif msg.get("type") == "export_get_fields":
+                dtype = msg.get("data_type", "")
+                fields = export_manager.get_available_fields(dtype)
+                await websocket.send_json({
+                    "type": "export_fields_result",
+                    "data_type": dtype,
+                    "fields": fields,
+                })
+
+            elif msg.get("type") == "export_clear_history":
+                count = export_manager.clear_history()
+                await websocket.send_json({
+                    "type": "export_history_cleared",
+                    "count": count,
+                })
+                await broadcast_export_status()
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")
