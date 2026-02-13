@@ -5860,6 +5860,229 @@
             font-size: 0.85rem;
         }
 
+        /* Market Monitor */
+        .mm-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .mm-stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .mm-stat-card .mm-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .mm-stat-card .mm-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .mm-actions-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .mm-actions-bar button, .mm-actions-bar select {
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .mm-actions-bar button:hover { background: var(--primary-color); color: #fff; }
+        .mm-btn-primary {
+            background: var(--primary-color) !important;
+            color: #fff !important;
+            border-color: var(--primary-color) !important;
+        }
+        .mm-form-wrap {
+            margin-bottom: 1rem;
+        }
+        .mm-form-wrap summary {
+            cursor: pointer;
+            font-weight: 600;
+            padding: 0.5rem 0;
+            color: var(--primary-color);
+        }
+        .mm-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .mm-form label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mm-form input, .mm-form select, .mm-form textarea {
+            padding: 0.4rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 0.85rem;
+        }
+        .mm-form .mm-full { grid-column: 1 / -1; }
+        .mm-form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 0.25rem;
+        }
+        .mm-form-actions button {
+            padding: 0.4rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .mm-section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 1rem 0 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .mm-comp-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .mm-comp-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        .mm-comp-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .mm-comp-name {
+            font-weight: 600;
+            flex: 1;
+        }
+        .mm-comp-meta {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+        .mm-comp-services {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+            margin-top: 0.3rem;
+        }
+        .mm-badge {
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .mm-badge-type {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .mm-badge-mobile_mechanic { background: #fce4ec; color: #c62828; }
+        .mm-badge-independent_shop { background: #e8f5e9; color: #2e7d32; }
+        .mm-badge-dealer_service { background: #f3e5f5; color: #7b1fa2; }
+        .mm-badge-specialty_shop { background: #fff3e0; color: #e65100; }
+        .mm-badge-chain_shop { background: #e0e0e0; color: #424242; }
+        .mm-badge-svc {
+            background: var(--border-color);
+            color: var(--text-color);
+            font-size: 0.55rem;
+        }
+        .mm-comp-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 4px;
+            color: var(--text-secondary);
+        }
+        .mm-comp-actions button:hover { color: #f44336; }
+        .mm-rating { color: #ffa726; font-weight: 600; }
+        .mm-pricing-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .mm-pricing-table th, .mm-pricing-table td {
+            border: 1px solid var(--border-color);
+            padding: 0.3rem 0.5rem;
+            text-align: left;
+        }
+        .mm-pricing-table th {
+            background: var(--card-bg);
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+        .mm-pricing-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .mm-pricing-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem;
+        }
+        .mm-pricing-card .mm-ps-service {
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 0.2rem;
+        }
+        .mm-pricing-card .mm-ps-range {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .mm-pricing-card .mm-ps-avg {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .mm-analysis-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .mm-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -9500,6 +9723,80 @@
             </div>
         </section>
 
+        <section data-panel-id="market-monitor" style="display:none;">
+            <h2>Market Intelligence</h2>
+
+            <!-- Stats Row -->
+            <div class="mm-stats-row" id="mm-stats-row">
+                <div class="mm-stat-card"><div class="mm-stat-value" id="mm-stat-competitors">0</div><div class="mm-stat-label">Competitors</div></div>
+                <div class="mm-stat-card"><div class="mm-stat-value" id="mm-stat-mobile">0</div><div class="mm-stat-label">Mobile Mechs</div></div>
+                <div class="mm-stat-card"><div class="mm-stat-value" id="mm-stat-areas">0</div><div class="mm-stat-label">Areas Covered</div></div>
+                <div class="mm-stat-card"><div class="mm-stat-value" id="mm-stat-avg-rating">—</div><div class="mm-stat-label">Avg Rating</div></div>
+                <div class="mm-stat-card"><div class="mm-stat-value" id="mm-stat-scans">0</div><div class="mm-stat-label">Total Scans</div></div>
+                <div class="mm-stat-card"><div class="mm-stat-value" id="mm-stat-analyses">0</div><div class="mm-stat-label">Analyses</div></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mm-actions-bar">
+                <button class="mm-btn-primary" onclick="mmScanCompetitors()">Scan for Competitors</button>
+                <select id="mm-scan-source">
+                    <option value="google">Google</option>
+                    <option value="craigslist">Craigslist</option>
+                    <option value="yelp">Yelp</option>
+                </select>
+                <button onclick="mmRunAnalysis('competitive')">Competitive Analysis</button>
+                <button onclick="mmRunAnalysis('gaps')">Gap Analysis</button>
+                <button onclick="mmRunAnalysis('full')">Full Report</button>
+            </div>
+
+            <!-- Add Competitor Form -->
+            <details class="mm-form-wrap" id="mm-form-details">
+                <summary>Add Competitor Manually</summary>
+                <div class="mm-form" id="mm-add-form">
+                    <label>Business Name <input type="text" id="mm-name" placeholder="e.g. Portland Moto Works"></label>
+                    <label>Type
+                        <select id="mm-comp-type">
+                            <option value="mobile_mechanic">Mobile Mechanic</option>
+                            <option value="independent_shop">Independent Shop</option>
+                            <option value="dealer_service">Dealer Service</option>
+                            <option value="specialty_shop">Specialty Shop</option>
+                            <option value="chain_shop">Chain Shop</option>
+                        </select>
+                    </label>
+                    <label>Location <input type="text" id="mm-location" placeholder="e.g. Portland, OR"></label>
+                    <label>Coverage Area <input type="text" id="mm-coverage" placeholder="e.g. East Portland, Gresham"></label>
+                    <label>Rating (0-5) <input type="number" id="mm-rating" step="0.1" min="0" max="5"></label>
+                    <label>Review Count <input type="number" id="mm-reviews" min="0"></label>
+                    <label>Phone <input type="text" id="mm-phone" placeholder="503-555-1234"></label>
+                    <label>Website <input type="text" id="mm-website" placeholder="https://..."></label>
+                    <label class="mm-full">Services (comma-separated) <input type="text" id="mm-services" placeholder="diagnostics, oil_change, brake_service"></label>
+                    <label class="mm-full">Notes <textarea id="mm-notes" rows="2" placeholder="Any intel..."></textarea></label>
+                    <div class="mm-form-actions">
+                        <button style="background:var(--border-color);color:var(--text-color)" onclick="mmClearForm()">Clear</button>
+                        <button style="background:var(--primary-color);color:#fff" onclick="mmAddCompetitor()">Add Competitor</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Competitor List -->
+            <div class="mm-section-title">Tracked Competitors</div>
+            <div class="mm-comp-list" id="mm-comp-list">
+                <div class="mm-empty">No competitors tracked yet.</div>
+            </div>
+
+            <!-- Pricing Comparison -->
+            <div class="mm-section-title">Pricing Landscape</div>
+            <div class="mm-pricing-summary" id="mm-pricing-summary">
+                <div class="mm-empty">No pricing data yet.</div>
+            </div>
+
+            <!-- Analysis -->
+            <div class="mm-section-title">Latest Analysis</div>
+            <div class="mm-analysis-box" id="mm-analysis-box">
+                <div class="mm-empty">Run an analysis to see competitive insights.</div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -10205,6 +10502,7 @@
             { id: 'photo-docs', name: 'Photo Docs' },
             { id: 'training', name: 'Training Mode' },
             { id: 'ride-log', name: 'Ride Log' },
+            { id: 'market-monitor', name: 'Market Intel' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -10653,6 +10951,26 @@
                 } else if (data.type === "ride_fuel_stats_result") {
                     rlFuelStats = data;
                     renderRlFuel();
+
+                // --- Market Monitor dispatch ---
+                } else if (data.type === "market_monitor_status") {
+                    mmCompetitors = data.competitors || [];
+                    mmStatus = data.status || {};
+                    mmPricingMatrix = data.pricing_matrix || {};
+                    mmRecentScans = data.recent_scans || [];
+                    mmLatestAnalysis = data.latest_analysis || null;
+                    renderMmAll();
+                } else if (data.type === "market_competitor_added" || data.type === "market_competitor_updated" || data.type === "market_competitor_deleted") {
+                    // refreshed via broadcast
+                } else if (data.type === "market_scan_result") {
+                    mmScanResult = data;
+                    renderMmScanResult();
+                } else if (data.type === "market_analysis_result") {
+                    mmLatestAnalysis = data;
+                    renderMmAnalysis();
+                } else if (data.type === "market_pricing_result") {
+                    mmPricingMatrix = data;
+                    renderMmPricing();
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -14010,6 +14328,162 @@
                 window.renderAgents = function() {
                     origRender.apply(this, arguments);
                     renderRlAll();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Market Monitor
+        // ---------------------------------------------------------------
+
+        let mmCompetitors = [];
+        let mmStatus = {};
+        let mmPricingMatrix = {};
+        let mmRecentScans = [];
+        let mmLatestAnalysis = null;
+        let mmScanResult = null;
+
+        function renderMmAll() {
+            renderMmStats();
+            renderMmCompetitors();
+            renderMmPricing();
+            renderMmAnalysis();
+        }
+
+        function renderMmStats() {
+            const s = mmStatus;
+            const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+            el("mm-stat-competitors", s.active_competitors ?? 0);
+            el("mm-stat-mobile", s.mobile_competitors ?? 0);
+            el("mm-stat-areas", s.areas_covered ?? 0);
+            el("mm-stat-avg-rating", s.avg_rating ? s.avg_rating.toFixed(1) : "—");
+            el("mm-stat-scans", s.total_scans ?? 0);
+            el("mm-stat-analyses", s.total_analyses ?? 0);
+        }
+
+        function renderMmCompetitors() {
+            const list = document.getElementById("mm-comp-list");
+            if (!list) return;
+            if (!mmCompetitors.length) {
+                list.innerHTML = '<div class="mm-empty">No competitors tracked yet. Add manually or run a scan.</div>';
+                return;
+            }
+            list.innerHTML = mmCompetitors.map(c => {
+                const stars = c.rating > 0 ? `<span class="mm-rating">${"★".repeat(Math.round(c.rating))}${"☆".repeat(5 - Math.round(c.rating))} ${c.rating.toFixed(1)}</span>` : "";
+                const reviews = c.review_count > 0 ? ` (${c.review_count} reviews)` : "";
+                const svcs = (c.services || []).map(s => `<span class="mm-badge mm-badge-svc">${s}</span>`).join("");
+                return `<div class="mm-comp-card">
+                    <div class="mm-comp-header">
+                        <span class="mm-badge mm-badge-${c.comp_type}">${c.type_label}</span>
+                        <span class="mm-comp-name">${c.name}</span>
+                        ${stars}${reviews}
+                        <span class="mm-comp-actions">
+                            <button onclick="mmDeleteCompetitor('${c.competitor_id}')" title="Delete">&#x2715;</button>
+                        </span>
+                    </div>
+                    <div class="mm-comp-meta">
+                        ${c.location ? c.location : ""}${c.coverage_area ? " · Coverage: " + c.coverage_area : ""}
+                        ${c.source !== "manual" ? " · via " + c.source : ""}
+                        ${c.website ? ' · <a href="' + c.website + '" target="_blank" style="color:var(--primary-color)">website</a>' : ""}
+                    </div>
+                    ${svcs ? '<div class="mm-comp-services">' + svcs + '</div>' : ""}
+                    ${c.notes ? '<div class="mm-comp-meta" style="margin-top:0.3rem;font-style:italic">' + c.notes + '</div>' : ""}
+                </div>`;
+            }).join("");
+        }
+
+        function renderMmPricing() {
+            const el = document.getElementById("mm-pricing-summary");
+            if (!el) return;
+            const summary = mmPricingMatrix.summary || {};
+            const services = Object.keys(summary);
+            if (!services.length) {
+                el.innerHTML = '<div class="mm-empty">No pricing data yet. Add pricing info to competitors.</div>';
+                return;
+            }
+            el.innerHTML = services.map(svc => {
+                const s = summary[svc];
+                return `<div class="mm-pricing-card">
+                    <div class="mm-ps-service">${svc.replace(/_/g, " ")}</div>
+                    <div class="mm-ps-avg">$${s.avg}</div>
+                    <div class="mm-ps-range">$${s.min} – $${s.max} (${s.data_points} data pts)</div>
+                </div>`;
+            }).join("");
+        }
+
+        function renderMmAnalysis() {
+            const el = document.getElementById("mm-analysis-box");
+            if (!el) return;
+            if (!mmLatestAnalysis || !mmLatestAnalysis.content) {
+                el.innerHTML = '<div class="mm-empty">Run an analysis to see competitive insights.</div>';
+                return;
+            }
+            const a = mmLatestAnalysis;
+            el.innerHTML = `<div style="margin-bottom:0.5rem;font-weight:600;color:var(--primary-color)">${a.title || "Analysis"}</div>` +
+                `<div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:0.5rem">${a.created_at || ""}</div>` +
+                a.content;
+        }
+
+        function renderMmScanResult() {
+            if (!mmScanResult) return;
+            const msg = `Scan complete: ${mmScanResult.results_count} results, ${mmScanResult.new_found} new competitors found.`;
+            alert(msg);
+            mmScanResult = null;
+        }
+
+        // --- Actions ---
+
+        function mmAddCompetitor() {
+            const name = document.getElementById("mm-name")?.value;
+            if (!name) { alert("Business name is required."); return; }
+            const servicesStr = document.getElementById("mm-services")?.value || "";
+            const services = servicesStr ? servicesStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+            ws.send(JSON.stringify({
+                type: "market_add_competitor",
+                name: name,
+                comp_type: document.getElementById("mm-comp-type")?.value || "independent_shop",
+                services: services,
+                location: document.getElementById("mm-location")?.value || "",
+                coverage_area: document.getElementById("mm-coverage")?.value || "",
+                rating: parseFloat(document.getElementById("mm-rating")?.value) || 0,
+                review_count: parseInt(document.getElementById("mm-reviews")?.value) || 0,
+                phone: document.getElementById("mm-phone")?.value || "",
+                website: document.getElementById("mm-website")?.value || "",
+                notes: document.getElementById("mm-notes")?.value || "",
+            }));
+            mmClearForm();
+            document.getElementById("mm-form-details").removeAttribute("open");
+        }
+
+        function mmClearForm() {
+            ["mm-name","mm-location","mm-coverage","mm-rating","mm-reviews",
+             "mm-phone","mm-website","mm-services","mm-notes"
+            ].forEach(id => { const e = document.getElementById(id); if (e) e.value = ""; });
+            const sel = document.getElementById("mm-comp-type");
+            if (sel) sel.value = "independent_shop";
+        }
+
+        function mmDeleteCompetitor(id) {
+            if (!confirm("Delete this competitor?")) return;
+            ws.send(JSON.stringify({ type: "market_delete_competitor", competitor_id: id }));
+        }
+
+        function mmScanCompetitors() {
+            const source = document.getElementById("mm-scan-source")?.value || "google";
+            ws.send(JSON.stringify({ type: "market_scan", source: source }));
+        }
+
+        function mmRunAnalysis(analysisType) {
+            ws.send(JSON.stringify({ type: "market_analyze", analysis_type: analysisType }));
+        }
+
+        // Hook into renderAgents
+        (function() {
+            const origRender = window.renderAgents;
+            if (origRender) {
+                window.renderAgents = function() {
+                    origRender.apply(this, arguments);
+                    renderMmAll();
                 };
             }
         })();

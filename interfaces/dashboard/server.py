@@ -55,6 +55,7 @@ from tools.doppler.email_templates import EmailTemplateManager
 from tools.doppler.photo_docs import PhotoDocManager
 from core.training import TrainingManager
 from tools.doppler.ride_log import RideLogManager
+from tools.doppler.market_monitor import MarketMonitor
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -449,6 +450,14 @@ async def broadcast_ride_log_status():
     await broadcast_to_dashboards({
         "type": "ride_log_status",
         **ride_log_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_market_monitor_status():
+    """Push current market monitor state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "market_monitor_status",
+        **market_monitor.to_broadcast_dict(),
     })
 
 
@@ -1262,6 +1271,15 @@ ride_log_manager = RideLogManager(
     on_change=broadcast_ride_log_status,
 )
 
+# Competitive market monitor — tracks local service landscape
+market_monitor = MarketMonitor(
+    db_path="data/market_monitor.db",
+    router=orchestrator.router,
+    notification_manager=notification_manager,
+    long_term_memory=long_term_memory,
+    on_change=broadcast_market_monitor_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1589,6 +1607,7 @@ async def lifespan(app: FastAPI):
     photo_doc_manager.close()
     training_manager.close()
     ride_log_manager.close()
+    market_monitor.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1651,6 +1670,7 @@ app.state.email_template_manager = email_template_manager
 app.state.photo_doc_manager = photo_doc_manager
 app.state.training_manager = training_manager
 app.state.ride_log_manager = ride_log_manager
+app.state.market_monitor = market_monitor
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2825,6 +2845,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "ride_log_status",
         **ride_log_manager.to_broadcast_dict(),
+    })
+
+    # Send current market monitor status
+    await websocket.send_json({
+        "type": "market_monitor_status",
+        **market_monitor.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4321,6 +4347,88 @@ async def dashboard_websocket(websocket: WebSocket):
                 await websocket.send_json({
                     "type": "ride_fuel_stats_result",
                     **stats,
+                })
+
+            # ================================================================
+            # MARKET MONITOR
+            # ================================================================
+
+            elif msg.get("type") == "market_add_competitor":
+                comp = market_monitor.add_competitor(
+                    name=msg.get("name", ""),
+                    comp_type=msg.get("comp_type", "independent_shop"),
+                    services=msg.get("services", []),
+                    pricing=msg.get("pricing", {}),
+                    rating=float(msg.get("rating", 0)),
+                    review_count=int(msg.get("review_count", 0)),
+                    location=msg.get("location", ""),
+                    coverage_area=msg.get("coverage_area", ""),
+                    source=msg.get("source", "manual"),
+                    source_url=msg.get("source_url", ""),
+                    phone=msg.get("phone", ""),
+                    website=msg.get("website", ""),
+                    notes=msg.get("notes", ""),
+                )
+                await websocket.send_json({
+                    "type": "market_competitor_added",
+                    "ok": True,
+                    "competitor": comp.to_dict(),
+                })
+                await broadcast_market_monitor_status()
+
+            elif msg.get("type") == "market_update_competitor":
+                cid = msg.get("competitor_id", "")
+                fields = {k: v for k, v in msg.items()
+                          if k not in ("type", "competitor_id")}
+                for num_f in ("rating",):
+                    if num_f in fields:
+                        fields[num_f] = float(fields[num_f])
+                for int_f in ("review_count",):
+                    if int_f in fields:
+                        fields[int_f] = int(fields[int_f])
+                comp = market_monitor.update_competitor(cid, **fields)
+                await websocket.send_json({
+                    "type": "market_competitor_updated",
+                    "ok": comp is not None,
+                    "competitor": comp.to_dict() if comp else None,
+                })
+                await broadcast_market_monitor_status()
+
+            elif msg.get("type") == "market_delete_competitor":
+                cid = msg.get("competitor_id", "")
+                ok = market_monitor.delete_competitor(cid)
+                await websocket.send_json({
+                    "type": "market_competitor_deleted",
+                    "ok": ok,
+                    "competitor_id": cid,
+                })
+                await broadcast_market_monitor_status()
+
+            elif msg.get("type") == "market_scan":
+                source = msg.get("source", "google")
+                result = await market_monitor.scan_for_competitors(source)
+                await websocket.send_json({
+                    "type": "market_scan_result",
+                    "ok": True,
+                    **result,
+                })
+                await broadcast_market_monitor_status()
+
+            elif msg.get("type") == "market_analyze":
+                analysis_type = msg.get("analysis_type", "competitive")
+                result = await market_monitor.generate_analysis(analysis_type)
+                await websocket.send_json({
+                    "type": "market_analysis_result",
+                    "ok": True,
+                    **result,
+                })
+                await broadcast_market_monitor_status()
+
+            elif msg.get("type") == "market_pricing_matrix":
+                matrix = market_monitor.pricing_matrix()
+                await websocket.send_json({
+                    "type": "market_pricing_result",
+                    **matrix,
                 })
 
             elif msg.get("type") == "research_result_delete":
