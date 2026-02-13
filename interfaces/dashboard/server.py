@@ -57,6 +57,7 @@ from core.training import TrainingManager
 from tools.doppler.ride_log import RideLogManager
 from tools.doppler.market_monitor import MarketMonitor
 from tools.doppler.feedback import FeedbackManager
+from tools.doppler.warranty import WarrantyRecallManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -467,6 +468,14 @@ async def broadcast_feedback_status():
     await broadcast_to_dashboards({
         "type": "feedback_status",
         **feedback_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_warranty_status():
+    """Push current warranty/recall state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "warranty_status",
+        **warranty_manager.to_broadcast_dict(),
     })
 
 
@@ -1299,6 +1308,16 @@ feedback_manager = FeedbackManager(
     on_change=broadcast_feedback_status,
 )
 
+# Warranty & Recall Tracker — warranties and safety recall notices
+warranty_manager = WarrantyRecallManager(
+    db_path="data/warranty.db",
+    crm_store=crm_store,
+    service_store=service_store,
+    notification_manager=notification_manager,
+    email_template_manager=email_template_manager,
+    on_change=broadcast_warranty_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1628,6 +1647,7 @@ async def lifespan(app: FastAPI):
     ride_log_manager.close()
     market_monitor.close()
     feedback_manager.close()
+    warranty_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1692,6 +1712,7 @@ app.state.training_manager = training_manager
 app.state.ride_log_manager = ride_log_manager
 app.state.market_monitor = market_monitor
 app.state.feedback_manager = feedback_manager
+app.state.warranty_manager = warranty_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2878,6 +2899,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "feedback_status",
         **feedback_manager.to_broadcast_dict(),
+    })
+
+    # Send current warranty & recall status
+    await websocket.send_json({
+        "type": "warranty_status",
+        **warranty_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4542,6 +4569,106 @@ async def dashboard_websocket(websocket: WebSocket):
                     "feedback_id": fid,
                 })
                 await broadcast_feedback_status()
+
+            # ================================================================
+            # WARRANTY & RECALL TRACKER
+            # ================================================================
+
+            elif msg.get("type") == "warranty_add":
+                w = warranty_manager.add_warranty(
+                    vehicle_id=msg.get("vehicle_id", ""),
+                    customer_id=msg.get("customer_id", ""),
+                    component=msg.get("component", ""),
+                    start_date=msg.get("start_date", ""),
+                    end_date=msg.get("end_date", ""),
+                    coverage_type=msg.get("coverage_type", "factory"),
+                    provider=msg.get("provider", ""),
+                    documentation_path=msg.get("documentation_path", ""),
+                    mileage_limit=int(msg.get("mileage_limit", 0)),
+                    notes=msg.get("notes", ""),
+                )
+                await websocket.send_json({
+                    "type": "warranty_added",
+                    "ok": True,
+                    "warranty": w.to_dict(),
+                })
+                await broadcast_warranty_status()
+
+            elif msg.get("type") == "warranty_update":
+                wid = msg.get("warranty_id", "")
+                fields = {k: v for k, v in msg.items()
+                          if k not in ("type", "warranty_id")}
+                if "mileage_limit" in fields:
+                    fields["mileage_limit"] = int(fields["mileage_limit"])
+                w = warranty_manager.update_warranty(wid, **fields)
+                await websocket.send_json({
+                    "type": "warranty_updated",
+                    "ok": w is not None,
+                    "warranty": w.to_dict() if w else None,
+                })
+                await broadcast_warranty_status()
+
+            elif msg.get("type") == "warranty_delete":
+                wid = msg.get("warranty_id", "")
+                ok = warranty_manager.delete_warranty(wid)
+                await websocket.send_json({
+                    "type": "warranty_deleted",
+                    "ok": ok,
+                    "warranty_id": wid,
+                })
+                await broadcast_warranty_status()
+
+            elif msg.get("type") == "recall_add":
+                r = warranty_manager.add_recall(
+                    nhtsa_id=msg.get("nhtsa_id", ""),
+                    make=msg.get("make", ""),
+                    model=msg.get("model", ""),
+                    year_start=int(msg.get("year_start", 0)),
+                    year_end=int(msg.get("year_end", 0)),
+                    component=msg.get("component", ""),
+                    description=msg.get("description", ""),
+                    remedy=msg.get("remedy", ""),
+                    date_issued=msg.get("date_issued", ""),
+                    severity=msg.get("severity", "safety"),
+                    notes=msg.get("notes", ""),
+                )
+                await websocket.send_json({
+                    "type": "recall_added",
+                    "ok": True,
+                    "recall": r.to_dict(),
+                })
+                await broadcast_warranty_status()
+
+            elif msg.get("type") == "recall_delete":
+                rid = msg.get("recall_id", "")
+                ok = warranty_manager.delete_recall(rid)
+                await websocket.send_json({
+                    "type": "recall_deleted",
+                    "ok": ok,
+                    "recall_id": rid,
+                })
+                await broadcast_warranty_status()
+
+            elif msg.get("type") == "warranty_scan_recalls":
+                cid = msg.get("customer_id", "")
+                matches = warranty_manager.scan_recalls(customer_id=cid)
+                count = warranty_manager.notify_recall_matches(matches)
+                await websocket.send_json({
+                    "type": "warranty_scan_results",
+                    "ok": True,
+                    "matches": matches,
+                    "notifications_sent": count,
+                })
+                await broadcast_warranty_status()
+
+            elif msg.get("type") == "warranty_check_expiring":
+                days = int(msg.get("days", 30))
+                count = warranty_manager.notify_expiring_warranties(days)
+                await websocket.send_json({
+                    "type": "warranty_expiring_checked",
+                    "ok": True,
+                    "notifications_sent": count,
+                })
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")

@@ -6305,6 +6305,133 @@
             font-size: 0.85rem;
         }
 
+        /* Warranty & Recall Tracker */
+        .wr-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .wr-stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .wr-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .wr-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .wr-section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 1rem 0 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .wr-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .wr-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        .wr-card-expired {
+            border-left: 3px solid #f44336;
+            background: rgba(244, 67, 54, 0.05);
+        }
+        .wr-card-expiring {
+            border-left: 3px solid #ffa726;
+            background: rgba(255, 167, 38, 0.05);
+        }
+        .wr-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .wr-card-title { font-weight: 600; flex: 1; }
+        .wr-card-date { color: var(--text-secondary); font-size: 0.75rem; }
+        .wr-card-type {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .wr-type-factory { background: #e3f2fd; color: #1565c0; }
+        .wr-type-extended { background: #f3e5f5; color: #6a1b9a; }
+        .wr-type-powertrain { background: #e8f5e9; color: #2e7d32; }
+        .wr-type-aftermarket { background: #fff3e0; color: #e65100; }
+        .wr-type-dealer { background: #fce4ec; color: #c62828; }
+        .wr-card-detail { color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.3rem; }
+        .wr-card-actions {
+            display: flex;
+            gap: 0.3rem;
+            margin-top: 0.5rem;
+        }
+        .wr-card-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            color: var(--text-secondary);
+        }
+        .wr-card-actions button:hover { color: var(--primary-color); }
+        .wr-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .wr-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .wr-form label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .wr-form input, .wr-form select, .wr-form textarea {
+            padding: 0.4rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 0.85rem;
+        }
+        .wr-form .wr-full { grid-column: 1 / -1; }
+        .wr-recall-severity {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .wr-sev-safety { background: #ffebee; color: #c62828; }
+        .wr-sev-emissions { background: #fff8e1; color: #f57f17; }
+        .wr-sev-compliance { background: #e8eaf6; color: #283593; }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -10087,6 +10214,99 @@
             </div>
         </section>
 
+        <section data-panel-id="warranty-recall" style="display:none;">
+            <h2>Warranty &amp; Recall Tracker</h2>
+
+            <!-- Stats Row -->
+            <div class="wr-stats-row" id="wr-stats-row">
+                <div class="wr-stat-card"><div class="wr-stat-value" id="wr-stat-total">0</div><div class="wr-stat-label">Warranties</div></div>
+                <div class="wr-stat-card"><div class="wr-stat-value" id="wr-stat-active">0</div><div class="wr-stat-label">Active</div></div>
+                <div class="wr-stat-card"><div class="wr-stat-value" id="wr-stat-expiring">0</div><div class="wr-stat-label">Expiring</div></div>
+                <div class="wr-stat-card"><div class="wr-stat-value" id="wr-stat-expired">0</div><div class="wr-stat-label">Expired</div></div>
+                <div class="wr-stat-card"><div class="wr-stat-value" id="wr-stat-recalls">0</div><div class="wr-stat-label">Recalls</div></div>
+                <div class="wr-stat-card"><div class="wr-stat-value" id="wr-stat-alerts">0</div><div class="wr-stat-label">Alerts Sent</div></div>
+            </div>
+
+            <!-- Add Warranty Form -->
+            <details id="wr-form-details">
+                <summary style="cursor:pointer;font-weight:600;padding:0.5rem 0;color:var(--primary-color);">Add Warranty</summary>
+                <div class="wr-form" id="wr-new-form">
+                    <label>Customer ID <input type="text" id="wr-customer-id" placeholder="Customer ID"></label>
+                    <label>Vehicle ID <input type="text" id="wr-vehicle-id" placeholder="Vehicle ID"></label>
+                    <label>Coverage Type
+                        <select id="wr-coverage-type">
+                            <option value="factory">Factory</option>
+                            <option value="extended">Extended</option>
+                            <option value="powertrain">Powertrain</option>
+                            <option value="aftermarket">Aftermarket</option>
+                            <option value="dealer">Dealer</option>
+                        </select>
+                    </label>
+                    <label>Provider <input type="text" id="wr-provider" placeholder="Warranty provider"></label>
+                    <label>Component <input type="text" id="wr-component" placeholder="e.g. full vehicle, engine"></label>
+                    <label>Mileage Limit <input type="number" id="wr-mileage-limit" placeholder="0 = unlimited" value="0"></label>
+                    <label>Start Date <input type="date" id="wr-start-date"></label>
+                    <label>End Date <input type="date" id="wr-end-date"></label>
+                    <label class="wr-full">Documentation Path <input type="text" id="wr-doc-path" placeholder="Path to warranty docs"></label>
+                    <label class="wr-full">Notes <textarea id="wr-notes" rows="2" placeholder="Additional notes"></textarea></label>
+                    <div style="grid-column:1/-1;display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.25rem;">
+                        <button style="background:var(--border-color);color:var(--text-color);border:none;border-radius:4px;padding:0.4rem 1rem;cursor:pointer;font-size:0.85rem;" onclick="wrClearForm()">Clear</button>
+                        <button style="background:var(--primary-color);color:#fff;border:none;border-radius:4px;padding:0.4rem 1rem;cursor:pointer;font-size:0.85rem;" onclick="wrSubmitWarranty()">Add Warranty</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Active Warranties -->
+            <div class="wr-section-title">Active Warranties</div>
+            <div class="wr-list" id="wr-active-list">
+                <div class="wr-empty">No active warranties.</div>
+            </div>
+
+            <!-- Expiring Soon -->
+            <div class="wr-section-title">Expiring Soon (90 days)</div>
+            <div class="wr-list" id="wr-expiring-list">
+                <div class="wr-empty">No warranties expiring soon.</div>
+            </div>
+
+            <!-- Add Recall Form -->
+            <details id="wr-recall-form-details">
+                <summary style="cursor:pointer;font-weight:600;padding:0.5rem 0;color:var(--primary-color);">Add Recall Notice</summary>
+                <div class="wr-form" id="wr-recall-form">
+                    <label>NHTSA ID <input type="text" id="wr-nhtsa-id" placeholder="e.g. 24V-123"></label>
+                    <label>Make <input type="text" id="wr-recall-make" placeholder="e.g. Honda"></label>
+                    <label>Model <input type="text" id="wr-recall-model" placeholder="e.g. CB500X"></label>
+                    <label>Year Start <input type="number" id="wr-year-start" placeholder="2020"></label>
+                    <label>Year End <input type="number" id="wr-year-end" placeholder="2024"></label>
+                    <label>Severity
+                        <select id="wr-severity">
+                            <option value="safety">Safety</option>
+                            <option value="emissions">Emissions</option>
+                            <option value="compliance">Compliance</option>
+                        </select>
+                    </label>
+                    <label class="wr-full">Component <input type="text" id="wr-recall-component" placeholder="Affected component/system"></label>
+                    <label class="wr-full">Description <textarea id="wr-recall-desc" rows="2" placeholder="Recall description"></textarea></label>
+                    <label class="wr-full">Remedy <textarea id="wr-recall-remedy" rows="2" placeholder="Recommended fix"></textarea></label>
+                    <label>Date Issued <input type="date" id="wr-recall-date"></label>
+                    <label class="wr-full">Notes <textarea id="wr-recall-notes" rows="1" placeholder="Additional notes"></textarea></label>
+                    <div style="grid-column:1/-1;display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.25rem;">
+                        <button style="background:var(--border-color);color:var(--text-color);border:none;border-radius:4px;padding:0.4rem 1rem;cursor:pointer;font-size:0.85rem;" onclick="wrClearRecallForm()">Clear</button>
+                        <button style="background:var(--primary-color);color:#fff;border:none;border-radius:4px;padding:0.4rem 1rem;cursor:pointer;font-size:0.85rem;" onclick="wrSubmitRecall()">Add Recall</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Recall Notices -->
+            <div class="wr-section-title">Recall Notices</div>
+            <div style="margin-bottom:0.5rem;">
+                <button style="background:var(--primary-color);color:#fff;border:none;border-radius:4px;padding:0.4rem 0.8rem;cursor:pointer;font-size:0.85rem;" onclick="wrScanRecalls()">Scan Customer Vehicles</button>
+                <button style="background:var(--border-color);color:var(--text-color);border:none;border-radius:4px;padding:0.4rem 0.8rem;cursor:pointer;font-size:0.85rem;margin-left:0.25rem;" onclick="wrCheckExpiring()">Check Expiring</button>
+            </div>
+            <div class="wr-list" id="wr-recalls-list">
+                <div class="wr-empty">No recall notices.</div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -10794,6 +11014,7 @@
             { id: 'ride-log', name: 'Ride Log' },
             { id: 'market-monitor', name: 'Market Intel' },
             { id: 'feedback', name: 'Feedback' },
+            { id: 'warranty-recall', name: 'Warranty & Recalls' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -11278,6 +11499,26 @@
                     // refreshed via broadcast
                 } else if (data.type === "feedback_testimonial_queued") {
                     // refreshed via broadcast
+
+                } else if (data.type === "warranty_status") {
+                    wrWarranties = data.warranties || [];
+                    wrRecalls = data.recalls || [];
+                    wrExpiring = data.expiring || [];
+                    wrStatus = data.status || {};
+                    renderWrAll();
+                } else if (data.type === "warranty_added" || data.type === "warranty_updated" || data.type === "warranty_deleted") {
+                    // refreshed via broadcast
+                } else if (data.type === "recall_added" || data.type === "recall_deleted") {
+                    // refreshed via broadcast
+                } else if (data.type === "warranty_scan_results") {
+                    var mc = data.matches || [];
+                    if (mc.length > 0) {
+                        alert("Found " + mc.length + " recall match(es)! Check notifications.");
+                    } else {
+                        alert("No recall matches found for customer vehicles.");
+                    }
+                } else if (data.type === "warranty_expiring_checked") {
+                    alert("Expiring warranty check complete. " + (data.notifications_sent || 0) + " notification(s) sent.");
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -14995,6 +15236,201 @@
                 window.renderAgents = function() {
                     origRender.apply(this, arguments);
                     renderFbAll();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Warranty & Recall Tracker
+        // ---------------------------------------------------------------
+
+        var wrWarranties = [];
+        var wrRecalls = [];
+        var wrExpiring = [];
+        var wrStatus = {};
+
+        function renderWrAll() {
+            renderWrStats();
+            renderWrActive();
+            renderWrExpiring();
+            renderWrRecalls();
+        }
+
+        function renderWrStats() {
+            var s = wrStatus || {};
+            var el_t = document.getElementById("wr-stat-total");
+            var el_a = document.getElementById("wr-stat-active");
+            var el_x = document.getElementById("wr-stat-expiring");
+            var el_e = document.getElementById("wr-stat-expired");
+            var el_r = document.getElementById("wr-stat-recalls");
+            var el_al = document.getElementById("wr-stat-alerts");
+            if (el_t) el_t.textContent = s.total_warranties ?? 0;
+            if (el_a) el_a.textContent = s.active ?? 0;
+            if (el_x) el_x.textContent = s.expiring_soon ?? 0;
+            if (el_e) el_e.textContent = s.expired ?? 0;
+            if (el_r) el_r.textContent = s.total_recalls ?? 0;
+            if (el_al) el_al.textContent = s.alerts_sent ?? 0;
+        }
+
+        function wrWarrantyCard(w, extraClass) {
+            var cls = "wr-card" + (extraClass ? " " + extraClass : "");
+            var days = w.days_remaining != null ? w.days_remaining + " days left" : "";
+            return '<div class="' + cls + '">' +
+                '<div class="wr-card-header">' +
+                    '<div class="wr-card-title">' + esc(w.component || "Full Vehicle") + '</div>' +
+                    '<span class="wr-card-type wr-type-' + esc(w.coverage_type || "factory") + '">' + esc(w.coverage_type || "factory") + '</span>' +
+                '</div>' +
+                '<div class="wr-card-date">' + esc(w.provider || "Unknown provider") +
+                    (w.start_date ? ' | ' + esc(w.start_date) + ' to ' + esc(w.end_date) : '') +
+                    (days ? ' | ' + days : '') +
+                '</div>' +
+                '<div class="wr-card-detail">' +
+                    'Vehicle: ' + esc(w.vehicle_id ? w.vehicle_id.substring(0, 8) : "N/A") +
+                    ' | Customer: ' + esc(w.customer_id ? w.customer_id.substring(0, 8) : "N/A") +
+                    (w.mileage_limit > 0 ? ' | ' + w.mileage_limit.toLocaleString() + ' mi limit' : '') +
+                '</div>' +
+                (w.notes ? '<div class="wr-card-detail">' + esc(w.notes) + '</div>' : '') +
+                '<div class="wr-card-actions">' +
+                    '<button onclick="wrDeleteWarranty(\'' + w.warranty_id + '\')" title="Delete">Delete</button>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function renderWrActive() {
+            var container = document.getElementById("wr-active-list");
+            if (!container) return;
+            var active = wrWarranties.filter(function(w) { return w.status === "active"; });
+            if (active.length === 0) {
+                container.innerHTML = '<div class="wr-empty">No active warranties.</div>';
+                return;
+            }
+            container.innerHTML = active.map(function(w) { return wrWarrantyCard(w); }).join("");
+        }
+
+        function renderWrExpiring() {
+            var container = document.getElementById("wr-expiring-list");
+            if (!container) return;
+            var items = wrExpiring.length > 0 ? wrExpiring : wrWarranties.filter(function(w) { return w.status === "expiring_soon"; });
+            if (items.length === 0) {
+                container.innerHTML = '<div class="wr-empty">No warranties expiring soon.</div>';
+                return;
+            }
+            container.innerHTML = items.map(function(w) { return wrWarrantyCard(w, "wr-card-expiring"); }).join("");
+        }
+
+        function renderWrRecalls() {
+            var container = document.getElementById("wr-recalls-list");
+            if (!container) return;
+            if (wrRecalls.length === 0) {
+                container.innerHTML = '<div class="wr-empty">No recall notices. Add recalls manually or scan customer vehicles.</div>';
+                return;
+            }
+            container.innerHTML = wrRecalls.map(function(r) {
+                return '<div class="wr-card">' +
+                    '<div class="wr-card-header">' +
+                        '<div class="wr-card-title">' + esc(r.year_range || "") + ' ' + esc(r.make) + ' ' + esc(r.model) + '</div>' +
+                        '<span class="wr-recall-severity wr-sev-' + esc(r.severity || "safety") + '">' + esc(r.severity || "safety") + '</span>' +
+                    '</div>' +
+                    (r.nhtsa_id ? '<div class="wr-card-date">NHTSA: ' + esc(r.nhtsa_id) + (r.date_issued ? ' | Issued: ' + esc(r.date_issued) : '') + '</div>' : '') +
+                    '<div class="wr-card-detail">' + esc(r.component || "Unknown component") + '</div>' +
+                    '<div class="wr-card-detail">' + esc(r.description) + '</div>' +
+                    (r.remedy ? '<div class="wr-card-detail"><strong>Remedy:</strong> ' + esc(r.remedy) + '</div>' : '') +
+                    '<div class="wr-card-actions">' +
+                        '<button onclick="wrDeleteRecall(\'' + r.recall_id + '\')" title="Delete">Delete</button>' +
+                    '</div>' +
+                '</div>';
+            }).join("");
+        }
+
+        function wrSubmitWarranty() {
+            var custId = document.getElementById("wr-customer-id");
+            var vehId = document.getElementById("wr-vehicle-id");
+            var covType = document.getElementById("wr-coverage-type");
+            if (!custId || !covType) return;
+            ws.send(JSON.stringify({
+                type: "warranty_add",
+                customer_id: custId.value,
+                vehicle_id: vehId ? vehId.value : "",
+                coverage_type: covType.value,
+                provider: (document.getElementById("wr-provider") || {}).value || "",
+                component: (document.getElementById("wr-component") || {}).value || "",
+                mileage_limit: parseInt((document.getElementById("wr-mileage-limit") || {}).value || "0") || 0,
+                start_date: (document.getElementById("wr-start-date") || {}).value || "",
+                end_date: (document.getElementById("wr-end-date") || {}).value || "",
+                documentation_path: (document.getElementById("wr-doc-path") || {}).value || "",
+                notes: (document.getElementById("wr-notes") || {}).value || "",
+            }));
+            wrClearForm();
+            var det = document.getElementById("wr-form-details");
+            if (det) det.removeAttribute("open");
+        }
+
+        function wrClearForm() {
+            ["wr-customer-id","wr-vehicle-id","wr-coverage-type","wr-provider","wr-component",
+             "wr-mileage-limit","wr-start-date","wr-end-date","wr-doc-path","wr-notes"].forEach(function(id) {
+                var e = document.getElementById(id);
+                if (e) e.value = (id === "wr-mileage-limit" ? "0" : (id === "wr-coverage-type" ? "factory" : ""));
+            });
+        }
+
+        function wrDeleteWarranty(id) {
+            if (!confirm("Delete this warranty?")) return;
+            ws.send(JSON.stringify({ type: "warranty_delete", warranty_id: id }));
+        }
+
+        function wrSubmitRecall() {
+            var nhtsaId = document.getElementById("wr-nhtsa-id");
+            var make = document.getElementById("wr-recall-make");
+            var model = document.getElementById("wr-recall-model");
+            if (!make || !model) return;
+            ws.send(JSON.stringify({
+                type: "recall_add",
+                nhtsa_id: nhtsaId ? nhtsaId.value : "",
+                make: make.value,
+                model: model.value,
+                year_start: parseInt((document.getElementById("wr-year-start") || {}).value || "0") || 0,
+                year_end: parseInt((document.getElementById("wr-year-end") || {}).value || "0") || 0,
+                component: (document.getElementById("wr-recall-component") || {}).value || "",
+                description: (document.getElementById("wr-recall-desc") || {}).value || "",
+                remedy: (document.getElementById("wr-recall-remedy") || {}).value || "",
+                date_issued: (document.getElementById("wr-recall-date") || {}).value || "",
+                severity: (document.getElementById("wr-severity") || {}).value || "safety",
+                notes: (document.getElementById("wr-recall-notes") || {}).value || "",
+            }));
+            wrClearRecallForm();
+            var det = document.getElementById("wr-recall-form-details");
+            if (det) det.removeAttribute("open");
+        }
+
+        function wrClearRecallForm() {
+            ["wr-nhtsa-id","wr-recall-make","wr-recall-model","wr-year-start","wr-year-end",
+             "wr-recall-component","wr-recall-desc","wr-recall-remedy","wr-recall-date",
+             "wr-severity","wr-recall-notes"].forEach(function(id) {
+                var e = document.getElementById(id);
+                if (e) e.value = (id === "wr-severity" ? "safety" : "");
+            });
+        }
+
+        function wrDeleteRecall(id) {
+            if (!confirm("Delete this recall notice?")) return;
+            ws.send(JSON.stringify({ type: "recall_delete", recall_id: id }));
+        }
+
+        function wrScanRecalls() {
+            ws.send(JSON.stringify({ type: "warranty_scan_recalls", customer_id: "" }));
+        }
+
+        function wrCheckExpiring() {
+            ws.send(JSON.stringify({ type: "warranty_check_expiring", days: 30 }));
+        }
+
+        // Hook into renderAgents for panel refresh
+        (function() {
+            var origRender = window.renderAgents;
+            if (origRender) {
+                window.renderAgents = function() {
+                    origRender.apply(this, arguments);
+                    renderWrAll();
                 };
             }
         })();
