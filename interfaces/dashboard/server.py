@@ -78,6 +78,7 @@ from tools.doppler.invoicing import InvoiceManager
 from tools.doppler.inventory import InventoryManager
 from tools.doppler.finances import FinanceTracker
 from tools.doppler.route_planner import RoutePlanner
+from tools.content.highway20 import Highway20Planner
 from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
@@ -722,6 +723,13 @@ route_planner = RoutePlanner(
     appointment_scheduler=appointment_scheduler,
 )
 
+async def broadcast_hwy20_status():
+    """Push current Highway 20 documentary planner state to all dashboards."""
+    await broadcast_to_dashboards({
+        "type": "hwy20_status",
+        **highway20_planner.to_broadcast_dict(),
+    })
+
 async def broadcast_diagnostics_status():
     """Push current diagnostic engine state to all connected dashboard browsers."""
     await broadcast_to_dashboards({
@@ -1252,6 +1260,14 @@ diagnostic_engine = DiagnosticEngine(
     on_change=broadcast_diagnostics_status,
 )
 
+# Highway 20 documentary planner — segment tracking, shots, weather
+highway20_planner = Highway20Planner(
+    db_path="data/highway20.db",
+    router=orchestrator.router,
+    ltm=long_term_memory,
+    on_change=broadcast_hwy20_status,
+)
+
 # Scheduled reporting engine — pulls from all data stores
 report_engine = ReportEngine(
     db_path=getattr(config, "reports", None) and config.reports.db_path or "data/reports.db",
@@ -1780,6 +1796,7 @@ async def lifespan(app: FastAPI):
     inventory_manager.close()
     finance_tracker.close()
     route_planner.close()
+    highway20_planner.close()
     diagnostic_engine.close()
     report_engine.close()
     security_audit_log.close()
@@ -3196,6 +3213,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "route_status",
         **route_planner.to_broadcast_dict(),
+    })
+
+    # Send current Highway 20 documentary planner state
+    await websocket.send_json({
+        "type": "hwy20_status",
+        **highway20_planner.to_broadcast_dict(),
     })
 
     # Send current diagnostic engine state
@@ -6537,6 +6560,149 @@ async def dashboard_websocket(websocket: WebSocket):
                     "ok": True,
                     "route": route.to_dict() if route else None,
                 })
+
+            # --- Highway 20 Documentary handlers ---
+            elif msg.get("type") == "hwy20_add_segment":
+                location = (msg.get("location_name") or "").strip()
+                state = (msg.get("state") or "").strip().upper()
+                if not location or not state:
+                    await websocket.send_json({"type": "hwy20_segment_added", "ok": False, "error": "Location and state required"})
+                    continue
+                try:
+                    seg = highway20_planner.add_segment(
+                        location_name=location, state=state,
+                        mile_marker_start=float(msg.get("mile_marker_start", 0)),
+                        mile_marker_end=float(msg.get("mile_marker_end", 0)),
+                        gps_lat=float(msg.get("gps_lat", 0)),
+                        gps_lon=float(msg.get("gps_lon", 0)),
+                        description=msg.get("description", ""),
+                        terrain_type=msg.get("terrain_type", "plains"),
+                        points_of_interest=msg.get("points_of_interest", []),
+                        best_season=msg.get("best_season", "summer"),
+                        priority=int(msg.get("priority", 2)),
+                        planned_date=msg.get("planned_date", ""),
+                    )
+                    event_logger.info("highway20", f"Segment '{location}' ({seg.short_id}) added in {state}")
+                    await websocket.send_json({"type": "hwy20_segment_added", "ok": True, "segment_id": seg.segment_id})
+                    await broadcast_hwy20_status()
+                except Exception as e:
+                    logger.error("Highway 20 add segment failed: %s", e)
+                    await websocket.send_json({"type": "hwy20_segment_added", "ok": False, "error": str(e)})
+
+            elif msg.get("type") == "hwy20_update_segment":
+                seg_id = msg.get("segment_id", "")
+                fields = {}
+                for key in ("location_name", "state", "mile_marker_start", "mile_marker_end",
+                            "gps_lat", "gps_lon", "description", "terrain_type",
+                            "points_of_interest", "filming_notes", "weather_conditions",
+                            "best_season", "priority", "planned_date"):
+                    if key in msg:
+                        fields[key] = msg[key]
+                seg = highway20_planner.update_segment(seg_id, **fields)
+                if seg:
+                    event_logger.info("highway20", f"Segment '{seg.location_name}' ({seg.short_id}) updated")
+                    await websocket.send_json({"type": "hwy20_segment_updated", "ok": True})
+                    await broadcast_hwy20_status()
+                else:
+                    await websocket.send_json({"type": "hwy20_segment_updated", "ok": False, "error": "Segment not found"})
+
+            elif msg.get("type") == "hwy20_delete_segment":
+                seg_id = msg.get("segment_id", "")
+                removed = highway20_planner.delete_segment(seg_id)
+                if removed:
+                    event_logger.info("highway20", f"Segment {seg_id[:8]} deleted")
+                    await websocket.send_json({"type": "hwy20_segment_deleted", "ok": True})
+                    await broadcast_hwy20_status()
+                else:
+                    await websocket.send_json({"type": "hwy20_segment_deleted", "ok": False, "error": "Segment not found"})
+
+            elif msg.get("type") == "hwy20_mark_filmed":
+                seg_id = msg.get("segment_id", "")
+                seg = highway20_planner.mark_filmed(
+                    seg_id,
+                    filming_notes=msg.get("filming_notes", ""),
+                    weather_conditions=msg.get("weather_conditions", ""),
+                )
+                if seg:
+                    event_logger.info("highway20", f"Segment '{seg.location_name}' marked filmed")
+                    await websocket.send_json({"type": "hwy20_filmed", "ok": True})
+                    await broadcast_hwy20_status()
+                else:
+                    await websocket.send_json({"type": "hwy20_filmed", "ok": False, "error": "Segment not found"})
+
+            elif msg.get("type") == "hwy20_generate_shots":
+                seg_id = msg.get("segment_id", "")
+                try:
+                    shots = await highway20_planner.shot_list_generator(seg_id)
+                    await websocket.send_json({
+                        "type": "hwy20_shots_generated",
+                        "ok": True,
+                        "shots": [s.to_dict() for s in shots],
+                        "count": len(shots),
+                    })
+                    await broadcast_hwy20_status()
+                except Exception as e:
+                    logger.error("Highway 20 shot generation failed: %s", e)
+                    await websocket.send_json({"type": "hwy20_shots_generated", "ok": False, "error": str(e)})
+
+            elif msg.get("type") == "hwy20_add_shot":
+                seg_id = msg.get("segment_id", "")
+                shot = highway20_planner.add_shot(
+                    segment_id=seg_id,
+                    shot_type=msg.get("shot_type", "wide"),
+                    description=msg.get("description", ""),
+                    equipment=msg.get("equipment", ""),
+                    time_of_day=msg.get("time_of_day", "any"),
+                    duration_sec=int(msg.get("duration_sec", 30)),
+                    notes=msg.get("notes", ""),
+                )
+                if shot:
+                    await websocket.send_json({"type": "hwy20_shot_added", "ok": True, "shot_id": shot.shot_id})
+                    await broadcast_hwy20_status()
+                else:
+                    await websocket.send_json({"type": "hwy20_shot_added", "ok": False, "error": "Segment not found"})
+
+            elif msg.get("type") == "hwy20_update_shot":
+                shot_id = msg.get("shot_id", "")
+                fields = {}
+                for key in ("shot_type", "description", "equipment", "time_of_day",
+                            "duration_sec", "status", "notes"):
+                    if key in msg:
+                        fields[key] = msg[key]
+                shot = highway20_planner.update_shot(shot_id, **fields)
+                if shot:
+                    await websocket.send_json({"type": "hwy20_shot_updated", "ok": True})
+                    await broadcast_hwy20_status()
+                else:
+                    await websocket.send_json({"type": "hwy20_shot_updated", "ok": False, "error": "Shot not found"})
+
+            elif msg.get("type") == "hwy20_delete_shot":
+                shot_id = msg.get("shot_id", "")
+                removed = highway20_planner.delete_shot(shot_id)
+                if removed:
+                    await websocket.send_json({"type": "hwy20_shot_deleted", "ok": True})
+                    await broadcast_hwy20_status()
+                else:
+                    await websocket.send_json({"type": "hwy20_shot_deleted", "ok": False, "error": "Shot not found"})
+
+            elif msg.get("type") == "hwy20_weather":
+                seg_id = msg.get("segment_id", "")
+                weather = highway20_planner.weather_planner(segment_id=seg_id)
+                await websocket.send_json({"type": "hwy20_weather_result", "ok": True, "weather": weather})
+
+            elif msg.get("type") == "hwy20_scouting_note":
+                seg_id = msg.get("segment_id", "")
+                note = (msg.get("note") or "").strip()
+                if not note:
+                    await websocket.send_json({"type": "hwy20_note_stored", "ok": False, "error": "Note is required"})
+                    continue
+                stored = highway20_planner.store_scouting_note(seg_id, note)
+                await websocket.send_json({"type": "hwy20_note_stored", "ok": stored})
+
+            elif msg.get("type") == "hwy20_search_notes":
+                query = (msg.get("query") or "").strip()
+                results = highway20_planner.search_scouting_notes(query) if query else []
+                await websocket.send_json({"type": "hwy20_search_results", "ok": True, "results": results})
 
             # --- Scheduled Reports handlers ---
             elif msg.get("type") == "reports_generate":

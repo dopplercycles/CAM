@@ -134,7 +134,7 @@ OPERATOR_PANELS: set[str] = {
     "tasks", "chains", "swarms", "scheduler", "content", "pipeline",
     "youtube", "media-library", "social-media", "tts", "research",
     "business", "invoicing", "parts-inventory", "financial-dashboard",
-    "route-planner", "crm", "email-templates", "appointment-calendar",
+    "route-planner", "highway20", "crm", "email-templates", "appointment-calendar",
     "service-records", "photo-docs", "ride-log", "market-monitor",
     "feedback", "warranty-recall", "maintenance-scheduler", "diagnostics",
     "reports", "knowledge-ingest", "scout", "market-analytics",
@@ -292,6 +292,16 @@ WS_PERMISSIONS: dict[str, Role] = {
     "tts_queue": Role.OPERATOR,
     "tts_delete": Role.OPERATOR,
     "research_result_delete": Role.OPERATOR,
+    "hwy20_add_segment": Role.OPERATOR,
+    "hwy20_update_segment": Role.OPERATOR,
+    "hwy20_delete_segment": Role.OPERATOR,
+    "hwy20_mark_filmed": Role.OPERATOR,
+    "hwy20_generate_shots": Role.OPERATOR,
+    "hwy20_add_shot": Role.OPERATOR,
+    "hwy20_update_shot": Role.OPERATOR,
+    "hwy20_delete_shot": Role.OPERATOR,
+    "hwy20_weather": Role.OPERATOR,
+    "hwy20_scouting_note": Role.OPERATOR,
 
     # --- VIEWER ---
     "task_list": Role.VIEWER,
@@ -311,6 +321,7 @@ WS_PERMISSIONS: dict[str, Role] = {
     "research_search": Role.VIEWER,
     "webhook_delivery_history": Role.VIEWER,
     "episodic_search": Role.VIEWER,
+    "hwy20_search_notes": Role.VIEWER,
     "bus_history": Role.VIEWER,
 }
 

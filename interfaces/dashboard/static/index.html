@@ -4517,6 +4517,141 @@
             padding: 2rem; font-size: 0.9rem;
         }
 
+        /* Highway 20 Documentary */
+        .h20-section { margin-bottom: 2rem; }
+        .h20-toolbar {
+            display: flex; gap: 0.5rem; align-items: center;
+            flex-wrap: wrap; margin-bottom: 1rem;
+        }
+        .h20-progress-bar {
+            width: 100%; height: 28px; background: var(--bg-secondary);
+            border-radius: 14px; overflow: hidden; margin-bottom: 1rem;
+            position: relative; border: 1px solid var(--border);
+        }
+        .h20-progress-fill {
+            height: 100%; border-radius: 14px;
+            background: linear-gradient(90deg, #34d399, #6ee7b7);
+            transition: width 0.6s ease;
+        }
+        .h20-progress-label {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 0.8rem; font-weight: 700; color: var(--text-primary);
+            text-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+        .h20-summary-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem; margin-bottom: 1.2rem;
+        }
+        .h20-summary-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem; text-align: center;
+        }
+        .h20-card-value {
+            font-size: 1.4rem; font-weight: 700; color: var(--text-primary);
+        }
+        .h20-card-label {
+            font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem;
+        }
+        .h20-route-map {
+            display: flex; gap: 4px; margin-bottom: 1.2rem; flex-wrap: wrap;
+            align-items: stretch;
+        }
+        .h20-state-block {
+            flex: 1; min-width: 55px; padding: 0.5rem 0.25rem;
+            border-radius: 6px; text-align: center; font-size: 0.7rem;
+            font-weight: 700; border: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+        .h20-state-block.complete { background: rgba(52,211,153,0.25); color: #34d399; border-color: #34d399; }
+        .h20-state-block.partial { background: rgba(251,191,36,0.2); color: #fbbf24; border-color: #fbbf24; }
+        .h20-state-block.empty { background: var(--bg-secondary); color: var(--text-secondary); }
+        .h20-state-count { font-size: 0.6rem; font-weight: 400; display: block; }
+        .h20-seg-table {
+            width: 100%; border-collapse: collapse; font-size: 0.82rem;
+            margin-bottom: 1rem;
+        }
+        .h20-seg-table th {
+            text-align: left; padding: 0.5rem; border-bottom: 2px solid var(--border);
+            color: var(--text-secondary); font-weight: 600; font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        .h20-seg-table td {
+            padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .h20-seg-table tr:hover { background: rgba(99,102,241,0.05); }
+        .h20-badge {
+            display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+            font-size: 0.72rem; font-weight: 600;
+        }
+        .h20-badge.p1 { background: rgba(239,68,68,0.15); color: #f87171; }
+        .h20-badge.p2 { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .h20-badge.p3 { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .h20-badge.filmed { background: rgba(52,211,153,0.15); color: #34d399; }
+        .h20-badge.not-filmed { background: rgba(99,102,241,0.15); color: #818cf8; }
+        .h20-add-form {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+            display: none;
+        }
+        .h20-add-form.visible { display: block; }
+        .h20-form-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+        }
+        .h20-form-grid label {
+            font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.15rem;
+        }
+        .h20-form-grid input, .h20-form-grid select, .h20-form-grid textarea {
+            width: 100%; padding: 0.35rem 0.5rem; background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: 4px;
+            color: var(--text-primary); font-size: 0.85rem;
+        }
+        .h20-form-grid textarea { grid-column: 1 / -1; min-height: 60px; resize: vertical; }
+        .h20-form-grid .full-width { grid-column: 1 / -1; }
+        .h20-shot-cards {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem; margin-bottom: 1rem;
+        }
+        .h20-shot-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem;
+        }
+        .h20-shot-card .shot-type {
+            font-weight: 700; font-size: 0.82rem; text-transform: uppercase;
+            color: var(--accent); margin-bottom: 0.3rem;
+        }
+        .h20-shot-card .shot-desc { font-size: 0.82rem; margin-bottom: 0.3rem; }
+        .h20-shot-card .shot-meta {
+            font-size: 0.72rem; color: var(--text-secondary);
+        }
+        .h20-weather-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0.75rem; margin-bottom: 1rem;
+        }
+        .h20-weather-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.75rem;
+        }
+        .h20-weather-card h4 { margin: 0 0 0.5rem; font-size: 0.88rem; }
+        .h20-weather-season {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem;
+            font-size: 0.72rem;
+        }
+        .h20-weather-season > div {
+            text-align: center; padding: 0.3rem; border-radius: 4px;
+            background: var(--bg-secondary);
+        }
+        .h20-weather-season .season-label { font-weight: 700; margin-bottom: 0.15rem; }
+        .h20-weather-season .rating-5 { color: #34d399; }
+        .h20-weather-season .rating-4 { color: #6ee7b7; }
+        .h20-weather-season .rating-3 { color: #fbbf24; }
+        .h20-weather-season .rating-2 { color: #f97316; }
+        .h20-weather-season .rating-1 { color: #f87171; }
+        .h20-empty {
+            text-align: center; color: var(--text-secondary);
+            padding: 2rem; font-size: 0.9rem;
+        }
+
         /* CRM */
         .crm-section { margin-bottom: 2rem; }
         .crm-stats-bar {
@@ -10526,6 +10661,120 @@
             </details>
         </section>
 
+        <section class="h20-section" data-panel-id="highway20">
+            <h2>Highway 20 Documentary</h2>
+
+            <!-- Toolbar -->
+            <div class="h20-toolbar">
+                <button class="btn btn-sm" onclick="document.getElementById('h20-add-form').classList.toggle('visible')">+ Add Segment</button>
+                <button class="btn btn-sm" onclick="h20RefreshWeather()">Weather Planner</button>
+                <select id="h20-state-filter" onchange="renderH20Segments()" style="background:var(--bg-card); border:1px solid var(--border); color:var(--text-primary); padding:0.3rem 0.5rem; border-radius:4px; font-size:0.82rem;">
+                    <option value="">All States</option>
+                    <option value="OR">Oregon</option><option value="ID">Idaho</option>
+                    <option value="MT">Montana</option><option value="WY">Wyoming</option>
+                    <option value="NE">Nebraska</option><option value="IA">Iowa</option>
+                    <option value="IL">Illinois</option><option value="IN">Indiana</option>
+                    <option value="OH">Ohio</option><option value="PA">Pennsylvania</option>
+                    <option value="NY">New York</option><option value="MA">Massachusetts</option>
+                </select>
+                <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.3rem;">
+                    <input type="checkbox" id="h20-hide-filmed" onchange="renderH20Segments()"> Hide filmed
+                </label>
+            </div>
+
+            <!-- Add Segment Form -->
+            <div id="h20-add-form" class="h20-add-form">
+                <div class="h20-form-grid">
+                    <div><label>Location Name</label><input id="h20-f-location" placeholder="e.g. Newport Coast"></div>
+                    <div><label>State</label>
+                        <select id="h20-f-state">
+                            <option value="OR">OR</option><option value="ID">ID</option>
+                            <option value="MT">MT</option><option value="WY">WY</option>
+                            <option value="NE">NE</option><option value="IA">IA</option>
+                            <option value="IL">IL</option><option value="IN">IN</option>
+                            <option value="OH">OH</option><option value="PA">PA</option>
+                            <option value="NY">NY</option><option value="MA">MA</option>
+                        </select>
+                    </div>
+                    <div><label>Mile Start</label><input id="h20-f-mile-start" type="number" step="0.1" placeholder="0.0"></div>
+                    <div><label>Mile End</label><input id="h20-f-mile-end" type="number" step="0.1" placeholder="0.0"></div>
+                    <div><label>GPS Lat</label><input id="h20-f-lat" type="number" step="0.0001" placeholder="0.0"></div>
+                    <div><label>GPS Lon</label><input id="h20-f-lon" type="number" step="0.0001" placeholder="0.0"></div>
+                    <div><label>Terrain</label>
+                        <select id="h20-f-terrain">
+                            <option value="coastal">Coastal</option><option value="mountain">Mountain</option>
+                            <option value="forest">Forest</option><option value="desert">Desert</option>
+                            <option value="plains">Plains</option><option value="farmland">Farmland</option>
+                            <option value="urban">Urban</option><option value="suburban">Suburban</option>
+                            <option value="river_valley">River Valley</option><option value="lake">Lake</option>
+                        </select>
+                    </div>
+                    <div><label>Best Season</label>
+                        <select id="h20-f-season">
+                            <option value="summer">Summer</option><option value="fall">Fall</option>
+                            <option value="spring">Spring</option><option value="winter">Winter</option>
+                        </select>
+                    </div>
+                    <div><label>Priority</label>
+                        <select id="h20-f-priority">
+                            <option value="1">1 — Must Have</option>
+                            <option value="2" selected>2 — Important</option>
+                            <option value="3">3 — Nice to Have</option>
+                        </select>
+                    </div>
+                    <div><label>Planned Date</label><input id="h20-f-date" type="date"></div>
+                    <div class="full-width"><label>Points of Interest (comma-separated)</label><input id="h20-f-poi" placeholder="e.g. Bridge, Lighthouse, Historic marker"></div>
+                    <textarea id="h20-f-desc" placeholder="Description of the segment..."></textarea>
+                    <div class="full-width" style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.5rem;">
+                        <button class="btn btn-sm" onclick="document.getElementById('h20-add-form').classList.remove('visible')">Cancel</button>
+                        <button class="btn btn-sm btn-primary" onclick="h20AddSegment()">Add Segment</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="h20-progress-bar">
+                <div class="h20-progress-fill" id="h20-progress-fill" style="width:0%"></div>
+                <div class="h20-progress-label" id="h20-progress-label">0%</div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="h20-summary-row" id="h20-summary-row">
+                <div class="h20-summary-card"><div class="h20-card-value" id="h20-sum-segments">0</div><div class="h20-card-label">Segments</div></div>
+                <div class="h20-summary-card"><div class="h20-card-value" id="h20-sum-filmed">0</div><div class="h20-card-label">Filmed</div></div>
+                <div class="h20-summary-card"><div class="h20-card-value" id="h20-sum-miles">0</div><div class="h20-card-label">Miles Covered</div></div>
+                <div class="h20-summary-card"><div class="h20-card-value" id="h20-sum-shots">0</div><div class="h20-card-label">Shots Planned</div></div>
+            </div>
+
+            <!-- Route Map -->
+            <div class="h20-route-map" id="h20-route-map"></div>
+
+            <!-- Segment Table -->
+            <div id="h20-segments-container"></div>
+
+            <!-- Shots Section -->
+            <details style="margin-bottom:1rem;">
+                <summary style="cursor:pointer; font-weight:600; padding:0.5rem 0;">Shot List</summary>
+                <div id="h20-shots-container" class="h20-shot-cards"></div>
+            </details>
+
+            <!-- Weather Section -->
+            <details style="margin-bottom:1rem;">
+                <summary style="cursor:pointer; font-weight:600; padding:0.5rem 0;">Weather Planner</summary>
+                <div id="h20-weather-container" class="h20-weather-grid"></div>
+            </details>
+
+            <!-- Scouting Notes -->
+            <details>
+                <summary style="cursor:pointer; font-weight:600; padding:0.5rem 0;">Scouting Notes</summary>
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                    <input id="h20-scout-query" placeholder="Search scouting notes..." style="flex:1; padding:0.4rem 0.6rem; background:var(--bg-secondary); border:1px solid var(--border); border-radius:4px; color:var(--text-primary); font-size:0.85rem;">
+                    <button class="btn btn-sm" onclick="h20SearchNotes()">Search</button>
+                </div>
+                <div id="h20-scout-results"></div>
+            </details>
+        </section>
+
         <section class="crm-section" data-panel-id="crm">
             <h2>Customer CRM</h2>
 
@@ -12581,6 +12830,7 @@
             { id: 'parts-inventory', name: 'Parts Inventory' },
             { id: 'financial-dashboard', name: 'Financial Dashboard' },
             { id: 'route-planner', name: 'Route Planner' },
+            { id: 'highway20', name: 'Highway 20 Documentary' },
             { id: 'crm', name: 'Customer CRM' },
             { id: 'email-templates', name: 'Email Templates' },
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
@@ -13269,6 +13519,22 @@
                     // individual confirmation
                 } else if (data.type === "route_day_plan") {
                     if (data.route) handleRouteStatus({ today_route: data.route, status: routeStatus, route_history: routeHistory, accuracy_stats: routeAccuracy });
+
+                // --- Highway 20 Documentary ---
+                } else if (data.type === "hwy20_status") {
+                    handleHwy20Status(data);
+                } else if (data.type === "hwy20_segment_added" || data.type === "hwy20_segment_updated" ||
+                           data.type === "hwy20_segment_deleted" || data.type === "hwy20_filmed") {
+                    // broadcast triggers full refresh
+                } else if (data.type === "hwy20_shots_generated" || data.type === "hwy20_shot_added" ||
+                           data.type === "hwy20_shot_updated" || data.type === "hwy20_shot_deleted") {
+                    // broadcast triggers full refresh
+                } else if (data.type === "hwy20_weather_result") {
+                    if (data.ok) renderH20Weather(data.weather);
+                } else if (data.type === "hwy20_search_results") {
+                    if (data.ok) renderH20ScoutResults(data.results);
+                } else if (data.type === "hwy20_note_stored") {
+                    // confirmation only
 
                 } else if (data.type === "performance_status") {
                     handlePerformanceStatus(data);
@@ -19137,6 +19403,210 @@
             const now = new Date();
             const hhmm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
             ws.send(JSON.stringify({ type: 'route_complete', route_id: routeToday.route_id, actual_return: hhmm }));
+        }
+
+        // ---------------------------------------------------------------
+        // Highway 20 Documentary
+        // ---------------------------------------------------------------
+        let h20Segments = [];
+        let h20Progress = {};
+        let h20Shots = [];
+        let h20Status = {};
+
+        function handleHwy20Status(data) {
+            h20Segments = data.segments || [];
+            h20Shots = data.shots || [];
+            h20Progress = data.progress || {};
+            h20Status = data.status || {};
+            renderH20Summary();
+            renderH20RouteMap();
+            renderH20Segments();
+            renderH20Shots();
+        }
+
+        function renderH20Summary() {
+            const s = h20Status;
+            document.getElementById('h20-sum-segments').textContent = s.segments_total || 0;
+            document.getElementById('h20-sum-filmed').textContent = s.segments_filmed || 0;
+            document.getElementById('h20-sum-miles').textContent = s.total_miles || 0;
+            document.getElementById('h20-sum-shots').textContent = s.total_shots || 0;
+
+            const pct = s.percent_complete || 0;
+            document.getElementById('h20-progress-fill').style.width = pct + '%';
+            document.getElementById('h20-progress-label').textContent = pct + '% Filmed';
+        }
+
+        function renderH20RouteMap() {
+            const states = ['OR','ID','MT','WY','NE','IA','IL','IN','OH','PA','NY','MA'];
+            const byState = h20Progress.by_state || {};
+            const el = document.getElementById('h20-route-map');
+            el.innerHTML = states.map(st => {
+                const info = byState[st] || { total: 0, filmed: 0, status: 'empty' };
+                const cls = info.status || 'empty';
+                const count = info.total > 0 ? `<span class="h20-state-count">${info.filmed}/${info.total}</span>` : '';
+                return `<div class="h20-state-block ${cls}">${st}${count}</div>`;
+            }).join('');
+        }
+
+        function renderH20Segments() {
+            const stateFilter = document.getElementById('h20-state-filter').value;
+            const hideFilmed = document.getElementById('h20-hide-filmed').checked;
+
+            let segs = h20Segments;
+            if (stateFilter) segs = segs.filter(s => s.state === stateFilter);
+            if (hideFilmed) segs = segs.filter(s => !s.filmed);
+
+            const el = document.getElementById('h20-segments-container');
+            if (!segs.length) {
+                el.innerHTML = '<div class="h20-empty">No segments yet. Add your first filming segment above.</div>';
+                return;
+            }
+
+            const priorityLabel = { 1: 'Must Have', 2: 'Important', 3: 'Nice to Have' };
+            const rows = segs.map(s => {
+                const pBadge = `<span class="h20-badge p${s.priority}">${priorityLabel[s.priority] || 'P' + s.priority}</span>`;
+                const fBadge = s.filmed
+                    ? '<span class="h20-badge filmed">Filmed</span>'
+                    : '<span class="h20-badge not-filmed">Pending</span>';
+                const miles = s.miles ? s.miles.toFixed(1) : '0.0';
+                const segShots = h20Shots.filter(sh => sh.segment_id === s.segment_id).length;
+                return `<tr>
+                    <td><strong>${s.location_name}</strong><br><span style="font-size:0.72rem;color:var(--text-secondary)">${s.state} &middot; mi ${s.mile_marker_start}–${s.mile_marker_end} (${miles} mi)</span></td>
+                    <td>${s.terrain_type}</td>
+                    <td>${pBadge}</td>
+                    <td>${fBadge}</td>
+                    <td>${segShots}</td>
+                    <td>${s.planned_date || '—'}</td>
+                    <td>
+                        ${!s.filmed ? `<button class="btn btn-xs" onclick="h20MarkFilmed('${s.segment_id}')">Filmed</button>` : ''}
+                        <button class="btn btn-xs" onclick="h20GenShots('${s.segment_id}')">AI Shots</button>
+                        <button class="btn btn-xs" style="color:#f87171" onclick="h20DeleteSegment('${s.segment_id}')">Del</button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            el.innerHTML = `<table class="h20-seg-table">
+                <thead><tr><th>Location</th><th>Terrain</th><th>Priority</th><th>Status</th><th>Shots</th><th>Planned</th><th>Actions</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+        }
+
+        function renderH20Shots() {
+            const el = document.getElementById('h20-shots-container');
+            if (!h20Shots.length) {
+                el.innerHTML = '<div class="h20-empty">No shots yet. Generate shots from a segment or add manually.</div>';
+                return;
+            }
+            el.innerHTML = h20Shots.map(s => {
+                const seg = h20Segments.find(sg => sg.segment_id === s.segment_id);
+                const loc = seg ? seg.location_name : s.segment_id.slice(0, 8);
+                const statusCls = s.status === 'captured' ? 'filmed' : s.status === 'final' ? 'filmed' : 'not-filmed';
+                return `<div class="h20-shot-card">
+                    <div class="shot-type">${s.shot_type} ${s.ai_generated ? '<span style="font-size:0.65rem;opacity:0.6">(AI)</span>' : ''}</div>
+                    <div class="shot-desc">${s.description}</div>
+                    <div class="shot-meta">
+                        ${loc} &middot; ${s.equipment || 'Any'} &middot; ${s.time_of_day || 'Any'} &middot; ${s.duration_sec}s
+                        &middot; <span class="h20-badge ${statusCls}">${s.status}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderH20Weather(weather) {
+            const el = document.getElementById('h20-weather-container');
+            if (!weather || !weather.length) {
+                el.innerHTML = '<div class="h20-empty">No weather data. Add segments first.</div>';
+                return;
+            }
+            el.innerHTML = weather.map(w => {
+                const seasons = w.seasons || {};
+                const seasonCells = ['spring','summer','fall','winter'].map(sn => {
+                    const d = seasons[sn] || {};
+                    const r = d.filming_rating || 3;
+                    return `<div>
+                        <div class="season-label">${sn.charAt(0).toUpperCase() + sn.slice(1)}</div>
+                        <div class="rating-${r}">${r}/5</div>
+                        <div>${d.avg_temp_f || '?'}°F</div>
+                        <div>${d.rain_chance_pct || '?'}% rain</div>
+                    </div>`;
+                }).join('');
+                const mismatch = w.mismatch ? ` <span style="color:#f87171;font-size:0.72rem">(best: ${w.recommended_season})</span>` : '';
+                return `<div class="h20-weather-card">
+                    <h4>${w.location_name}, ${w.state}${mismatch}</h4>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.4rem">${w.terrain_type} &middot; planned: ${w.best_season}</div>
+                    <div class="h20-weather-season">${seasonCells}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderH20ScoutResults(results) {
+            const el = document.getElementById('h20-scout-results');
+            if (!results || !results.length) {
+                el.innerHTML = '<div class="h20-empty">No scouting notes found.</div>';
+                return;
+            }
+            el.innerHTML = results.map(r => {
+                const text = r.text || r.document || '';
+                const meta = r.metadata || {};
+                return `<div style="background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:0.6rem; margin-bottom:0.5rem; font-size:0.82rem;">
+                    <div>${text}</div>
+                    <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:0.25rem">${meta.location || ''} ${meta.state || ''}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function h20AddSegment() {
+            const location = document.getElementById('h20-f-location').value.trim();
+            const state = document.getElementById('h20-f-state').value;
+            if (!location) { alert('Location name required'); return; }
+
+            const poiRaw = document.getElementById('h20-f-poi').value.trim();
+            const poi = poiRaw ? poiRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            ws.send(JSON.stringify({
+                type: 'hwy20_add_segment',
+                location_name: location,
+                state: state,
+                mile_marker_start: parseFloat(document.getElementById('h20-f-mile-start').value) || 0,
+                mile_marker_end: parseFloat(document.getElementById('h20-f-mile-end').value) || 0,
+                gps_lat: parseFloat(document.getElementById('h20-f-lat').value) || 0,
+                gps_lon: parseFloat(document.getElementById('h20-f-lon').value) || 0,
+                terrain_type: document.getElementById('h20-f-terrain').value,
+                best_season: document.getElementById('h20-f-season').value,
+                priority: parseInt(document.getElementById('h20-f-priority').value) || 2,
+                planned_date: document.getElementById('h20-f-date').value || '',
+                points_of_interest: poi,
+                description: document.getElementById('h20-f-desc').value.trim(),
+            }));
+            document.getElementById('h20-add-form').classList.remove('visible');
+            // Clear form
+            ['h20-f-location','h20-f-mile-start','h20-f-mile-end','h20-f-lat','h20-f-lon','h20-f-poi','h20-f-desc','h20-f-date'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+
+        function h20MarkFilmed(segId) {
+            ws.send(JSON.stringify({ type: 'hwy20_mark_filmed', segment_id: segId }));
+        }
+
+        function h20GenShots(segId) {
+            ws.send(JSON.stringify({ type: 'hwy20_generate_shots', segment_id: segId }));
+        }
+
+        function h20DeleteSegment(segId) {
+            if (!confirm('Delete this segment and all its shots?')) return;
+            ws.send(JSON.stringify({ type: 'hwy20_delete_segment', segment_id: segId }));
+        }
+
+        function h20RefreshWeather() {
+            ws.send(JSON.stringify({ type: 'hwy20_weather' }));
+        }
+
+        function h20SearchNotes() {
+            const query = document.getElementById('h20-scout-query').value.trim();
+            if (!query) return;
+            ws.send(JSON.stringify({ type: 'hwy20_search_notes', query: query }));
         }
 
         // ---------------------------------------------------------------
