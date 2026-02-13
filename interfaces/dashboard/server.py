@@ -54,6 +54,7 @@ from tools.content.social_media import SocialMediaManager
 from tools.doppler.email_templates import EmailTemplateManager
 from tools.doppler.photo_docs import PhotoDocManager
 from core.training import TrainingManager
+from tools.doppler.ride_log import RideLogManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -440,6 +441,14 @@ async def broadcast_training_status():
     await broadcast_to_dashboards({
         "type": "training_status",
         **training_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_ride_log_status():
+    """Push current ride log state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "ride_log_status",
+        **ride_log_manager.to_broadcast_dict(),
     })
 
 
@@ -1247,6 +1256,12 @@ training_manager = TrainingManager(
     on_change=broadcast_training_status,
 )
 
+# Ride and service log — mileage tracking for tax documentation
+ride_log_manager = RideLogManager(
+    db_path="data/ride_log.db",
+    on_change=broadcast_ride_log_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1573,6 +1588,7 @@ async def lifespan(app: FastAPI):
     email_template_manager.close()
     photo_doc_manager.close()
     training_manager.close()
+    ride_log_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1634,6 +1650,7 @@ app.state.social_media_manager = social_media_manager
 app.state.email_template_manager = email_template_manager
 app.state.photo_doc_manager = photo_doc_manager
 app.state.training_manager = training_manager
+app.state.ride_log_manager = ride_log_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2802,6 +2819,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "training_status",
         **training_manager.to_broadcast_dict(),
+    })
+
+    # Send current ride log status
+    await websocket.send_json({
+        "type": "ride_log_status",
+        **ride_log_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4232,6 +4255,73 @@ async def dashboard_websocket(websocket: WebSocket):
                     "session_id": sid,
                 })
                 await broadcast_training_status()
+
+            # ================================================================
+            # RIDE LOG
+            # ================================================================
+
+            elif msg.get("type") == "ride_log":
+                entry = ride_log_manager.log_ride(
+                    date=msg.get("date", ""),
+                    start_time=msg.get("start_time", ""),
+                    end_time=msg.get("end_time", ""),
+                    start_location=msg.get("start_location", ""),
+                    end_location=msg.get("end_location", ""),
+                    distance=float(msg.get("distance", 0)),
+                    purpose=msg.get("purpose", "personal"),
+                    weather_conditions=msg.get("weather_conditions", ""),
+                    fuel_used=float(msg.get("fuel_used", 0)),
+                    odometer_start=float(msg.get("odometer_start", 0)),
+                    odometer_end=float(msg.get("odometer_end", 0)),
+                    notes=msg.get("notes", ""),
+                )
+                await websocket.send_json({
+                    "type": "ride_logged",
+                    "ok": True,
+                    "ride": entry.to_dict(),
+                })
+                await broadcast_ride_log_status()
+
+            elif msg.get("type") == "ride_update":
+                ride_id = msg.get("ride_id", "")
+                fields = {k: v for k, v in msg.items() if k not in ("type", "ride_id")}
+                # Convert numeric fields
+                for num_field in ("distance", "fuel_used", "odometer_start", "odometer_end"):
+                    if num_field in fields:
+                        fields[num_field] = float(fields[num_field])
+                entry = ride_log_manager.update_ride(ride_id, **fields)
+                await websocket.send_json({
+                    "type": "ride_updated",
+                    "ok": entry is not None,
+                    "ride": entry.to_dict() if entry else None,
+                })
+                await broadcast_ride_log_status()
+
+            elif msg.get("type") == "ride_delete":
+                ride_id = msg.get("ride_id", "")
+                ok = ride_log_manager.delete_ride(ride_id)
+                await websocket.send_json({
+                    "type": "ride_deleted",
+                    "ok": ok,
+                    "ride_id": ride_id,
+                })
+                await broadcast_ride_log_status()
+
+            elif msg.get("type") == "ride_mileage_report":
+                year = int(msg.get("year", 0))
+                report = ride_log_manager.mileage_report(year)
+                await websocket.send_json({
+                    "type": "ride_mileage_report_result",
+                    **report,
+                })
+
+            elif msg.get("type") == "ride_fuel_stats":
+                months = int(msg.get("months", 6))
+                stats = ride_log_manager.fuel_tracker(months)
+                await websocket.send_json({
+                    "type": "ride_fuel_stats_result",
+                    **stats,
+                })
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")

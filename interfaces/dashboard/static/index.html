@@ -5597,6 +5597,269 @@
             font-size: 0.85rem;
         }
 
+        /* Ride Log */
+        .rl-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .rl-stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .rl-stat-card .rl-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .rl-stat-card .rl-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .rl-form-wrap {
+            margin-bottom: 1rem;
+        }
+        .rl-form-wrap summary {
+            cursor: pointer;
+            font-weight: 600;
+            padding: 0.5rem 0;
+            color: var(--primary-color);
+        }
+        .rl-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .rl-form label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .rl-form input, .rl-form select, .rl-form textarea {
+            padding: 0.4rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 0.85rem;
+        }
+        .rl-form .rl-full { grid-column: 1 / -1; }
+        .rl-form-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 0.25rem;
+        }
+        .rl-form-actions button {
+            padding: 0.4rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .rl-btn-log {
+            background: var(--primary-color);
+            color: #fff;
+        }
+        .rl-btn-log:hover { opacity: 0.85; }
+        .rl-btn-cancel {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+        .rl-rides-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .rl-ride-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+        }
+        .rl-ride-date {
+            font-weight: 600;
+            min-width: 90px;
+        }
+        .rl-ride-route {
+            flex: 1;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .rl-ride-dist {
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+        .rl-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .rl-badge-service_call { background: #e3f2fd; color: #1565c0; }
+        .rl-badge-commute { background: #f3e5f5; color: #7b1fa2; }
+        .rl-badge-content_ride { background: #e8f5e9; color: #2e7d32; }
+        .rl-badge-personal { background: #fff3e0; color: #e65100; }
+        .rl-badge-highway_20 { background: #fce4ec; color: #c62828; }
+        .rl-ride-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 4px;
+            color: var(--text-secondary);
+        }
+        .rl-ride-actions button:hover { color: #f44336; }
+        .rl-section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 1rem 0 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .rl-bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+        }
+        .rl-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .rl-bar-label {
+            min-width: 65px;
+            text-align: right;
+            color: var(--text-secondary);
+        }
+        .rl-bar-track {
+            flex: 1;
+            height: 18px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            display: flex;
+        }
+        .rl-bar-biz {
+            background: var(--primary-color);
+            height: 100%;
+            transition: width 0.3s;
+        }
+        .rl-bar-pers {
+            background: #ff9800;
+            height: 100%;
+            transition: width 0.3s;
+        }
+        .rl-bar-val {
+            min-width: 50px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        .rl-breakdown {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .rl-breakdown-item {
+            text-align: center;
+        }
+        .rl-breakdown-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        .rl-breakdown-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .rl-breakdown-biz { color: var(--primary-color); }
+        .rl-breakdown-pers { color: #ff9800; }
+        .rl-report-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+        .rl-report-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .rl-report-row:last-child { border-bottom: none; }
+        .rl-report-highlight {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1rem;
+        }
+        .rl-fuel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .rl-fuel-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem;
+            text-align: center;
+        }
+        .rl-fuel-card .rl-fuel-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .rl-fuel-card .rl-fuel-lbl {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .rl-year-picker {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .rl-year-picker select {
+            padding: 0.3rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+        .rl-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -9159,6 +9422,84 @@
             </div>
         </section>
 
+        <section data-panel-id="ride-log" style="display:none;">
+            <h2>Ride &amp; Service Log</h2>
+
+            <!-- Stats Row -->
+            <div class="rl-stats-row" id="rl-stats-row">
+                <div class="rl-stat-card"><div class="rl-stat-value" id="rl-stat-total-rides">0</div><div class="rl-stat-label">Total Rides</div></div>
+                <div class="rl-stat-card"><div class="rl-stat-value" id="rl-stat-total-miles">0</div><div class="rl-stat-label">Total Miles</div></div>
+                <div class="rl-stat-card"><div class="rl-stat-value" id="rl-stat-biz-miles">0</div><div class="rl-stat-label">Business Miles</div></div>
+                <div class="rl-stat-card"><div class="rl-stat-value" id="rl-stat-month-miles">0</div><div class="rl-stat-label">This Month</div></div>
+                <div class="rl-stat-card"><div class="rl-stat-value" id="rl-stat-avg-mpg">—</div><div class="rl-stat-label">Avg MPG</div></div>
+                <div class="rl-stat-card"><div class="rl-stat-value" id="rl-stat-rides-month">0</div><div class="rl-stat-label">Rides/Month</div></div>
+            </div>
+
+            <!-- Log New Ride Form -->
+            <details class="rl-form-wrap" id="rl-form-details">
+                <summary>Log New Ride</summary>
+                <div class="rl-form" id="rl-new-ride-form">
+                    <label>Date <input type="date" id="rl-date"></label>
+                    <label>Purpose
+                        <select id="rl-purpose">
+                            <option value="service_call">Service Call</option>
+                            <option value="commute">Commute</option>
+                            <option value="content_ride">Content Ride</option>
+                            <option value="personal">Personal</option>
+                            <option value="highway_20">Highway 20</option>
+                        </select>
+                    </label>
+                    <label>Start Time <input type="time" id="rl-start-time"></label>
+                    <label>End Time <input type="time" id="rl-end-time"></label>
+                    <label>Start Location <input type="text" id="rl-start-loc" placeholder="e.g. Home, Shop"></label>
+                    <label>End Location <input type="text" id="rl-end-loc" placeholder="e.g. Customer, Portland"></label>
+                    <label>Distance (mi) <input type="number" id="rl-distance" step="0.1" min="0"></label>
+                    <label>Fuel Used (gal) <input type="number" id="rl-fuel" step="0.01" min="0"></label>
+                    <label>Odometer Start <input type="number" id="rl-odo-start" step="0.1" min="0"></label>
+                    <label>Odometer End <input type="number" id="rl-odo-end" step="0.1" min="0"></label>
+                    <label>Weather <input type="text" id="rl-weather" placeholder="e.g. Clear, 65F"></label>
+                    <label class="rl-full">Notes <textarea id="rl-notes" rows="2" placeholder="Optional notes..."></textarea></label>
+                    <div class="rl-form-actions">
+                        <button class="rl-btn-cancel" onclick="rlClearForm()">Clear</button>
+                        <button class="rl-btn-log" onclick="rlLogRide()">Log Ride</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Ride History -->
+            <div class="rl-section-title">Ride History</div>
+            <div class="rl-rides-list" id="rl-rides-list">
+                <div class="rl-empty">No rides logged yet.</div>
+            </div>
+
+            <!-- Monthly Summary -->
+            <div class="rl-section-title">Monthly Summary</div>
+            <div class="rl-bar-chart" id="rl-monthly-chart">
+                <div class="rl-empty">No data yet.</div>
+            </div>
+
+            <!-- Fuel Efficiency -->
+            <div class="rl-section-title">Fuel Efficiency</div>
+            <div class="rl-fuel-grid" id="rl-fuel-grid">
+                <div class="rl-empty">No fuel data yet.</div>
+            </div>
+
+            <!-- Business vs Personal -->
+            <div class="rl-section-title">Business vs Personal</div>
+            <div class="rl-breakdown" id="rl-breakdown">
+                <div class="rl-empty">No data yet.</div>
+            </div>
+
+            <!-- IRS Mileage Report -->
+            <div class="rl-section-title">IRS Mileage Report</div>
+            <div class="rl-year-picker">
+                <label>Year: <select id="rl-report-year" onchange="rlRequestMileageReport()"></select></label>
+            </div>
+            <div class="rl-report-box" id="rl-report-box">
+                <div class="rl-empty">Select a year to generate report.</div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -9863,6 +10204,7 @@
             { id: 'service-records', name: 'Service Records' },
             { id: 'photo-docs', name: 'Photo Docs' },
             { id: 'training', name: 'Training Mode' },
+            { id: 'ride-log', name: 'Ride Log' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -10290,6 +10632,27 @@
                     renderTrTreeSuggestions(data);
                 } else if (data.type === "training_deleted") {
                     // refreshed via broadcast
+
+                // --- Ride Log dispatch ---
+                } else if (data.type === "ride_log_status") {
+                    rlRides = data.rides || [];
+                    rlStatus = data.status || {};
+                    rlFuelStats = data.fuel_stats || {};
+                    rlMileageReport = data.mileage_report || {};
+                    rlMonthlySummary = data.monthly_summary || [];
+                    renderRlAll();
+                } else if (data.type === "ride_logged") {
+                    // full refresh via broadcast
+                } else if (data.type === "ride_updated") {
+                    // full refresh via broadcast
+                } else if (data.type === "ride_deleted") {
+                    // full refresh via broadcast
+                } else if (data.type === "ride_mileage_report_result") {
+                    rlMileageReport = data;
+                    renderRlMileageReport();
+                } else if (data.type === "ride_fuel_stats_result") {
+                    rlFuelStats = data;
+                    renderRlFuel();
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -13426,6 +13789,227 @@
                     // Store trees for the training dropdown
                     window.diagTrees = data.trees || [];
                     populateTrTreeDropdown();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Ride Log
+        // ---------------------------------------------------------------
+
+        let rlRides = [];
+        let rlStatus = {};
+        let rlFuelStats = {};
+        let rlMileageReport = {};
+        let rlMonthlySummary = [];
+
+        function renderRlAll() {
+            renderRlStats();
+            renderRlRides();
+            renderRlMonthly();
+            renderRlFuel();
+            renderRlBreakdown();
+            renderRlMileageReport();
+            rlPopulateYearPicker();
+        }
+
+        function renderRlStats() {
+            const s = rlStatus;
+            const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+            el("rl-stat-total-rides", s.total_rides ?? 0);
+            el("rl-stat-total-miles", s.total_miles != null ? s.total_miles.toLocaleString(undefined, {maximumFractionDigits:1}) : "0");
+            el("rl-stat-biz-miles", s.business_miles != null ? s.business_miles.toLocaleString(undefined, {maximumFractionDigits:1}) : "0");
+            el("rl-stat-month-miles", s.this_month_miles != null ? s.this_month_miles.toLocaleString(undefined, {maximumFractionDigits:1}) : "0");
+            el("rl-stat-avg-mpg", s.avg_mpg != null ? s.avg_mpg.toFixed(1) : "—");
+            el("rl-stat-rides-month", s.rides_this_month ?? 0);
+        }
+
+        function renderRlRides() {
+            const list = document.getElementById("rl-rides-list");
+            if (!list) return;
+            if (!rlRides.length) {
+                list.innerHTML = '<div class="rl-empty">No rides logged yet.</div>';
+                return;
+            }
+            list.innerHTML = rlRides.map(r => {
+                const route = [r.start_location, r.end_location].filter(Boolean).join(" → ") || "—";
+                const time = [r.start_time, r.end_time].filter(Boolean).join("–") || "";
+                const dur = r.duration_minutes != null ? ` (${r.duration_minutes}min)` : "";
+                const mpg = r.mpg != null ? ` · ${r.mpg} mpg` : "";
+                return `<div class="rl-ride-card">
+                    <span class="rl-ride-date">${r.date}</span>
+                    <span class="rl-badge rl-badge-${r.purpose}">${r.purpose_label}</span>
+                    <span class="rl-ride-route" title="${route}${time ? ' ' + time + dur : ''}">${route}${time ? ' <small>' + time + dur + '</small>' : ''}</span>
+                    <span class="rl-ride-dist">${r.distance.toFixed(1)} mi${mpg}</span>
+                    <span class="rl-ride-actions">
+                        <button onclick="rlDeleteRide('${r.ride_id}')" title="Delete">&#x2715;</button>
+                    </span>
+                </div>`;
+            }).join("");
+        }
+
+        function renderRlMonthly() {
+            const el = document.getElementById("rl-monthly-chart");
+            if (!el) return;
+            if (!rlMonthlySummary.length) {
+                el.innerHTML = '<div class="rl-empty">No data yet.</div>';
+                return;
+            }
+            const maxMiles = Math.max(...rlMonthlySummary.map(m => m.total_miles), 1);
+            el.innerHTML = rlMonthlySummary.map(m => {
+                const bizPct = m.total_miles > 0 ? (m.business_miles / m.total_miles * 100) : 0;
+                const persPct = m.total_miles > 0 ? (m.personal_miles / m.total_miles * 100) : 0;
+                const barW = (m.total_miles / maxMiles * 100).toFixed(1);
+                return `<div class="rl-bar-row">
+                    <span class="rl-bar-label">${m.month}</span>
+                    <div class="rl-bar-track" style="max-width:${barW}%">
+                        <div class="rl-bar-biz" style="width:${bizPct}%" title="Business: ${m.business_miles} mi"></div>
+                        <div class="rl-bar-pers" style="width:${persPct}%" title="Personal: ${m.personal_miles} mi"></div>
+                    </div>
+                    <span class="rl-bar-val">${m.total_miles} mi</span>
+                </div>`;
+            }).join("");
+        }
+
+        function renderRlFuel() {
+            const el = document.getElementById("rl-fuel-grid");
+            if (!el) return;
+            const f = rlFuelStats;
+            if (!f.total_miles) {
+                el.innerHTML = '<div class="rl-empty">No fuel data yet.</div>';
+                return;
+            }
+            let html = `
+                <div class="rl-fuel-card"><div class="rl-fuel-val">${f.total_miles}</div><div class="rl-fuel-lbl">Total Miles</div></div>
+                <div class="rl-fuel-card"><div class="rl-fuel-val">${f.total_gallons}</div><div class="rl-fuel-lbl">Total Gallons</div></div>
+                <div class="rl-fuel-card"><div class="rl-fuel-val">${f.avg_mpg != null ? f.avg_mpg : '—'}</div><div class="rl-fuel-lbl">Avg MPG</div></div>
+            `;
+            if (f.monthly && f.monthly.length) {
+                html += f.monthly.map(m => `
+                    <div class="rl-fuel-card"><div class="rl-fuel-val">${m.mpg != null ? m.mpg : '—'}</div><div class="rl-fuel-lbl">${m.month} MPG</div></div>
+                `).join("");
+            }
+            el.innerHTML = html;
+        }
+
+        function renderRlBreakdown() {
+            const el = document.getElementById("rl-breakdown");
+            if (!el) return;
+            const r = rlMileageReport;
+            if (!r.total_miles) {
+                el.innerHTML = '<div class="rl-empty">No data yet.</div>';
+                return;
+            }
+            el.innerHTML = `
+                <div class="rl-breakdown-item">
+                    <div class="rl-breakdown-value rl-breakdown-biz">${r.business_miles}</div>
+                    <div class="rl-breakdown-label">Business Miles</div>
+                </div>
+                <div class="rl-breakdown-item">
+                    <div class="rl-breakdown-value rl-breakdown-pers">${r.personal_miles}</div>
+                    <div class="rl-breakdown-label">Personal Miles</div>
+                </div>
+                <div class="rl-breakdown-item">
+                    <div class="rl-breakdown-value rl-breakdown-biz">${r.business_pct}%</div>
+                    <div class="rl-breakdown-label">Business %</div>
+                </div>
+                <div class="rl-breakdown-item">
+                    <div class="rl-breakdown-value" style="color:var(--primary-color)">$${r.estimated_deduction?.toFixed(2) ?? '0.00'}</div>
+                    <div class="rl-breakdown-label">Est. Deduction</div>
+                </div>
+            `;
+        }
+
+        function renderRlMileageReport() {
+            const el = document.getElementById("rl-report-box");
+            if (!el) return;
+            const r = rlMileageReport;
+            if (!r.year || !r.total_miles) {
+                el.innerHTML = '<div class="rl-empty">No mileage data for this year.</div>';
+                return;
+            }
+            let purposeRows = "";
+            if (r.by_purpose) {
+                for (const [p, data] of Object.entries(r.by_purpose)) {
+                    const label = {service_call:"Service Call",commute:"Commute",content_ride:"Content Ride",personal:"Personal",highway_20:"Highway 20"}[p] || p;
+                    purposeRows += `<div class="rl-report-row"><span>${label}</span><span>${data.count} rides · ${data.miles} mi</span></div>`;
+                }
+            }
+            el.innerHTML = `
+                <div class="rl-report-row"><span>Tax Year</span><span class="rl-report-highlight">${r.year}</span></div>
+                <div class="rl-report-row"><span>Total Miles</span><span>${r.total_miles}</span></div>
+                <div class="rl-report-row"><span>Business Miles</span><span>${r.business_miles}</span></div>
+                <div class="rl-report-row"><span>Personal Miles</span><span>${r.personal_miles}</span></div>
+                <div class="rl-report-row"><span>Business %</span><span>${r.business_pct}%</span></div>
+                ${purposeRows}
+                <div class="rl-report-row"><span>IRS Rate (${r.year})</span><span>$${r.irs_rate}/mile</span></div>
+                <div class="rl-report-row"><span>Estimated Deduction</span><span class="rl-report-highlight">$${r.estimated_deduction?.toFixed(2) ?? '0.00'}</span></div>
+            `;
+        }
+
+        function rlPopulateYearPicker() {
+            const sel = document.getElementById("rl-report-year");
+            if (!sel || sel.options.length > 1) return;
+            const curYear = new Date().getFullYear();
+            sel.innerHTML = "";
+            for (let y = curYear; y >= curYear - 3; y--) {
+                sel.innerHTML += `<option value="${y}">${y}</option>`;
+            }
+        }
+
+        // --- Actions ---
+
+        function rlLogRide() {
+            const date = document.getElementById("rl-date")?.value;
+            if (!date) { alert("Date is required."); return; }
+            ws.send(JSON.stringify({
+                type: "ride_log",
+                date: date,
+                start_time: document.getElementById("rl-start-time")?.value || "",
+                end_time: document.getElementById("rl-end-time")?.value || "",
+                start_location: document.getElementById("rl-start-loc")?.value || "",
+                end_location: document.getElementById("rl-end-loc")?.value || "",
+                distance: parseFloat(document.getElementById("rl-distance")?.value) || 0,
+                purpose: document.getElementById("rl-purpose")?.value || "personal",
+                weather_conditions: document.getElementById("rl-weather")?.value || "",
+                fuel_used: parseFloat(document.getElementById("rl-fuel")?.value) || 0,
+                odometer_start: parseFloat(document.getElementById("rl-odo-start")?.value) || 0,
+                odometer_end: parseFloat(document.getElementById("rl-odo-end")?.value) || 0,
+                notes: document.getElementById("rl-notes")?.value || "",
+            }));
+            rlClearForm();
+            document.getElementById("rl-form-details").removeAttribute("open");
+        }
+
+        function rlClearForm() {
+            ["rl-date","rl-start-time","rl-end-time","rl-start-loc","rl-end-loc",
+             "rl-distance","rl-fuel","rl-odo-start","rl-odo-end","rl-weather","rl-notes"
+            ].forEach(id => { const e = document.getElementById(id); if (e) e.value = ""; });
+            const sel = document.getElementById("rl-purpose");
+            if (sel) sel.value = "service_call";
+        }
+
+        function rlDeleteRide(rideId) {
+            if (!confirm("Delete this ride?")) return;
+            ws.send(JSON.stringify({ type: "ride_delete", ride_id: rideId }));
+        }
+
+        function rlRequestMileageReport() {
+            const year = parseInt(document.getElementById("rl-report-year")?.value) || 0;
+            if (year) ws.send(JSON.stringify({ type: "ride_mileage_report", year: year }));
+        }
+
+        function rlRequestFuelStats() {
+            ws.send(JSON.stringify({ type: "ride_fuel_stats", months: 6 }));
+        }
+
+        // Hook into renderAgents to also render ride log when panel is visible
+        (function() {
+            const origRender = window.renderAgents;
+            if (origRender) {
+                window.renderAgents = function() {
+                    origRender.apply(this, arguments);
+                    renderRlAll();
                 };
             }
         })();
