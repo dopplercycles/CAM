@@ -194,6 +194,16 @@ _DEFAULTS: dict[str, Any] = {
         "max_delivery_history": 500,
         "inbound_secret": "",
     },
+    "email": {
+        "enabled": False,
+        "smtp_host": "",
+        "smtp_port": 587,
+        "smtp_user": "",
+        "smtp_password": "",
+        "from_address": "cam@dopplercycles.com",
+        "to_address": "",
+        "use_tls": True,
+    },
     "knowledge": {
         "db_path": "data/knowledge_ingest.db",
         "inbox_dir": "data/knowledge/inbox",

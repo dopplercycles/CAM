@@ -3522,6 +3522,99 @@
             color: var(--text-tertiary); font-style: italic; padding: 1rem 0;
         }
 
+        /* --- Email Templates --- */
+        .em-stats-row {
+            display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .em-stat-card {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 6px; padding: 0.5rem 1rem; text-align: center; min-width: 80px;
+        }
+        .em-stat-card .em-stat-val { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
+        .em-stat-card .em-stat-lbl { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
+        .em-generate-form {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+        }
+        .em-generate-form label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .em-generate-form select,
+        .em-generate-form textarea {
+            width: 100%; padding: 0.5rem; border: 1px solid var(--border-color);
+            border-radius: 4px; background: var(--bg-primary); color: var(--text-primary);
+            font-family: inherit; font-size: 0.85rem; margin-bottom: 0.75rem; box-sizing: border-box;
+        }
+        .em-generate-form textarea { min-height: 60px; resize: vertical; }
+        .em-generate-btn {
+            background: var(--accent); color: #fff; border: none; border-radius: 4px;
+            padding: 0.5rem 1.2rem; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+        }
+        .em-generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .em-preview {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem; display: none;
+        }
+        .em-preview-subject {
+            font-size: 1rem; font-weight: 700; color: var(--text-primary);
+            margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);
+        }
+        .em-tabs { display: flex; gap: 0; margin-bottom: 0.75rem; }
+        .em-tab-btn {
+            padding: 0.4rem 1rem; border: 1px solid var(--border-color); background: transparent;
+            color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
+        }
+        .em-tab-btn:first-child { border-radius: 4px 0 0 4px; }
+        .em-tab-btn:last-child { border-radius: 0 4px 4px 0; }
+        .em-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .em-tab-content { display: none; }
+        .em-tab-content.active { display: block; }
+        .em-text-view {
+            width: 100%; min-height: 200px; background: var(--bg-primary);
+            border: 1px solid var(--border-color); border-radius: 4px;
+            color: var(--text-primary); padding: 0.75rem; font-family: inherit;
+            font-size: 0.85rem; resize: vertical; box-sizing: border-box;
+        }
+        .em-html-frame {
+            width: 100%; min-height: 300px; border: 1px solid var(--border-color);
+            border-radius: 4px; background: #fff;
+        }
+        .em-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .em-actions button {
+            padding: 0.4rem 0.9rem; border: 1px solid var(--border-color); border-radius: 4px;
+            background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
+        }
+        .em-actions button:hover { border-color: var(--accent); color: var(--accent); }
+        .em-actions .em-send-btn:hover { border-color: #00ba7c; color: #00ba7c; }
+        .em-actions .em-delete-btn:hover { border-color: #f4212e; color: #f4212e; }
+        .em-queue-section { margin-bottom: 1rem; }
+        .em-queue-section h3 { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .em-queue-table {
+            width: 100%; border-collapse: collapse; font-size: 0.8rem;
+        }
+        .em-queue-table th {
+            text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border-color);
+            color: var(--text-tertiary); font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
+        }
+        .em-queue-table td {
+            padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .em-queue-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .em-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 12px;
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+        }
+        .em-status-draft { background: #71767b22; color: #71767b; border: 1px solid #71767b44; }
+        .em-status-queued { background: #1d9bf022; color: #1d9bf0; border: 1px solid #1d9bf044; }
+        .em-status-sent { background: #00ba7c22; color: #00ba7c; border: 1px solid #00ba7c44; }
+        .em-status-failed { background: #f4212e22; color: #f4212e; border: 1px solid #f4212e44; }
+        .em-history-section h3 { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .em-empty { color: var(--text-tertiary); font-style: italic; padding: 1rem 0; }
+        .em-send-queued-btn {
+            background: transparent; border: 1px solid #00ba7c; color: #00ba7c;
+            border-radius: 4px; padding: 0.3rem 0.8rem; cursor: pointer; font-size: 0.75rem; margin-left: auto;
+        }
+        .em-send-queued-btn:hover { background: #00ba7c22; }
+
         /* --- Voice Synthesis (TTS) --- */
         .tts-section {
             margin-bottom: 2rem;
@@ -8030,6 +8123,83 @@
             </div>
         </section>
 
+        <section data-panel-id="email-templates" style="display:none;">
+            <h2 style="margin-bottom:1rem;">Email Templates</h2>
+
+            <!-- Stats row -->
+            <div class="em-stats-row" id="em-stats-row">
+                <div class="em-stat-card"><div class="em-stat-val" id="em-stat-total">0</div><div class="em-stat-lbl">Total</div></div>
+                <div class="em-stat-card"><div class="em-stat-val" id="em-stat-drafts">0</div><div class="em-stat-lbl">Drafts</div></div>
+                <div class="em-stat-card"><div class="em-stat-val" id="em-stat-queued">0</div><div class="em-stat-lbl">Queued</div></div>
+                <div class="em-stat-card"><div class="em-stat-val" id="em-stat-sent">0</div><div class="em-stat-lbl">Sent</div></div>
+                <div class="em-stat-card"><div class="em-stat-val" id="em-stat-failed">0</div><div class="em-stat-lbl">Failed</div></div>
+            </div>
+
+            <!-- Generate form -->
+            <div class="em-generate-form">
+                <label for="em-customer-select">Customer</label>
+                <select id="em-customer-select" onchange="loadEmCustomerHistory()">
+                    <option value="">-- Select customer --</option>
+                </select>
+
+                <label for="em-template-select">Template Type</label>
+                <select id="em-template-select">
+                    <option value="appointment_confirmation">Appointment Confirmation</option>
+                    <option value="appointment_reminder">Appointment Reminder</option>
+                    <option value="service_complete">Service Complete Summary</option>
+                    <option value="invoice_sent">Invoice Cover Letter</option>
+                    <option value="follow_up_30day">30-Day Follow-Up</option>
+                    <option value="seasonal_maintenance_reminder">Seasonal Maintenance Reminder</option>
+                    <option value="thank_you">Thank You</option>
+                </select>
+
+                <label for="em-extra-context">Additional Context <span style="color:var(--text-tertiary);">(optional — appointment date, invoice #, etc.)</span></label>
+                <textarea id="em-extra-context" placeholder="e.g. Appointment: Feb 20 at 10am, Location: customer garage, Services: chain adjustment + oil change"></textarea>
+
+                <button class="em-generate-btn" id="em-generate-btn" onclick="generateEmPreview()">Generate Email</button>
+            </div>
+
+            <!-- Preview area -->
+            <div class="em-preview" id="em-preview">
+                <div class="em-preview-subject" id="em-preview-subject"></div>
+                <div class="em-tabs">
+                    <button class="em-tab-btn active" onclick="switchEmTab('text')">Plain Text</button>
+                    <button class="em-tab-btn" onclick="switchEmTab('html')">HTML Preview</button>
+                </div>
+                <div class="em-tab-content active" id="em-tab-text">
+                    <textarea class="em-text-view" id="em-text-view" readonly></textarea>
+                </div>
+                <div class="em-tab-content" id="em-tab-html">
+                    <iframe class="em-html-frame" id="em-html-frame" sandbox="allow-same-origin" title="HTML Preview"></iframe>
+                </div>
+                <div class="em-actions">
+                    <button onclick="queueEmEmail()" title="Move to send queue">Queue</button>
+                    <button class="em-send-btn" onclick="sendEmEmail()" title="Send now (or mark sent in copy-ready mode)">Send</button>
+                    <button onclick="copyEmContent()" title="Copy subject + body to clipboard">Copy</button>
+                    <button class="em-delete-btn" onclick="deleteEmEmail()" title="Delete this email">Delete</button>
+                </div>
+            </div>
+
+            <!-- Send queue -->
+            <div class="em-queue-section">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <h3>Send Queue</h3>
+                    <button class="em-send-queued-btn" onclick="sendEmQueued()" title="Send all queued emails">Send All Queued</button>
+                </div>
+                <div id="em-queue-list">
+                    <div class="em-empty">No emails in queue.</div>
+                </div>
+            </div>
+
+            <!-- Customer history -->
+            <div class="em-history-section">
+                <h3>Customer Communication History</h3>
+                <div id="em-history-list">
+                    <div class="em-empty">Select a customer to view history.</div>
+                </div>
+            </div>
+        </section>
+
         <section class="appt-cal-section" data-panel-id="appointment-calendar">
             <div class="appt-cal-header">
                 <h2>Appointment Calendar</h2>
@@ -8882,6 +9052,7 @@
             { id: 'financial-dashboard', name: 'Financial Dashboard' },
             { id: 'route-planner', name: 'Route Planner' },
             { id: 'crm', name: 'Customer CRM' },
+            { id: 'email-templates', name: 'Email Templates' },
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
@@ -9212,6 +9383,30 @@
                     const btn = document.getElementById("sm-generate-btn");
                     if (btn) { btn.disabled = false; btn.textContent = "Generate Drafts"; }
                     if (!data.ok) console.warn("Draft generation failed");
+
+                // Email Templates
+                } else if (data.type === "email_status") {
+                    handleEmStatus(data);
+                } else if (data.type === "email_generated") {
+                    const btn = document.getElementById("em-generate-btn");
+                    if (btn) { btn.disabled = false; btn.textContent = "Generate Email"; }
+                    if (data.ok && data.email) {
+                        emPreview = data.email;
+                        renderEmPreview();
+                    } else {
+                        console.warn("Email generation failed:", data.error);
+                    }
+                } else if (data.type === "email_queued") {
+                    if (!data.ok) console.warn("Email queue failed");
+                } else if (data.type === "email_sent") {
+                    if (!data.ok) console.warn("Email send failed");
+                } else if (data.type === "email_deleted") {
+                    if (data.ok) { emPreview = null; renderEmPreview(); }
+                } else if (data.type === "email_send_queued_done") {
+                    // refreshed via broadcast
+                } else if (data.type === "email_customer_history_result") {
+                    emHistory = data.emails || [];
+                    renderEmHistory();
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -11628,6 +11823,218 @@
                 ws.send(JSON.stringify({ type: "sm_delete", post_id: postId }));
             }
         }
+
+        // ---------------------------------------------------------------
+        // Email Templates
+        // ---------------------------------------------------------------
+
+        let emEmails = [];
+        let emStatus = { total: 0, drafts: 0, queued: 0, sent: 0, failed: 0 };
+        let emPreview = null;  // currently previewed EmailRecord dict
+        let emHistory = [];
+
+        function handleEmStatus(data) {
+            if (data && data.emails) emEmails = data.emails;
+            if (data && data.status) emStatus = data.status;
+            renderEmStats();
+            renderEmQueue();
+            // Populate customer dropdown from CRM data
+            populateEmCustomerDropdown();
+        }
+
+        function populateEmCustomerDropdown() {
+            const sel = document.getElementById('em-customer-select');
+            if (!sel) return;
+            const current = sel.value;
+            let opts = '<option value="">-- Select customer --</option>';
+            (typeof crmCustomers !== 'undefined' ? crmCustomers : []).forEach(c => {
+                opts += `<option value="${c.customer_id}" data-email="${c.email || ''}">${c.name || c.customer_id}</option>`;
+            });
+            sel.innerHTML = opts;
+            sel.value = current;
+        }
+
+        function renderEmStats() {
+            const s = emStatus;
+            const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+            el('em-stat-total', s.total);
+            el('em-stat-drafts', s.drafts);
+            el('em-stat-queued', s.queued);
+            el('em-stat-sent', s.sent);
+            el('em-stat-failed', s.failed);
+        }
+
+        function renderEmQueue() {
+            const container = document.getElementById('em-queue-list');
+            if (!container) return;
+            const queued = emEmails.filter(e => e.status === 'queued' || e.status === 'draft');
+            if (!queued.length) {
+                container.innerHTML = '<div class="em-empty">No emails in queue.</div>';
+                return;
+            }
+            let html = '<table class="em-queue-table"><thead><tr><th>Customer</th><th>Template</th><th>Subject</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>';
+            queued.forEach(e => {
+                const created = e.created_at ? new Date(e.created_at).toLocaleDateString() : '';
+                const tmplLabel = e.template_type ? e.template_type.replace(/_/g, ' ') : '';
+                html += `<tr>
+                    <td>${escapeHtml(e.customer_name || e.customer_id || '—')}</td>
+                    <td style="text-transform:capitalize;">${tmplLabel}</td>
+                    <td>${escapeHtml(e.subject || '')}</td>
+                    <td><span class="em-badge em-status-${e.status}">${e.status}</span></td>
+                    <td>${created}</td>
+                    <td><button onclick="previewEmEmail('${e.email_id}')" style="font-size:0.75rem;padding:2px 6px;border:1px solid var(--border-color);border-radius:3px;background:transparent;color:var(--text-secondary);cursor:pointer;">View</button></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function renderEmHistory() {
+            const container = document.getElementById('em-history-list');
+            if (!container) return;
+            if (!emHistory.length) {
+                container.innerHTML = '<div class="em-empty">No email history for this customer.</div>';
+                return;
+            }
+            let html = '<table class="em-queue-table"><thead><tr><th>Date</th><th>Template</th><th>Subject</th><th>Status</th><th></th></tr></thead><tbody>';
+            emHistory.forEach(e => {
+                const dt = e.created_at ? new Date(e.created_at).toLocaleDateString() : '';
+                const tmplLabel = e.template_type ? e.template_type.replace(/_/g, ' ') : '';
+                html += `<tr>
+                    <td>${dt}</td>
+                    <td style="text-transform:capitalize;">${tmplLabel}</td>
+                    <td>${escapeHtml(e.subject || '')}</td>
+                    <td><span class="em-badge em-status-${e.status}">${e.status}</span></td>
+                    <td><button onclick="previewEmEmail('${e.email_id}')" style="font-size:0.75rem;padding:2px 6px;border:1px solid var(--border-color);border-radius:3px;background:transparent;color:var(--text-secondary);cursor:pointer;">View</button></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function renderEmPreview() {
+            const panel = document.getElementById('em-preview');
+            if (!panel) return;
+            if (!emPreview) {
+                panel.style.display = 'none';
+                return;
+            }
+            panel.style.display = 'block';
+            document.getElementById('em-preview-subject').textContent = emPreview.subject || '(no subject)';
+            document.getElementById('em-text-view').value = emPreview.body_text || '';
+            const iframe = document.getElementById('em-html-frame');
+            if (iframe) {
+                iframe.srcdoc = emPreview.body_html || '<p>No HTML version</p>';
+            }
+        }
+
+        function switchEmTab(tab) {
+            document.querySelectorAll('.em-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.em-tab-content').forEach(c => c.classList.remove('active'));
+            if (tab === 'html') {
+                document.getElementById('em-tab-html').classList.add('active');
+                document.querySelectorAll('.em-tab-btn')[1].classList.add('active');
+            } else {
+                document.getElementById('em-tab-text').classList.add('active');
+                document.querySelectorAll('.em-tab-btn')[0].classList.add('active');
+            }
+        }
+
+        function previewEmEmail(emailId) {
+            const email = emEmails.find(e => e.email_id === emailId) || emHistory.find(e => e.email_id === emailId);
+            if (email) {
+                emPreview = email;
+                renderEmPreview();
+            }
+        }
+
+        function generateEmPreview() {
+            const custId = document.getElementById('em-customer-select').value;
+            const tmpl = document.getElementById('em-template-select').value;
+            const extraRaw = document.getElementById('em-extra-context').value.trim();
+            if (!custId) { alert('Please select a customer.'); return; }
+            if (!tmpl) { alert('Please select a template type.'); return; }
+
+            // Parse extra context: try JSON first, else wrap as {notes: "..."}
+            let extra = {};
+            if (extraRaw) {
+                try { extra = JSON.parse(extraRaw); } catch (_) { extra = { notes: extraRaw }; }
+            }
+
+            const btn = document.getElementById('em-generate-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'email_generate',
+                    customer_id: custId,
+                    template_type: tmpl,
+                    extra_data: extra,
+                }));
+            }
+        }
+
+        function queueEmEmail() {
+            if (!emPreview) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'email_queue', email_id: emPreview.email_id }));
+            }
+        }
+
+        function sendEmEmail() {
+            if (!emPreview) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'email_send', email_id: emPreview.email_id }));
+            }
+        }
+
+        function sendEmQueued() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'email_send_queued' }));
+            }
+        }
+
+        function copyEmContent() {
+            if (!emPreview) return;
+            const text = `Subject: ${emPreview.subject}\n\n${emPreview.body_text}`;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 1500);
+            });
+        }
+
+        function deleteEmEmail() {
+            if (!emPreview) return;
+            if (!confirm('Delete this email?')) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'email_delete', email_id: emPreview.email_id }));
+            }
+        }
+
+        function loadEmCustomerHistory() {
+            const custId = document.getElementById('em-customer-select').value;
+            if (!custId) {
+                emHistory = [];
+                renderEmHistory();
+                return;
+            }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'email_customer_history', customer_id: custId }));
+            }
+        }
+
+        // Hook into renderAgents to refresh customer dropdown when CRM data updates
+        (function() {
+            const origRenderCrm = window.renderCrmCustomerList;
+            if (origRenderCrm) {
+                window.renderCrmCustomerList = function() {
+                    origRenderCrm.apply(this, arguments);
+                    populateEmCustomerDropdown();
+                };
+            }
+        })();
 
         // ---------------------------------------------------------------
         // Voice Synthesis (TTS)

@@ -51,6 +51,7 @@ from tools.content.pipeline import ContentPipelineManager
 from tools.content.youtube import YouTubeManager
 from tools.content.video_processor import VideoProcessor
 from tools.content.social_media import SocialMediaManager
+from tools.doppler.email_templates import EmailTemplateManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -413,6 +414,14 @@ async def broadcast_social_media_status():
     await broadcast_to_dashboards({
         "type": "social_media_status",
         **social_media_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_email_status():
+    """Push current email template state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "email_status",
+        **email_template_manager.to_broadcast_dict(),
     })
 
 
@@ -1191,6 +1200,16 @@ social_media_manager = SocialMediaManager(
     router=orchestrator.router,
 )
 
+# Email template manager — customer communication generator
+email_template_manager = EmailTemplateManager(
+    db_path="data/email_communications.db",
+    on_change=broadcast_email_status,
+    router=orchestrator.router,
+    crm_store=crm_store,
+    service_store=service_store,
+    config=config,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1514,6 +1533,7 @@ async def lifespan(app: FastAPI):
     youtube_manager.close()
     video_processor.close()
     social_media_manager.close()
+    email_template_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1572,6 +1592,7 @@ app.state.pipeline_manager = pipeline_manager
 app.state.youtube_manager = youtube_manager
 app.state.video_processor = video_processor
 app.state.social_media_manager = social_media_manager
+app.state.email_template_manager = email_template_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2643,6 +2664,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "social_media_status",
         **social_media_manager.to_broadcast_dict(),
+    })
+
+    # Send current email template status
+    await websocket.send_json({
+        "type": "email_status",
+        **email_template_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -3850,6 +3877,54 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "sm_schedule_generated",
                     "ok": True,
                     "slots": slots,
+                })
+
+            # ── Email Template handlers ────────────────────────────
+            elif msg.get("type") == "email_generate":
+                cust_id = msg.get("customer_id", "")
+                tmpl = msg.get("template_type", "")
+                extra = msg.get("extra_data", {})
+                try:
+                    rec = await email_template_manager.generate_email(cust_id, tmpl, extra)
+                    await websocket.send_json({
+                        "type": "email_generated", "ok": True, "email": rec.to_dict(),
+                    })
+                except Exception as exc:
+                    await websocket.send_json({
+                        "type": "email_generated", "ok": False, "error": str(exc),
+                    })
+                await broadcast_email_status()
+
+            elif msg.get("type") == "email_queue":
+                eid = msg.get("email_id", "")
+                ok = email_template_manager.queue_email(eid)
+                await websocket.send_json({"type": "email_queued", "ok": ok})
+                await broadcast_email_status()
+
+            elif msg.get("type") == "email_send":
+                eid = msg.get("email_id", "")
+                ok = email_template_manager.send_email(eid)
+                await websocket.send_json({"type": "email_sent", "ok": ok})
+                await broadcast_email_status()
+
+            elif msg.get("type") == "email_send_queued":
+                count = email_template_manager.send_queued()
+                await websocket.send_json({"type": "email_send_queued_done", "ok": True, "count": count})
+                await broadcast_email_status()
+
+            elif msg.get("type") == "email_delete":
+                eid = msg.get("email_id", "")
+                ok = email_template_manager.delete_email(eid)
+                await websocket.send_json({"type": "email_deleted", "ok": ok})
+                await broadcast_email_status()
+
+            elif msg.get("type") == "email_customer_history":
+                cust_id = msg.get("customer_id", "")
+                history = email_template_manager.get_customer_history(cust_id)
+                await websocket.send_json({
+                    "type": "email_customer_history_result",
+                    "customer_id": cust_id,
+                    "emails": history,
                 })
 
             elif msg.get("type") == "research_result_delete":
