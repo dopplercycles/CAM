@@ -351,13 +351,19 @@ class Orchestrator:
             )
 
         # --- Build context from all memory systems ---
+        # Check for per-agent model override (from runtime model switching)
+        agent_model_override = None
+        if task.assigned_agent:
+            agent_model_override = self.router.get_agent_model(task.assigned_agent)
+
         # Resolve target model name from the router's model mapping
-        target_model = getattr(self.router, '_models', {}).get(router_complexity, "glm-4.7-flash")
+        target_model = agent_model_override or getattr(self.router, '_models', {}).get(router_complexity, "glm-4.7-flash")
         ctx = self.context_manager.build_context(task, model=target_model)
 
         response: ModelResponse = await self.router.route(
             prompt=ctx.prompt,
             task_complexity=router_complexity,
+            model_override=agent_model_override,
             system_prompt=ctx.system_prompt,
         )
 

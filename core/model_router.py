@@ -27,6 +27,7 @@ Usage:
 
 import json
 import logging
+import os
 import time
 import urllib.request
 import urllib.error
@@ -34,6 +35,22 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+
+# Anthropic SDK — optional dependency, graceful skip if not installed
+try:
+    import anthropic
+    _HAS_ANTHROPIC = True
+except ImportError:
+    anthropic = None  # type: ignore
+    _HAS_ANTHROPIC = False
+
+# OpenAI SDK — used for Moonshot/Kimi K2.5 (OpenAI-compatible API)
+try:
+    import openai
+    _HAS_OPENAI = True
+except ImportError:
+    openai = None  # type: ignore
+    _HAS_OPENAI = False
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +109,8 @@ _DEFAULT_MODELS = {
     "agentic": "kimi-k2.5",
     "complex": "claude",
     "nuanced": "claude",
+    # George talking to Cam — ALWAYS uses the best model, no cost optimization
+    "boss": "claude-opus-4-6",
     # Tier-based routing (from task classifier)
     "tier1": "glm-4.7-flash",    # Small/fast — placeholder until tiny models installed
     "tier2": "gpt-oss:20b",      # Medium — language understanding, multi-sentence
@@ -100,6 +119,8 @@ _DEFAULT_MODELS = {
 
 _API_COSTS = {
     "claude": {"input": 3.00, "output": 15.00},
+    "claude-opus-4-6": {"input": 15.00, "output": 75.00},
+    "claude-sonnet-4-5-20250929": {"input": 3.00, "output": 15.00},
     "kimi-k2.5": {"input": 0.50, "output": 1.50},
 }
 
@@ -133,6 +154,10 @@ class ModelRouter:
             self._models = dict(_DEFAULT_MODELS)
             self._api_costs = {k: dict(v) for k, v in _API_COSTS.items()}
 
+        # Per-agent model overrides — runtime only, not persisted
+        # Maps agent_id → model name (e.g., "firehorseclawd" → "kimi-k2.5")
+        self._agent_model_overrides: dict[str, str] = {}
+
         # Running cost totals for the session
         self._total_cost: float = 0.0
         self._total_tokens: int = 0
@@ -153,6 +178,7 @@ class ModelRouter:
         task_complexity: str = "simple",
         model_override: str | None = None,
         system_prompt: str | None = None,
+        messages: list[dict] | None = None,
     ) -> ModelResponse:
         """Route a prompt to the appropriate model.
 
@@ -163,10 +189,16 @@ class ModelRouter:
         Args:
             prompt:          The user/task prompt to send.
             task_complexity: One of "simple", "routine", "agentic",
-                             "complex", "nuanced". Determines which
-                             model handles the request.
+                             "complex", "nuanced", "boss". Determines
+                             which model handles the request.
+                             "boss" = George talking to Cam, always
+                             uses the best model (Claude Opus).
             model_override:  Force a specific model (bypasses routing).
             system_prompt:   Optional system prompt for the model.
+            messages:        Optional pre-built message list for
+                             multi-turn conversations. If provided,
+                             used instead of wrapping prompt in a
+                             single user message.
 
         Returns:
             A ModelResponse with the text and metadata.
@@ -180,9 +212,9 @@ class ModelRouter:
             prompt, "..." if len(prompt) > 80 else "",
         )
 
-        # Route to the right backend
-        if model in ("claude",):
-            response = await self._call_claude(prompt, model, system_prompt)
+        # Route to the right backend — Claude API models go to _call_claude
+        if model.startswith("claude"):
+            response = await self._call_claude(prompt, model, system_prompt, messages)
         elif model in ("kimi-k2.5",):
             response = await self._call_moonshot(prompt, model, system_prompt)
         else:
@@ -308,40 +340,107 @@ class ModelRouter:
         prompt: str,
         model: str,
         system_prompt: str | None = None,
+        messages: list[dict] | None = None,
     ) -> ModelResponse:
-        """Call the Claude API for complex/nuanced tasks.
+        """Call the Claude API for complex/nuanced/boss-tier tasks.
 
-        PLACEHOLDER — not yet implemented. Will use the Anthropic
-        Python SDK when we add it as a dependency. For now, returns
-        an error message so the rest of the system can handle it.
+        Uses the Anthropic Python SDK (async client). Requires the
+        ANTHROPIC_API_KEY environment variable to be set. Falls back
+        to a helpful error message if the SDK isn't installed or the
+        key is missing.
 
-        Future implementation:
-            from anthropic import Anthropic
-            client = Anthropic(api_key=config.claude_api_key)
-            response = client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=1024,
-                system=system_prompt or "",
-                messages=[{"role": "user", "content": prompt}],
-            )
+        Args:
+            prompt:        The prompt text (used if messages is None).
+            model:         Claude model name (e.g. "claude-opus-4-6").
+            system_prompt: Optional system message.
+            messages:      Optional pre-built message list for multi-turn.
+
+        Returns:
+            ModelResponse with the result and token/cost tracking.
         """
-        logger.warning("Claude API not yet configured — returning placeholder")
+        # Check SDK availability
+        if not _HAS_ANTHROPIC:
+            logger.warning("anthropic SDK not installed — returning error")
+            return ModelResponse(
+                text="[error] The anthropic Python package is not installed. "
+                     "Run: .venv/bin/pip install anthropic",
+                model=model,
+                backend="claude",
+            )
 
-        # Estimate what it would cost so cost tracking stays honest
-        # Rough estimate: ~4 chars per token
-        est_prompt_tokens = len(prompt) // 4
-        costs = self._api_costs.get("claude", {"input": 0, "output": 0})
-        est_cost = (est_prompt_tokens / 1_000_000) * costs["input"]
+        # Check API key
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            logger.warning("ANTHROPIC_API_KEY not set — returning error")
+            return ModelResponse(
+                text="[error] ANTHROPIC_API_KEY environment variable is not set. "
+                     "Set it before starting the server to enable Claude API calls.",
+                model=model,
+                backend="claude",
+            )
+
+        # Build messages list
+        if messages:
+            msgs = messages
+        else:
+            msgs = [{"role": "user", "content": prompt}]
+
+        start = time.perf_counter()
+        try:
+            client = anthropic.AsyncAnthropic(api_key=api_key)
+            kwargs: dict[str, Any] = {
+                "model": model,
+                "max_tokens": 4096,
+                "messages": msgs,
+            }
+            if system_prompt:
+                kwargs["system"] = system_prompt
+
+            response = await client.messages.create(**kwargs)
+        except anthropic.AuthenticationError as e:
+            logger.error("Claude API auth error: %s", e)
+            return ModelResponse(
+                text=f"[error] Claude API authentication failed. Check your ANTHROPIC_API_KEY.",
+                model=model,
+                backend="claude",
+            )
+        except Exception as e:
+            logger.error("Claude API call failed: %s", e)
+            return ModelResponse(
+                text=f"[error] Claude API call failed: {e}",
+                model=model,
+                backend="claude",
+            )
+
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        # Extract text from response content blocks
+        text = ""
+        for block in response.content:
+            if block.type == "text":
+                text += block.text
+
+        # Token counts from the API response
+        prompt_tokens = response.usage.input_tokens
+        response_tokens = response.usage.output_tokens
+        total_tokens = prompt_tokens + response_tokens
+
+        # Calculate cost using per-model pricing
+        costs = self._api_costs.get(model, self._api_costs.get("claude", {"input": 3.0, "output": 15.0}))
+        cost_usd = (
+            (prompt_tokens / 1_000_000) * costs["input"]
+            + (response_tokens / 1_000_000) * costs["output"]
+        )
 
         return ModelResponse(
-            text="[placeholder] Claude API not yet configured. "
-                 "Install anthropic SDK and add API key to config.",
-            model="claude",
+            text=text.strip(),
+            model=model,
             backend="claude",
-            prompt_tokens=est_prompt_tokens,
-            response_tokens=0,
-            total_tokens=est_prompt_tokens,
-            cost_usd=est_cost,
+            prompt_tokens=prompt_tokens,
+            response_tokens=response_tokens,
+            total_tokens=total_tokens,
+            latency_ms=round(elapsed_ms, 1),
+            cost_usd=round(cost_usd, 6),
         )
 
     # -------------------------------------------------------------------
@@ -356,36 +455,119 @@ class ModelRouter:
     ) -> ModelResponse:
         """Call the Moonshot API for agentic workflow tasks.
 
-        PLACEHOLDER — not yet implemented. Moonshot uses an
-        OpenAI-compatible API format.
+        Uses the OpenAI-compatible API at api.moonshot.cn. Requires
+        the MOONSHOT_API_KEY environment variable to be set.
 
-        Future implementation:
-            import openai
-            client = openai.OpenAI(
-                api_key=config.moonshot_api_key,
+        Args:
+            prompt:        The prompt text.
+            model:         Model name (e.g. "kimi-k2.5").
+            system_prompt: Optional system message.
+
+        Returns:
+            ModelResponse with the result and token/cost tracking.
+        """
+        if not _HAS_OPENAI:
+            logger.warning("openai SDK not installed — returning error")
+            return ModelResponse(
+                text="[error] The openai Python package is not installed. "
+                     "Run: .venv/bin/pip install openai",
+                model=model,
+                backend="moonshot",
+            )
+
+        api_key = os.environ.get("MOONSHOT_API_KEY", "")
+        if not api_key:
+            logger.warning("MOONSHOT_API_KEY not set — returning error")
+            return ModelResponse(
+                text="[error] MOONSHOT_API_KEY environment variable is not set.",
+                model=model,
+                backend="moonshot",
+            )
+
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        start = time.perf_counter()
+        try:
+            client = openai.AsyncOpenAI(
+                api_key=api_key,
                 base_url="https://api.moonshot.cn/v1",
             )
-            response = client.chat.completions.create(
-                model="kimi-k2.5",
-                messages=[{"role": "user", "content": prompt}],
+            response = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=4096,
             )
-        """
-        logger.warning("Moonshot API not yet configured — returning placeholder")
+        except Exception as e:
+            logger.error("Moonshot API call failed: %s", e)
+            return ModelResponse(
+                text=f"[error] Moonshot API call failed: {e}",
+                model=model,
+                backend="moonshot",
+            )
 
-        est_prompt_tokens = len(prompt) // 4
-        costs = self._api_costs.get("kimi-k2.5", {"input": 0, "output": 0})
-        est_cost = (est_prompt_tokens / 1_000_000) * costs["input"]
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        text = response.choices[0].message.content or ""
+        prompt_tokens = getattr(response.usage, "prompt_tokens", 0) or 0
+        response_tokens = getattr(response.usage, "completion_tokens", 0) or 0
+        total_tokens = prompt_tokens + response_tokens
+
+        costs = self._api_costs.get(model, self._api_costs.get("kimi-k2.5", {"input": 0.5, "output": 1.5}))
+        cost_usd = (
+            (prompt_tokens / 1_000_000) * costs["input"]
+            + (response_tokens / 1_000_000) * costs["output"]
+        )
 
         return ModelResponse(
-            text="[placeholder] Moonshot API not yet configured. "
-                 "Add API key to config.",
-            model="kimi-k2.5",
+            text=text.strip(),
+            model=model,
             backend="moonshot",
-            prompt_tokens=est_prompt_tokens,
-            response_tokens=0,
-            total_tokens=est_prompt_tokens,
-            cost_usd=est_cost,
+            prompt_tokens=prompt_tokens,
+            response_tokens=response_tokens,
+            total_tokens=total_tokens,
+            latency_ms=round(elapsed_ms, 1),
+            cost_usd=round(cost_usd, 6),
         )
+
+    # -------------------------------------------------------------------
+    # Per-agent model overrides (runtime switching)
+    # -------------------------------------------------------------------
+
+    def set_agent_model(self, agent_id: str, model: str):
+        """Set a runtime model override for a specific agent.
+
+        This override is runtime-only — it won't survive a server restart.
+        The agent will use this model instead of the default routing.
+
+        Args:
+            agent_id: The agent to override (e.g., "firehorseclawd").
+            model:    Full model name (e.g., "kimi-k2.5", "glm-4.7-flash").
+        """
+        self._agent_model_overrides[agent_id] = model
+        logger.info("Model override set: %s → %s", agent_id, model)
+
+    def get_agent_model(self, agent_id: str) -> str | None:
+        """Get the current model override for an agent, if any."""
+        return self._agent_model_overrides.get(agent_id)
+
+    def clear_agent_model(self, agent_id: str):
+        """Remove an agent's model override, reverting to default routing."""
+        removed = self._agent_model_overrides.pop(agent_id, None)
+        if removed:
+            logger.info("Model override cleared: %s (was %s)", agent_id, removed)
+
+    def get_model_assignments(self) -> dict:
+        """Return current model routing table and any agent overrides.
+
+        Used by the dashboard to display which model each component is using.
+        """
+        return {
+            "routing": dict(self._models),
+            "agent_overrides": dict(self._agent_model_overrides),
+        }
 
     # -------------------------------------------------------------------
     # Cost tracking

@@ -69,6 +69,7 @@ class AgentInfo:
     last_heartbeat: datetime | None = None
     connected_at: datetime | None = None
     heartbeat_count: int = 0
+    model_override: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for JSON / dashboard broadcast.
@@ -84,6 +85,7 @@ class AgentInfo:
             "last_heartbeat": self.last_heartbeat.isoformat() if self.last_heartbeat else None,
             "connected_at": self.connected_at.isoformat() if self.connected_at else None,
             "heartbeat_count": self.heartbeat_count,
+            "model_override": self.model_override,
         }
 
 

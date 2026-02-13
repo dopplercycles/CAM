@@ -19,6 +19,10 @@ from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+# Load .env before any imports that check env vars (e.g. ANTHROPIC_API_KEY)
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -39,6 +43,7 @@ from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.swarm import SwarmTask, SwarmStatus
 from core.orchestrator import Orchestrator
 from core.context_manager import ContextManager
+from core.conversation import ConversationManager
 from core.analytics import Analytics
 from core.commands import CommandLibrary
 from core.scheduler import Scheduler, ScheduleType
@@ -83,6 +88,7 @@ from core.reports import ReportEngine
 from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
 from tests.integration_test import LaunchReadiness
+from tests.v1_validation import V1Validation
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +224,9 @@ last_self_test_results: dict | None = None
 # Last launch readiness results cache — populated when dashboard runs integration test
 last_launch_readiness_results: dict | None = None
 
+# Last v1 validation results cache — populated when dashboard runs v1 validation
+last_v1_validation_results: dict | None = None
+
 # Background task handle for the orchestrator loop
 orchestrator_task: asyncio.Task | None = None
 
@@ -256,6 +265,14 @@ async def broadcast_agent_status():
     """
     data = registry.to_broadcast_list()
     await broadcast_to_dashboards({"type": "agent_status", "agents": data})
+
+
+async def broadcast_model_assignments():
+    """Push current model routing table and overrides to all dashboards."""
+    await broadcast_to_dashboards({
+        "type": "model_assignments",
+        **orchestrator.router.get_model_assignments(),
+    })
 
 
 async def broadcast_task_status():
@@ -1286,6 +1303,20 @@ report_engine = ReportEngine(
 # TTS pipeline — Piper TTS with graceful fallback
 tts_pipeline = TTSPipeline(config=config)
 
+# Conversation manager — handles George-to-Cam chat via Claude Opus
+conversation_manager = ConversationManager(
+    model_router=orchestrator.router,
+    persona=persona,
+    episodic_memory=episodic_memory,
+    short_term_memory=short_term_memory,
+    context_manager=context_manager,
+    orchestrator=orchestrator,
+    registry=registry,
+    finance_tracker=finance_tracker,
+    task_queue=task_queue,
+    analytics=analytics,
+)
+
 # Content agent — local in-process agent for content tasks
 content_agent = ContentAgent(
     router=orchestrator.router,
@@ -2310,6 +2341,30 @@ async def download_report_pdf(report_id: str):
     )
 
 
+@app.get("/api/v1-validation-pdf/{filename}")
+async def download_v1_validation_pdf(filename: str):
+    """Download a v1 validation readiness report PDF."""
+    # Sanitize — filename must start with v1_readiness_ and end with .pdf
+    if not filename.startswith("v1_readiness_") or not filename.endswith(".pdf"):
+        return JSONResponse(status_code=400, content={"error": "Invalid filename"})
+    # Path traversal protection — no slashes or dots in the base name
+    basename = filename.replace(".pdf", "")
+    if "/" in basename or "\\" in basename or ".." in basename:
+        return JSONResponse(status_code=400, content={"error": "Invalid filename"})
+
+    pdf_dir = "data/reports"
+    pdf_path = Path(pdf_dir) / filename
+
+    if not pdf_path.exists():
+        return JSONResponse(status_code=404, content={"error": "PDF not found"})
+
+    return FileResponse(
+        str(pdf_path),
+        media_type="application/pdf",
+        filename=filename,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Photo Documentation endpoints
 # ---------------------------------------------------------------------------
@@ -2913,7 +2968,7 @@ async def dashboard_websocket(websocket: WebSocket):
             await websocket.close(code=4401, reason="Not authenticated")
             return
 
-    global last_self_test_results, last_launch_readiness_results
+    global last_self_test_results, last_launch_readiness_results, last_v1_validation_results
 
     await websocket.accept()
 
@@ -2949,6 +3004,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "agent_status",
         "agents": registry.to_broadcast_list(),
+    })
+
+    # Send current model assignments (boss tier + any agent overrides)
+    await websocket.send_json({
+        "type": "model_assignments",
+        **orchestrator.router.get_model_assignments(),
     })
 
     # Also send current kill switch state
@@ -3288,6 +3349,16 @@ async def dashboard_websocket(websocket: WebSocket):
     # Send persona data for the persona preview panel
     await websocket.send_json({"type": "persona", "persona": persona.to_dict()})
 
+    # Send recent Cam chat history for the Talk to Cam panel
+    try:
+        cam_history = await conversation_manager.get_history(limit=20)
+        await websocket.send_json({
+            "type": "cam_chat_history",
+            "messages": cam_history,
+        })
+    except Exception:
+        logger.debug("Failed to send cam chat history on connect", exc_info=True)
+
     # Send Telegram bot connection status
     if telegram_bot:
         await websocket.send_json({
@@ -3300,6 +3371,13 @@ async def dashboard_websocket(websocket: WebSocket):
         await websocket.send_json({
             "type": "launch_readiness_results",
             **last_launch_readiness_results,
+        })
+
+    # Send cached v1 validation results if available
+    if last_v1_validation_results:
+        await websocket.send_json({
+            "type": "v1_validation_results",
+            **last_v1_validation_results,
         })
 
     try:
@@ -6892,6 +6970,106 @@ async def dashboard_websocket(websocket: WebSocket):
                     **results,
                 })
 
+            elif msg.get("type") == "run_v1_validation":
+                # Run the v1.0 release validation suite (52 checks)
+                async def v1_progress(completed, total, result):
+                    """Broadcast real-time progress to all dashboards."""
+                    await broadcast_to_dashboards({
+                        "type": "v1_validation_progress",
+                        "completed": completed,
+                        "total": total,
+                        "result": result,
+                    })
+
+                v1v = V1Validation(
+                    config=config,
+                    event_logger=event_logger,
+                    orchestrator=orchestrator,
+                    router=orchestrator.router,
+                    short_term_memory=short_term_memory,
+                    working_memory=working_memory,
+                    episodic_memory=episodic_memory,
+                    long_term_memory=long_term_memory,
+                    persona=persona,
+                    scheduler=scheduler,
+                    message_bus=message_bus,
+                    port=config.dashboard.port,
+                    agent_websockets=agent_websockets,
+                    dashboard_clients=dashboard_clients,
+                    telegram_bot=telegram_bot,
+                    performance_monitor=performance_monitor,
+                    plugin_manager=plugin_manager,
+                    offline_manager=offline_manager,
+                    deployer=deployer,
+                    webhook_manager=webhook_manager,
+                    crm_store=crm_store,
+                    appointment_scheduler=appointment_scheduler,
+                    invoice_manager=invoice_manager,
+                    inventory_manager=inventory_manager,
+                    service_store=service_store,
+                    finance_tracker=finance_tracker,
+                    diagnostic_engine=diagnostic_engine,
+                    warranty_manager=warranty_manager,
+                    maintenance_scheduler=maintenance_scheduler,
+                    route_planner=route_planner,
+                    content_calendar=content_calendar,
+                    pipeline_manager=pipeline_manager,
+                    tts_pipeline=tts_pipeline,
+                    video_processor=video_processor,
+                    youtube_manager=youtube_manager,
+                    social_media_manager=social_media_manager,
+                    highway20_planner=highway20_planner,
+                    email_template_manager=email_template_manager,
+                    scout_store=scout_store,
+                    market_monitor=market_monitor,
+                    market_analyzer=market_analyzer,
+                    training_manager=training_manager,
+                    knowledge_ingest=knowledge_ingest,
+                    research_store=research_store,
+                    backup_manager=backup_manager,
+                    security_audit_log=security_audit_log,
+                    access_control=access_control,
+                    session_manager=session_manager,
+                    context_manager=context_manager,
+                    export_manager=export_manager,
+                    ft_manager=ft_manager,
+                    registry=registry,
+                    analytics=analytics,
+                    on_progress=v1_progress,
+                )
+                results = await v1v.run_all()
+                last_v1_validation_results = results
+                await broadcast_to_dashboards({
+                    "type": "v1_validation_results",
+                    **results,
+                })
+
+            elif msg.get("type") == "v1_validation_pdf":
+                # Generate PDF from cached v1 validation results
+                if last_v1_validation_results:
+                    v1v_pdf = V1Validation(config=config)
+                    pdf_path = v1v_pdf.generate_pdf(last_v1_validation_results)
+                    if pdf_path:
+                        filename = os.path.basename(pdf_path)
+                        await websocket.send_json({
+                            "type": "v1_validation_pdf_result",
+                            "ok": True,
+                            "filename": filename,
+                            "url": f"/api/v1-validation-pdf/{filename}",
+                        })
+                    else:
+                        await websocket.send_json({
+                            "type": "v1_validation_pdf_result",
+                            "ok": False,
+                            "error": "PDF generation failed (fpdf2 not installed?)",
+                        })
+                else:
+                    await websocket.send_json({
+                        "type": "v1_validation_pdf_result",
+                        "ok": False,
+                        "error": "No validation results — run validation first",
+                    })
+
             elif msg.get("type") == "tts_synthesize":
                 tts_text = (msg.get("text") or "").strip()
                 tts_voice = msg.get("voice") or None
@@ -6966,6 +7144,89 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "tts_status",
                     **tts_pipeline.get_status(),
                 })
+
+            # --- Cam Chat: George-to-Cam conversation ---
+            elif msg.get("type") == "cam_chat_message":
+                cam_msg = msg.get("message", "").strip()
+                if cam_msg:
+                    try:
+                        chat_resp = await conversation_manager.chat(cam_msg)
+                        await broadcast_to_dashboards({
+                            "type": "cam_chat_response",
+                            "text": chat_resp.text,
+                            "model": chat_resp.model_used,
+                            "input_tokens": chat_resp.input_tokens,
+                            "output_tokens": chat_resp.output_tokens,
+                            "cost": chat_resp.cost,
+                            "intent": chat_resp.intent,
+                            "timestamp": chat_resp.timestamp,
+                        })
+                        # After a model switch, broadcast new assignments + agent status
+                        if chat_resp.intent == "model_switch":
+                            await broadcast_model_assignments()
+                            await broadcast_agent_status()
+                    except Exception as e:
+                        logger.error("Cam chat error: %s", e, exc_info=True)
+                        await websocket.send_json({
+                            "type": "cam_chat_error",
+                            "error": str(e),
+                        })
+
+            elif msg.get("type") == "cam_chat_history":
+                try:
+                    limit = min(int(msg.get("limit", 50)), 200)
+                    history = await conversation_manager.get_history(limit=limit)
+                    await websocket.send_json({
+                        "type": "cam_chat_history",
+                        "messages": history,
+                    })
+                except Exception as e:
+                    logger.error("Cam chat history error: %s", e)
+                    await websocket.send_json({
+                        "type": "cam_chat_history",
+                        "messages": [],
+                    })
+
+            elif msg.get("type") == "cam_voice_input":
+                # Placeholder for voice transcription via Whisper
+                # When Whisper is set up, decode base64 audio and transcribe
+                await websocket.send_json({
+                    "type": "cam_voice_result",
+                    "transcription": "",
+                    "error": "Voice transcription not available yet — type your message instead.",
+                })
+
+            elif msg.get("type") == "cam_tts_request":
+                tts_text = msg.get("text", "").strip()
+                if tts_text:
+                    try:
+                        tts_result = await tts_pipeline.synthesize(tts_text)
+                        if tts_result and tts_result.audio_path:
+                            audio_path = Path(tts_result.audio_path)
+                            if audio_path.exists():
+                                audio_bytes = audio_path.read_bytes()
+                                audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
+                                await websocket.send_json({
+                                    "type": "cam_tts_result",
+                                    "audio": audio_b64,
+                                    "format": "wav",
+                                })
+                            else:
+                                await websocket.send_json({
+                                    "type": "cam_tts_result",
+                                    "error": "Audio file not found after synthesis.",
+                                })
+                        else:
+                            await websocket.send_json({
+                                "type": "cam_tts_result",
+                                "error": "TTS synthesis returned no result. Piper may not be installed.",
+                            })
+                    except Exception as e:
+                        logger.error("Cam TTS error: %s", e)
+                        await websocket.send_json({
+                            "type": "cam_tts_result",
+                            "error": f"TTS error: {e}",
+                        })
 
             elif msg.get("type") == "episodic_search":
                 # Search episodic memory with optional filters
