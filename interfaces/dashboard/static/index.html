@@ -6880,6 +6880,123 @@
             font-size: 0.85rem;
         }
 
+        /* Agent Deploy */
+        .dp-form {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .dp-form-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .dp-form-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            flex: 1;
+            min-width: 180px;
+        }
+        .dp-form-row input,
+        .dp-form-row select {
+            padding: 0.5rem 0.7rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .dp-caps-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+        .dp-caps-grid label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .dp-caps-grid input[type="checkbox"] {
+            accent-color: var(--accent);
+        }
+        .dp-section {
+            margin-top: 1.5rem;
+        }
+        .dp-section h3 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-primary);
+            padding-bottom: 0.4rem;
+        }
+        .dp-cmd-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .dp-cmd-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .dp-cmd-header .dp-cmd-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+        .dp-cmd-header .dp-cmd-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .dp-copy-btn {
+            padding: 0.3rem 0.7rem;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .dp-copy-btn:hover { opacity: 0.85; }
+        .dp-cmd-body {
+            padding: 0.75rem 1rem;
+            overflow-x: auto;
+        }
+        .dp-cmd-body pre {
+            margin: 0;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .dp-note {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            margin-top: 0.5rem;
+        }
+
         /* Offline Mode */
         .ol-banner {
             display: flex;
@@ -11250,6 +11367,117 @@
             </div>
         </section>
 
+        <section data-panel-id="agent-deploy" style="display:none;">
+            <h2>Deploy New Agent</h2>
+
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">
+                Configure a new agent and generate install commands. Run the generated command
+                on the target machine (Raspberry Pi, laptop, etc.) to set up a CAM agent connector.
+            </p>
+
+            <!-- Config Form -->
+            <div class="dp-form">
+                <div class="dp-form-row">
+                    <label>
+                        Agent Name
+                        <input type="text" id="dp-name" placeholder="e.g., FireHorseClawd" oninput="dpGenerate()">
+                    </label>
+                    <label>
+                        Agent ID
+                        <input type="text" id="dp-id" placeholder="e.g., firehorseclawd" oninput="dpGenerate()">
+                    </label>
+                </div>
+                <div class="dp-form-row">
+                    <label>
+                        Dashboard IP
+                        <input type="text" id="dp-ip" placeholder="192.168.88.4" oninput="dpGenerate()">
+                    </label>
+                    <label>
+                        Dashboard Port
+                        <input type="text" id="dp-port" value="8080" oninput="dpGenerate()">
+                    </label>
+                </div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.25rem;">Capabilities:</div>
+                <div class="dp-caps-grid" id="dp-caps">
+                    <label><input type="checkbox" value="research" onchange="dpGenerate()"> research</label>
+                    <label><input type="checkbox" value="content" onchange="dpGenerate()"> content</label>
+                    <label><input type="checkbox" value="tts" onchange="dpGenerate()"> tts</label>
+                    <label><input type="checkbox" value="diagnostics" onchange="dpGenerate()"> diagnostics</label>
+                    <label><input type="checkbox" value="business" onchange="dpGenerate()"> business</label>
+                    <label><input type="checkbox" value="monitoring" onchange="dpGenerate()"> monitoring</label>
+                </div>
+                <button class="btn btn-primary" onclick="dpGenerate()" style="margin-top:0.5rem;">Generate Commands</button>
+            </div>
+
+            <!-- Generated Commands -->
+            <div class="dp-section" id="dp-commands" style="display:none;">
+                <h3>Install Commands</h3>
+
+                <!-- One-liner -->
+                <div class="dp-cmd-card">
+                    <div class="dp-cmd-header">
+                        <div>
+                            <div class="dp-cmd-title">One-Liner (curl)</div>
+                            <div class="dp-cmd-desc">Paste this on the target machine — downloads and runs installer</div>
+                        </div>
+                        <button class="dp-copy-btn" onclick="dpCopy('dp-cmd-curl')">Copy</button>
+                    </div>
+                    <div class="dp-cmd-body">
+                        <pre id="dp-cmd-curl"></pre>
+                    </div>
+                </div>
+
+                <!-- Non-interactive -->
+                <div class="dp-cmd-card">
+                    <div class="dp-cmd-header">
+                        <div>
+                            <div class="dp-cmd-title">Non-Interactive Install</div>
+                            <div class="dp-cmd-desc">For when the installer is already on the machine</div>
+                        </div>
+                        <button class="dp-copy-btn" onclick="dpCopy('dp-cmd-local')">Copy</button>
+                    </div>
+                    <div class="dp-cmd-body">
+                        <pre id="dp-cmd-local"></pre>
+                    </div>
+                </div>
+
+                <!-- Manual connector -->
+                <div class="dp-cmd-card">
+                    <div class="dp-cmd-header">
+                        <div>
+                            <div class="dp-cmd-title">Manual (connector only)</div>
+                            <div class="dp-cmd-desc">Just run the connector directly — no systemd, no installer</div>
+                        </div>
+                        <button class="dp-copy-btn" onclick="dpCopy('dp-cmd-manual')">Copy</button>
+                    </div>
+                    <div class="dp-cmd-body">
+                        <pre id="dp-cmd-manual"></pre>
+                    </div>
+                </div>
+
+                <!-- USB -->
+                <div class="dp-cmd-card">
+                    <div class="dp-cmd-header">
+                        <div>
+                            <div class="dp-cmd-title">USB Deployment</div>
+                            <div class="dp-cmd-desc">Prepare a USB drive, then install offline on the target</div>
+                        </div>
+                        <button class="dp-copy-btn" onclick="dpCopy('dp-cmd-usb')">Copy</button>
+                    </div>
+                    <div class="dp-cmd-body">
+                        <pre id="dp-cmd-usb"></pre>
+                    </div>
+                </div>
+
+                <div class="dp-note">
+                    <strong>Requirements:</strong> Target machine needs Ubuntu, Debian, or Raspbian.
+                    The installer handles Python, pip, Avahi (mDNS), systemd service creation,
+                    and the initial connection test. The agent will auto-reconnect if the dashboard
+                    is temporarily unreachable.
+                </div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -11962,6 +12190,7 @@
             { id: 'plugin-manager', name: 'Plugins' },
             { id: 'export', name: 'Data Export' },
             { id: 'offline-mode', name: 'Offline Mode' },
+            { id: 'agent-deploy', name: 'Deploy Agent' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -19217,6 +19446,115 @@
                 _origRender();
                 renderOlAll();
             };
+        })();
+
+        // ---------------------------------------------------------------
+        // Agent Deploy
+        // ---------------------------------------------------------------
+
+        function dpAutoId() {
+            // Auto-generate agent ID from name
+            const name = document.getElementById('dp-name').value;
+            const idField = document.getElementById('dp-id');
+            if (!idField.dataset.manual) {
+                idField.value = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                dpGenerate();
+            }
+        }
+        // Track manual edits to ID field
+        document.addEventListener('DOMContentLoaded', function() {
+            const idField = document.getElementById('dp-id');
+            if (idField) {
+                idField.addEventListener('input', function() { idField.dataset.manual = '1'; });
+                const nameField = document.getElementById('dp-name');
+                if (nameField) nameField.addEventListener('input', dpAutoId);
+            }
+        });
+
+        function dpGetCaps() {
+            const caps = [];
+            document.querySelectorAll('#dp-caps input:checked').forEach(cb => caps.push(cb.value));
+            return caps;
+        }
+
+        function dpGenerate() {
+            const name = document.getElementById('dp-name').value.trim();
+            const id = document.getElementById('dp-id').value.trim();
+            const ip = document.getElementById('dp-ip').value.trim() || '192.168.88.4';
+            const port = document.getElementById('dp-port').value.trim() || '8080';
+            const caps = dpGetCaps();
+
+            if (!name || !id) {
+                document.getElementById('dp-commands').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('dp-commands').style.display = 'block';
+
+            const capsArg = caps.length ? ' --capabilities ' + caps.join(' ') : '';
+            const capsConnArg = caps.length ? ' \\\n    --capabilities ' + caps.join(' ') : '';
+            const esc = s => s.replace(/"/g, '\\"');
+
+            // 1. Curl one-liner
+            document.getElementById('dp-cmd-curl').textContent =
+                'curl -fsSL https://raw.githubusercontent.com/dopplercycles/cam/main/deploy/install_agent.sh | \\\n' +
+                '  sudo bash -s -- \\\n' +
+                '    --agent-name "' + esc(name) + '" \\\n' +
+                '    --agent-id ' + id + ' \\\n' +
+                '    --dashboard-ip ' + ip + ' \\\n' +
+                '    --dashboard-port ' + port + capsArg;
+
+            // 2. Non-interactive local install
+            document.getElementById('dp-cmd-local').textContent =
+                'sudo ./install_agent.sh \\\n' +
+                '    --agent-name "' + esc(name) + '" \\\n' +
+                '    --agent-id ' + id + ' \\\n' +
+                '    --dashboard-ip ' + ip + ' \\\n' +
+                '    --dashboard-port ' + port + capsArg;
+
+            // 3. Manual connector
+            document.getElementById('dp-cmd-manual').textContent =
+                '# Install websockets, then run directly:\n' +
+                'pip3 install websockets\n' +
+                'python3 connector.py \\\n' +
+                '    --dashboard ws://' + ip + ':' + port + ' \\\n' +
+                '    --name "' + esc(name) + '" \\\n' +
+                '    --id ' + id + capsConnArg;
+
+            // 4. USB
+            document.getElementById('dp-cmd-usb').textContent =
+                '# Step 1: Prepare USB (on this machine)\n' +
+                'sudo ./deploy/install_agent.sh --prepare-usb /media/usb/cam-agent\n\n' +
+                '# Step 2: On the target machine (plug in USB)\n' +
+                'sudo /media/usb/cam-agent/install_agent.sh \\\n' +
+                '    --usb /media/usb/cam-agent \\\n' +
+                '    --agent-name "' + esc(name) + '" \\\n' +
+                '    --agent-id ' + id + ' \\\n' +
+                '    --dashboard-ip ' + ip + ' \\\n' +
+                '    --dashboard-port ' + port + capsArg;
+        }
+
+        function dpCopy(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 1500);
+            });
+        }
+
+        // Pre-fill dashboard IP from current page URL
+        (function() {
+            const ipField = document.getElementById('dp-ip');
+            if (ipField && !ipField.value) {
+                const host = window.location.hostname;
+                if (host && host !== 'localhost' && host !== '127.0.0.1') {
+                    ipField.value = host;
+                } else {
+                    ipField.value = '192.168.88.4';
+                }
+            }
         })();
 
         // ---------------------------------------------------------------
