@@ -5230,6 +5230,373 @@
             font-size: 0.9rem;
         }
 
+        /* Training Mode */
+        .tr-stats-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .tr-stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 0.9rem;
+            text-align: center;
+            min-width: 90px;
+        }
+        .tr-stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .tr-stat-label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .tr-new-form {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .tr-new-form summary {
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .tr-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .tr-form-grid label {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 0.15rem;
+        }
+        .tr-form-grid input,
+        .tr-form-grid select {
+            width: 100%;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.85rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+        .tr-form-full {
+            grid-column: 1 / -1;
+        }
+        .tr-start-btn {
+            margin-top: 0.5rem;
+            padding: 0.4rem 1.2rem;
+            background: var(--accent-color, #4fc3f7);
+            color: #111;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .tr-start-btn:hover { opacity: 0.85; }
+
+        /* Active session area */
+        .tr-active {
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent-color, #4fc3f7);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .tr-active-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .tr-active-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+        .tr-active-meta {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        /* Step type buttons */
+        .tr-step-types {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .tr-step-type-btn {
+            padding: 0.3rem 0.7rem;
+            font-size: 0.78rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .tr-step-type-btn.active {
+            background: var(--accent-color, #4fc3f7);
+            color: #111;
+            border-color: var(--accent-color, #4fc3f7);
+        }
+        .tr-step-type-btn[data-type="symptom"].active { background: #ef5350; color: #fff; border-color: #ef5350; }
+        .tr-step-type-btn[data-type="test"].active { background: #42a5f5; color: #fff; border-color: #42a5f5; }
+        .tr-step-type-btn[data-type="reading"].active { background: #66bb6a; color: #fff; border-color: #66bb6a; }
+        .tr-step-type-btn[data-type="conclusion"].active { background: #ffa726; color: #111; border-color: #ffa726; }
+        .tr-step-type-btn[data-type="note"].active { background: #ab47bc; color: #fff; border-color: #ab47bc; }
+
+        .tr-step-input {
+            width: 100%;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.85rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            resize: vertical;
+            min-height: 2.5rem;
+            font-family: inherit;
+        }
+        .tr-record-btn {
+            margin-top: 0.4rem;
+            padding: 0.35rem 1rem;
+            background: var(--accent-color, #4fc3f7);
+            color: #111;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.82rem;
+        }
+        .tr-record-btn:hover { opacity: 0.85; }
+
+        /* Step timeline */
+        .tr-timeline {
+            margin: 0.75rem 0;
+            padding-left: 1.2rem;
+            border-left: 2px solid var(--border-color);
+        }
+        .tr-timeline-step {
+            position: relative;
+            padding: 0.3rem 0 0.3rem 0.8rem;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+        }
+        .tr-timeline-step::before {
+            content: '';
+            position: absolute;
+            left: -1.35rem;
+            top: 0.55rem;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-color);
+        }
+        .tr-timeline-step[data-type="symptom"]::before { background: #ef5350; }
+        .tr-timeline-step[data-type="test"]::before { background: #42a5f5; }
+        .tr-timeline-step[data-type="reading"]::before { background: #66bb6a; }
+        .tr-timeline-step[data-type="conclusion"]::before { background: #ffa726; }
+        .tr-timeline-step[data-type="note"]::before { background: #ab47bc; }
+        .tr-step-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.05rem 0.4rem;
+            border-radius: 3px;
+            margin-right: 0.3rem;
+        }
+        .tr-step-badge.symptom  { background: #ef5350; color: #fff; }
+        .tr-step-badge.test     { background: #42a5f5; color: #fff; }
+        .tr-step-badge.reading  { background: #66bb6a; color: #fff; }
+        .tr-step-badge.conclusion { background: #ffa726; color: #111; }
+        .tr-step-badge.note     { background: #ab47bc; color: #fff; }
+        .tr-step-time {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-left: 0.4rem;
+        }
+        .tr-action-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .tr-complete-btn {
+            padding: 0.35rem 1rem;
+            background: #66bb6a;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.82rem;
+        }
+        .tr-extract-btn {
+            padding: 0.35rem 1rem;
+            background: #ffa726;
+            color: #111;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.82rem;
+        }
+        .tr-complete-btn:hover, .tr-extract-btn:hover { opacity: 0.85; }
+
+        /* Session history */
+        .tr-history-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .tr-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tr-history-title {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+        }
+        .tr-history-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .tr-category-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.1rem 0.45rem;
+            border-radius: 3px;
+            background: var(--accent-color, #4fc3f7);
+            color: #111;
+            margin-left: 0.3rem;
+        }
+        .tr-history-actions {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 0.3rem;
+        }
+        .tr-small-btn {
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .tr-small-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+        .tr-small-btn.danger:hover { color: #ef5350; border-color: #ef5350; }
+
+        /* Patterns */
+        .tr-pattern-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.4rem;
+        }
+        .tr-pattern-arrow {
+            color: var(--accent-color, #4fc3f7);
+            font-weight: 700;
+            margin: 0 0.3rem;
+        }
+        .tr-pattern-path {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+        .tr-pattern-meta {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        /* Suggestions area */
+        .tr-suggest-area {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 1rem;
+        }
+        .tr-suggest-area h3 {
+            font-size: 0.9rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-secondary);
+        }
+        .tr-suggest-input {
+            width: 100%;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.85rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            resize: vertical;
+            min-height: 2.5rem;
+            font-family: inherit;
+        }
+        .tr-suggest-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.4rem;
+            align-items: center;
+        }
+        .tr-ask-btn {
+            padding: 0.35rem 1rem;
+            background: var(--accent-color, #4fc3f7);
+            color: #111;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+        .tr-ask-btn:hover { opacity: 0.85; }
+        .tr-suggestions-output {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .tr-section-heading {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 1rem 0 0.5rem 0;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .tr-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -8682,6 +9049,116 @@
             </div>
         </section>
 
+        <section data-panel-id="training" style="display:none;">
+            <h2>Training Mode</h2>
+
+            <!-- Stats row -->
+            <div class="tr-stats-row" id="tr-stats-row">
+                <div class="tr-stat-card"><div class="tr-stat-value" id="tr-stat-sessions">0</div><div class="tr-stat-label">Sessions</div></div>
+                <div class="tr-stat-card"><div class="tr-stat-value" id="tr-stat-completed">0</div><div class="tr-stat-label">Completed</div></div>
+                <div class="tr-stat-card"><div class="tr-stat-value" id="tr-stat-patterns">0</div><div class="tr-stat-label">Patterns</div></div>
+                <div class="tr-stat-card"><div class="tr-stat-value" id="tr-stat-month">0</div><div class="tr-stat-label">This Month</div></div>
+                <div class="tr-stat-card"><div class="tr-stat-value" id="tr-stat-avgsteps">0</div><div class="tr-stat-label">Avg Steps</div></div>
+            </div>
+
+            <!-- New session form (collapsible) -->
+            <details class="tr-new-form" id="tr-new-form">
+                <summary>+ New Training Session</summary>
+                <div class="tr-form-grid">
+                    <div>
+                        <label for="tr-title">Title</label>
+                        <input type="text" id="tr-title" placeholder="e.g. DR650 charging issue">
+                    </div>
+                    <div>
+                        <label for="tr-vehicle">Vehicle Info</label>
+                        <input type="text" id="tr-vehicle" placeholder="e.g. 2019 Suzuki DR650">
+                    </div>
+                    <div>
+                        <label for="tr-category">Category</label>
+                        <select id="tr-category">
+                            <option value="general">General</option>
+                            <option value="electrical">Electrical</option>
+                            <option value="engine">Engine</option>
+                            <option value="fuel">Fuel</option>
+                            <option value="suspension">Suspension</option>
+                            <option value="drivetrain">Drivetrain</option>
+                            <option value="brakes">Brakes</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="tr-tree">Linked Tree (optional)</label>
+                        <select id="tr-tree">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                    <div class="tr-form-full">
+                        <button class="tr-start-btn" onclick="trStartSession()">Start Session</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Active session area (hidden when no active session) -->
+            <div id="tr-active-area" style="display:none;">
+                <div class="tr-active">
+                    <div class="tr-active-header">
+                        <div>
+                            <span class="tr-active-title" id="tr-active-title"></span>
+                            <span class="tr-category-badge" id="tr-active-category"></span>
+                        </div>
+                        <span class="tr-active-meta" id="tr-active-meta"></span>
+                    </div>
+
+                    <!-- Step timeline -->
+                    <div class="tr-timeline" id="tr-timeline"></div>
+
+                    <!-- Step input -->
+                    <div class="tr-step-types" id="tr-step-types">
+                        <button class="tr-step-type-btn active" data-type="symptom" onclick="trSelectStepType('symptom')">Symptom</button>
+                        <button class="tr-step-type-btn" data-type="test" onclick="trSelectStepType('test')">Test</button>
+                        <button class="tr-step-type-btn" data-type="reading" onclick="trSelectStepType('reading')">Reading</button>
+                        <button class="tr-step-type-btn" data-type="conclusion" onclick="trSelectStepType('conclusion')">Conclusion</button>
+                        <button class="tr-step-type-btn" data-type="note" onclick="trSelectStepType('note')">Note</button>
+                    </div>
+                    <textarea class="tr-step-input" id="tr-step-content" placeholder="Describe what you observed, tested, or concluded..." rows="2"></textarea>
+                    <button class="tr-record-btn" onclick="trRecordStep()">Record Step</button>
+
+                    <!-- Action buttons -->
+                    <div class="tr-action-row">
+                        <button class="tr-complete-btn" onclick="trCompleteSession()">Complete Session</button>
+                        <button class="tr-extract-btn" onclick="trExtractPatterns()">Extract Patterns</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session history -->
+            <div class="tr-section-heading">Session History</div>
+            <div id="tr-history"></div>
+
+            <!-- Patterns -->
+            <div class="tr-section-heading">Extracted Patterns</div>
+            <div id="tr-patterns"></div>
+
+            <!-- Experience suggestions -->
+            <div class="tr-suggest-area">
+                <h3>Ask Experience</h3>
+                <textarea class="tr-suggest-input" id="tr-suggest-symptoms" placeholder="Describe current symptoms..." rows="2"></textarea>
+                <div class="tr-suggest-row">
+                    <select id="tr-suggest-category" style="padding:0.35rem 0.5rem;font-size:0.82rem;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);">
+                        <option value="">Any Category</option>
+                        <option value="electrical">Electrical</option>
+                        <option value="engine">Engine</option>
+                        <option value="fuel">Fuel</option>
+                        <option value="suspension">Suspension</option>
+                        <option value="drivetrain">Drivetrain</option>
+                        <option value="brakes">Brakes</option>
+                    </select>
+                    <button class="tr-ask-btn" onclick="trAskExperience()">Ask Experience</button>
+                    <button class="tr-ask-btn" onclick="trSuggestTreeUpdates()" style="background:#ffa726;">Suggest Tree Updates</button>
+                </div>
+                <div class="tr-suggestions-output" id="tr-suggestions-output"></div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -9385,6 +9862,7 @@
             { id: 'appointment-calendar', name: 'Appointment Calendar' },
             { id: 'service-records', name: 'Service Records' },
             { id: 'photo-docs', name: 'Photo Docs' },
+            { id: 'training', name: 'Training Mode' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -9777,6 +10255,41 @@
                     // optional: could show service photos in detail
                 } else if (data.type === "photo_content_worthy_list") {
                     // optional: could display content-worthy list
+
+                // Training Mode
+                } else if (data.type === "training_status") {
+                    handleTrainingStatus(data);
+                } else if (data.type === "training_started") {
+                    if (data.ok && data.session) {
+                        trActiveSession = data.session;
+                        renderTrActiveSession();
+                        const form = document.getElementById("tr-new-form");
+                        if (form) form.removeAttribute("open");
+                    }
+                } else if (data.type === "training_step_recorded") {
+                    if (data.ok && data.session) {
+                        trActiveSession = data.session;
+                        renderTrTimeline();
+                        const inp = document.getElementById("tr-step-content");
+                        if (inp) inp.value = "";
+                    }
+                } else if (data.type === "training_completed") {
+                    if (data.ok) {
+                        trActiveSession = null;
+                        document.getElementById("tr-active-area").style.display = "none";
+                    }
+                } else if (data.type === "training_patterns_extracted") {
+                    if (data.ok) {
+                        const out = document.getElementById("tr-suggestions-output");
+                        if (out) out.textContent = `Extracted ${(data.patterns||[]).length} pattern(s).`;
+                    }
+                } else if (data.type === "training_suggestions") {
+                    trSuggestions = data;
+                    renderTrSuggestions();
+                } else if (data.type === "training_tree_suggestions") {
+                    renderTrTreeSuggestions(data);
+                } else if (data.type === "training_deleted") {
+                    // refreshed via broadcast
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -12634,6 +13147,285 @@
                 window.handleServiceRecordsStatus = function() {
                     origRenderSvc.apply(this, arguments);
                     populatePdServiceRecords();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Training Mode
+        // ---------------------------------------------------------------
+
+        let trSessions = [];
+        let trPatterns = [];
+        let trStatus = {};
+        let trActiveSession = null;
+        let trSuggestions = null;
+        let trSelectedStepType = 'symptom';
+
+        function handleTrainingStatus(data) {
+            trSessions = data.sessions || [];
+            trPatterns = data.patterns || [];
+            trStatus = data.status || {};
+            renderTrStats();
+            renderTrHistory();
+            renderTrPatterns();
+            populateTrTreeDropdown();
+            // Restore active session if one exists
+            const active = trSessions.find(s => s.status === 'active');
+            if (active && !trActiveSession) {
+                trActiveSession = active;
+                renderTrActiveSession();
+            }
+        }
+
+        function renderTrStats() {
+            const s = trStatus;
+            const el = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+            el('tr-stat-sessions', s.total_sessions || 0);
+            el('tr-stat-completed', s.completed || 0);
+            el('tr-stat-patterns', s.total_patterns || 0);
+            el('tr-stat-month', s.patterns_this_month || 0);
+            el('tr-stat-avgsteps', s.avg_steps || 0);
+        }
+
+        function populateTrTreeDropdown() {
+            const sel = document.getElementById('tr-tree');
+            if (!sel) return;
+            // Keep first option (None)
+            while (sel.options.length > 1) sel.remove(1);
+            // Pull trees from diagnostics state if available
+            if (window.diagTrees && Array.isArray(window.diagTrees)) {
+                window.diagTrees.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.tree_id;
+                    opt.textContent = t.name + ' (' + t.category + ')';
+                    sel.appendChild(opt);
+                });
+            }
+        }
+
+        function renderTrActiveSession() {
+            const area = document.getElementById('tr-active-area');
+            if (!trActiveSession) {
+                if (area) area.style.display = 'none';
+                return;
+            }
+            if (area) area.style.display = 'block';
+            const titleEl = document.getElementById('tr-active-title');
+            const catEl = document.getElementById('tr-active-category');
+            const metaEl = document.getElementById('tr-active-meta');
+            if (titleEl) titleEl.textContent = trActiveSession.title;
+            if (catEl) catEl.textContent = trActiveSession.category;
+            if (metaEl) metaEl.textContent = trActiveSession.vehicle_info || '';
+            renderTrTimeline();
+        }
+
+        function renderTrTimeline() {
+            const el = document.getElementById('tr-timeline');
+            if (!el || !trActiveSession) return;
+            const steps = trActiveSession.steps || [];
+            if (steps.length === 0) {
+                el.innerHTML = '<div style="font-size:0.82rem;color:var(--text-secondary);padding:0.5rem 0;">No steps recorded yet. Select a type and describe what you observe.</div>';
+                return;
+            }
+            el.innerHTML = steps.map(s => {
+                const time = s.timestamp ? new Date(s.timestamp).toLocaleTimeString() : '';
+                return `<div class="tr-timeline-step" data-type="${s.type}">` +
+                    `<span class="tr-step-badge ${s.type}">${s.type}</span>` +
+                    `${escapeHtml(s.content)}` +
+                    `<span class="tr-step-time">${time}</span>` +
+                    `</div>`;
+            }).join('');
+            // Scroll to bottom
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function trSelectStepType(type) {
+            trSelectedStepType = type;
+            document.querySelectorAll('.tr-step-type-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+            });
+        }
+
+        function trStartSession() {
+            const title = (document.getElementById('tr-title')?.value || '').trim();
+            if (!title) { alert('Please enter a session title.'); return; }
+            const vehicle = document.getElementById('tr-vehicle')?.value || '';
+            const category = document.getElementById('tr-category')?.value || 'general';
+            const treeId = document.getElementById('tr-tree')?.value || '';
+            ws.send(JSON.stringify({
+                type: 'training_start',
+                title: title,
+                vehicle_info: vehicle,
+                category: category,
+                linked_tree_id: treeId,
+            }));
+            // Clear the form
+            const titleInput = document.getElementById('tr-title');
+            if (titleInput) titleInput.value = '';
+            const vehInput = document.getElementById('tr-vehicle');
+            if (vehInput) vehInput.value = '';
+        }
+
+        function trRecordStep() {
+            if (!trActiveSession) return;
+            const content = (document.getElementById('tr-step-content')?.value || '').trim();
+            if (!content) { alert('Please describe the step.'); return; }
+            ws.send(JSON.stringify({
+                type: 'training_record_step',
+                session_id: trActiveSession.session_id,
+                step_type: trSelectedStepType,
+                content: content,
+            }));
+        }
+
+        function trCompleteSession() {
+            if (!trActiveSession) return;
+            if (!confirm('Complete this training session?')) return;
+            ws.send(JSON.stringify({
+                type: 'training_complete',
+                session_id: trActiveSession.session_id,
+            }));
+        }
+
+        function trExtractPatterns() {
+            if (!trActiveSession) return;
+            const out = document.getElementById('tr-suggestions-output');
+            if (out) out.textContent = 'Extracting patterns...';
+            ws.send(JSON.stringify({
+                type: 'training_extract',
+                session_id: trActiveSession.session_id,
+            }));
+        }
+
+        function trAskExperience() {
+            const symptoms = (document.getElementById('tr-suggest-symptoms')?.value || '').trim();
+            if (!symptoms) { alert('Please describe the symptoms.'); return; }
+            const category = document.getElementById('tr-suggest-category')?.value || '';
+            const out = document.getElementById('tr-suggestions-output');
+            if (out) out.textContent = 'Querying experience...';
+            ws.send(JSON.stringify({
+                type: 'training_suggest',
+                symptoms: symptoms,
+                category: category,
+            }));
+        }
+
+        function trSuggestTreeUpdates() {
+            const category = document.getElementById('tr-suggest-category')?.value || '';
+            const out = document.getElementById('tr-suggestions-output');
+            if (out) out.textContent = 'Analyzing patterns for tree suggestions...';
+            ws.send(JSON.stringify({
+                type: 'training_tree_suggest',
+                category: category,
+            }));
+        }
+
+        function trDeleteSession(sessionId) {
+            if (!confirm('Delete this training session and its patterns?')) return;
+            ws.send(JSON.stringify({
+                type: 'training_delete',
+                session_id: sessionId,
+            }));
+        }
+
+        function trExtractFromHistory(sessionId) {
+            const out = document.getElementById('tr-suggestions-output');
+            if (out) out.textContent = 'Extracting patterns...';
+            ws.send(JSON.stringify({
+                type: 'training_extract',
+                session_id: sessionId,
+            }));
+        }
+
+        function renderTrHistory() {
+            const el = document.getElementById('tr-history');
+            if (!el) return;
+            const sessions = trSessions.filter(s => s.status !== 'active');
+            if (sessions.length === 0) {
+                el.innerHTML = '<div class="tr-empty">No completed sessions yet.</div>';
+                return;
+            }
+            el.innerHTML = sessions.map(s => {
+                const date = s.completed_at ? new Date(s.completed_at).toLocaleDateString() : new Date(s.created_at).toLocaleDateString();
+                const stepCount = (s.steps || []).length;
+                const patternCount = (s.extracted_patterns || []).length;
+                return `<div class="tr-history-card">` +
+                    `<div class="tr-history-header">` +
+                        `<span class="tr-history-title">${escapeHtml(s.title)}<span class="tr-category-badge">${s.category}</span></span>` +
+                        `<span class="tr-history-meta">${date} &middot; ${stepCount} steps &middot; ${patternCount} patterns</span>` +
+                    `</div>` +
+                    (s.vehicle_info ? `<div class="tr-history-meta">${escapeHtml(s.vehicle_info)}</div>` : '') +
+                    (s.findings_summary ? `<div style="font-size:0.82rem;color:var(--text-primary);margin-top:0.25rem;white-space:pre-line;">${escapeHtml(s.findings_summary)}</div>` : '') +
+                    `<div class="tr-history-actions">` +
+                        `<button class="tr-small-btn" onclick="trExtractFromHistory('${s.session_id}')">Extract Patterns</button>` +
+                        `<button class="tr-small-btn danger" onclick="trDeleteSession('${s.session_id}')">Delete</button>` +
+                    `</div>` +
+                    `</div>`;
+            }).join('');
+        }
+
+        function renderTrPatterns() {
+            const el = document.getElementById('tr-patterns');
+            if (!el) return;
+            if (trPatterns.length === 0) {
+                el.innerHTML = '<div class="tr-empty">No patterns extracted yet. Complete sessions and click Extract Patterns.</div>';
+                return;
+            }
+            el.innerHTML = trPatterns.map(p => {
+                return `<div class="tr-pattern-card">` +
+                    `<span style="font-weight:600;">${escapeHtml(p.symptom)}</span>` +
+                    `<span class="tr-pattern-arrow">&rarr;</span>` +
+                    `<span>${escapeHtml(p.cause)}</span>` +
+                    (p.diagnostic_path ? `<div class="tr-pattern-path">${escapeHtml(p.diagnostic_path)}</div>` : '') +
+                    `<div class="tr-pattern-meta">` +
+                        `Confidence: ${p.confidence} &middot; Seen ${p.frequency}x` +
+                        (p.category ? ` &middot; ${p.category}` : '') +
+                    `</div>` +
+                    `</div>`;
+            }).join('');
+        }
+
+        function renderTrSuggestions() {
+            const el = document.getElementById('tr-suggestions-output');
+            if (!el || !trSuggestions) return;
+            if (!trSuggestions.ok) {
+                el.textContent = 'Error: ' + (trSuggestions.error || 'Unknown error');
+                return;
+            }
+            el.textContent = trSuggestions.suggestions || 'No suggestions available.';
+        }
+
+        function renderTrTreeSuggestions(data) {
+            const el = document.getElementById('tr-suggestions-output');
+            if (!el) return;
+            if (!data.ok) {
+                el.textContent = 'Error: ' + (data.error || 'Unknown error');
+                return;
+            }
+            const suggestions = data.suggestions || [];
+            if (suggestions.length === 0) {
+                el.textContent = `Analyzed ${data.patterns_analyzed || 0} patterns — no tree updates suggested.`;
+                return;
+            }
+            let text = `Analyzed ${data.patterns_analyzed || 0} patterns. Suggestions:\n\n`;
+            suggestions.forEach((s, i) => {
+                text += `${i+1}. [${s.tree_id || 'new'}] ${s.node_type || '?'}: ${s.text || ''}\n`;
+                text += `   Rationale: ${s.rationale || ''}\n`;
+                text += `   Parent: ${s.parent_node || 'start'}\n\n`;
+            });
+            el.textContent = text;
+        }
+
+        // Hook into diagnostics handler to populate tree dropdown
+        (function() {
+            const origDiag = window.handleDiagnosticsStatus;
+            if (origDiag) {
+                window.handleDiagnosticsStatus = function(data) {
+                    origDiag.apply(this, arguments);
+                    // Store trees for the training dropdown
+                    window.diagTrees = data.trees || [];
+                    populateTrTreeDropdown();
                 };
             }
         })();

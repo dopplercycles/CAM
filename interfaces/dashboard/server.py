@@ -53,6 +53,7 @@ from tools.content.video_processor import VideoProcessor
 from tools.content.social_media import SocialMediaManager
 from tools.doppler.email_templates import EmailTemplateManager
 from tools.doppler.photo_docs import PhotoDocManager
+from core.training import TrainingManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -431,6 +432,14 @@ async def broadcast_photo_docs_status():
     await broadcast_to_dashboards({
         "type": "photo_docs_status",
         **photo_doc_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_training_status():
+    """Push current training/learning state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "training_status",
+        **training_manager.to_broadcast_dict(),
     })
 
 
@@ -1228,6 +1237,16 @@ photo_doc_manager = PhotoDocManager(
     crm_store=crm_store,
 )
 
+# Training and learning manager — captures diagnostic expertise
+training_manager = TrainingManager(
+    db_path="data/training.db",
+    router=orchestrator.router,
+    episodic_memory=episodic_memory,
+    long_term_memory=long_term_memory,
+    diagnostic_engine=diagnostic_engine,
+    on_change=broadcast_training_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1553,6 +1572,7 @@ async def lifespan(app: FastAPI):
     social_media_manager.close()
     email_template_manager.close()
     photo_doc_manager.close()
+    training_manager.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1613,6 +1633,7 @@ app.state.video_processor = video_processor
 app.state.social_media_manager = social_media_manager
 app.state.email_template_manager = email_template_manager
 app.state.photo_doc_manager = photo_doc_manager
+app.state.training_manager = training_manager
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2775,6 +2796,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "photo_docs_status",
         **photo_doc_manager.to_broadcast_dict(),
+    })
+
+    # Send current training/learning status
+    await websocket.send_json({
+        "type": "training_status",
+        **training_manager.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4125,6 +4152,86 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "photo_content_worthy_list",
                     "photos": [p.to_dict() for p in photos],
                 })
+
+            # ── Training / Learning Mode handlers ─────────────────
+            elif msg.get("type") == "training_start":
+                title = msg.get("title", "Untitled Session")
+                vehicle_info = msg.get("vehicle_info", "")
+                category = msg.get("category", "general")
+                linked_tree_id = msg.get("linked_tree_id", "")
+                session = training_manager.start_training_session(
+                    title=title,
+                    vehicle_info=vehicle_info,
+                    category=category,
+                    linked_tree_id=linked_tree_id,
+                )
+                await websocket.send_json({
+                    "type": "training_started",
+                    "ok": True,
+                    "session": session.to_dict(),
+                })
+                await broadcast_training_status()
+
+            elif msg.get("type") == "training_record_step":
+                sid = msg.get("session_id", "")
+                step_type = msg.get("step_type", "")
+                content = msg.get("content", "")
+                meta = msg.get("metadata", {})
+                session = training_manager.record_step(sid, step_type, content, meta)
+                await websocket.send_json({
+                    "type": "training_step_recorded",
+                    "ok": session is not None,
+                    "session": session.to_dict() if session else None,
+                })
+                await broadcast_training_status()
+
+            elif msg.get("type") == "training_complete":
+                sid = msg.get("session_id", "")
+                session = training_manager.complete_session(sid)
+                await websocket.send_json({
+                    "type": "training_completed",
+                    "ok": session is not None,
+                    "session": session.to_dict() if session else None,
+                })
+                await broadcast_training_status()
+
+            elif msg.get("type") == "training_extract":
+                sid = msg.get("session_id", "")
+                patterns = await training_manager.extract_patterns(sid)
+                await websocket.send_json({
+                    "type": "training_patterns_extracted",
+                    "ok": True,
+                    "patterns": patterns,
+                    "session_id": sid,
+                })
+                await broadcast_training_status()
+
+            elif msg.get("type") == "training_suggest":
+                symptoms = msg.get("symptoms", "")
+                category = msg.get("category", "")
+                result = await training_manager.suggest_from_experience(symptoms, category)
+                await websocket.send_json({
+                    "type": "training_suggestions",
+                    **result,
+                })
+
+            elif msg.get("type") == "training_tree_suggest":
+                category = msg.get("category", "")
+                result = await training_manager.suggest_tree_updates(category)
+                await websocket.send_json({
+                    "type": "training_tree_suggestions",
+                    **result,
+                })
+
+            elif msg.get("type") == "training_delete":
+                sid = msg.get("session_id", "")
+                ok = training_manager.delete_session(sid)
+                await websocket.send_json({
+                    "type": "training_deleted",
+                    "ok": ok,
+                    "session_id": sid,
+                })
+                await broadcast_training_status()
 
             elif msg.get("type") == "research_result_delete":
                 entry_id = msg.get("entry_id", "")
