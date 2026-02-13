@@ -6432,6 +6432,168 @@
         .wr-sev-emissions { background: #fff8e1; color: #f57f17; }
         .wr-sev-compliance { background: #e8eaf6; color: #283593; }
 
+        /* Maintenance Scheduler */
+        .ms-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .ms-stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        .ms-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .ms-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .ms-section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 1rem 0 0.5rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .ms-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .ms-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        .ms-card-overdue {
+            border-left: 3px solid #f44336;
+            background: rgba(244, 67, 54, 0.05);
+        }
+        .ms-card-due_soon {
+            border-left: 3px solid #ffa726;
+            background: rgba(255, 167, 38, 0.05);
+        }
+        .ms-card-upcoming {
+            border-left: 3px solid #42a5f5;
+            background: rgba(66, 165, 245, 0.05);
+        }
+        .ms-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .ms-card-title { font-weight: 600; flex: 1; }
+        .ms-card-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .ms-badge-overdue { background: #ffebee; color: #c62828; }
+        .ms-badge-due_soon { background: #fff3e0; color: #e65100; }
+        .ms-badge-upcoming { background: #e3f2fd; color: #1565c0; }
+        .ms-badge-ok { background: #e8f5e9; color: #2e7d32; }
+        .ms-card-detail { color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.3rem; }
+        .ms-card-actions {
+            display: flex;
+            gap: 0.3rem;
+            margin-top: 0.5rem;
+        }
+        .ms-card-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            color: var(--text-secondary);
+        }
+        .ms-card-actions button:hover { color: var(--primary-color); }
+        .ms-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .ms-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .ms-form label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .ms-form input, .ms-form select, .ms-form textarea {
+            padding: 0.4rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 0.85rem;
+        }
+        .ms-form .ms-full { grid-column: 1 / -1; }
+        .ms-forecast-window {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .ms-forecast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .ms-forecast-label { font-weight: 600; font-size: 0.85rem; }
+        .ms-forecast-revenue { color: #2e7d32; font-weight: 700; font-size: 0.9rem; }
+        .ms-forecast-items { font-size: 0.8rem; color: var(--text-secondary); }
+        .ms-bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin: 0.5rem 0;
+        }
+        .ms-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .ms-bar-label { width: 120px; text-align: right; flex-shrink: 0; }
+        .ms-bar-track {
+            flex: 1;
+            height: 18px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .ms-bar-fill {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .ms-bar-value { width: 50px; font-size: 0.75rem; color: var(--text-secondary); }
+
         /* Knowledge Ingestion */
         .ki-stats-bar {
             display: flex;
@@ -10307,6 +10469,98 @@
             </div>
         </section>
 
+        <section data-panel-id="maintenance-scheduler" style="display:none;">
+            <h2>Maintenance Scheduler</h2>
+
+            <!-- Stats Row -->
+            <div class="ms-stats-row" id="ms-stats-row">
+                <div class="ms-stat-card"><div class="ms-stat-value" id="ms-stat-schedules">0</div><div class="ms-stat-label">Schedules</div></div>
+                <div class="ms-stat-card"><div class="ms-stat-value" id="ms-stat-vehicles">0</div><div class="ms-stat-label">Vehicles</div></div>
+                <div class="ms-stat-card"><div class="ms-stat-value" id="ms-stat-overdue">0</div><div class="ms-stat-label">Overdue</div></div>
+                <div class="ms-stat-card"><div class="ms-stat-value" id="ms-stat-due-soon">0</div><div class="ms-stat-label">Due Soon</div></div>
+                <div class="ms-stat-card"><div class="ms-stat-value" id="ms-stat-upcoming">0</div><div class="ms-stat-label">Upcoming</div></div>
+                <div class="ms-stat-card"><div class="ms-stat-value" id="ms-stat-revenue">$0</div><div class="ms-stat-label">Actionable $</div></div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                <button style="background:var(--primary-color);color:#fff;border:none;border-radius:4px;padding:0.4rem 0.8rem;cursor:pointer;font-size:0.85rem;" onclick="msGenerateReminders()">Generate Reminders</button>
+                <button style="background:var(--border-color);color:var(--text-color);border:none;border-radius:4px;padding:0.4rem 0.8rem;cursor:pointer;font-size:0.85rem;" onclick="msRequestForecast()">90-Day Forecast</button>
+            </div>
+
+            <!-- Setup Vehicle -->
+            <details id="ms-setup-details">
+                <summary style="cursor:pointer;font-weight:600;padding:0.5rem 0;color:var(--primary-color);">Auto-Setup Vehicle</summary>
+                <div class="ms-form">
+                    <label>Vehicle ID <input type="text" id="ms-setup-vehicle" placeholder="Vehicle ID"></label>
+                    <label>Customer ID <input type="text" id="ms-setup-customer" placeholder="Customer ID"></label>
+                    <label>Make <input type="text" id="ms-setup-make" placeholder="e.g. Honda"></label>
+                    <label>Model <input type="text" id="ms-setup-model" placeholder="e.g. CB500X"></label>
+                    <label>Current Mileage <input type="number" id="ms-setup-mileage" value="0"></label>
+                    <div style="grid-column:1/-1;display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.25rem;">
+                        <button style="background:var(--primary-color);color:#fff;border:none;border-radius:4px;padding:0.4rem 1rem;cursor:pointer;font-size:0.85rem;" onclick="msSetupVehicle()">Create Schedules</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Add Single Schedule -->
+            <details id="ms-add-details">
+                <summary style="cursor:pointer;font-weight:600;padding:0.5rem 0;color:var(--primary-color);">Add Single Schedule</summary>
+                <div class="ms-form">
+                    <label>Vehicle ID <input type="text" id="ms-add-vehicle" placeholder="Vehicle ID"></label>
+                    <label>Customer ID <input type="text" id="ms-add-customer" placeholder="Customer ID"></label>
+                    <label>Service Type
+                        <select id="ms-add-type">
+                            <option value="oil_change">Oil Change</option>
+                            <option value="valve_adjustment">Valve Adjustment</option>
+                            <option value="brake_fluid">Brake Fluid Flush</option>
+                            <option value="coolant">Coolant Flush</option>
+                            <option value="chain_service">Chain Service</option>
+                            <option value="belt_service">Belt Service</option>
+                            <option value="tire_replacement">Tire Replacement</option>
+                            <option value="fork_service">Fork Service</option>
+                            <option value="spark_plugs">Spark Plugs</option>
+                            <option value="air_filter">Air Filter</option>
+                            <option value="brake_pads">Brake Pads</option>
+                            <option value="final_drive">Final Drive Service</option>
+                        </select>
+                    </label>
+                    <label>Interval (miles) <input type="number" id="ms-add-interval" value="0" placeholder="0 = auto-detect"></label>
+                    <label>Last Service Date <input type="date" id="ms-add-last-date"></label>
+                    <label>Last Service Miles <input type="number" id="ms-add-last-miles" value="0"></label>
+                    <label>Current Mileage <input type="number" id="ms-add-mileage" value="0"></label>
+                    <label class="ms-full">Notes <textarea id="ms-add-notes" rows="1" placeholder="Notes"></textarea></label>
+                    <div style="grid-column:1/-1;display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.25rem;">
+                        <button style="background:var(--primary-color);color:#fff;border:none;border-radius:4px;padding:0.4rem 1rem;cursor:pointer;font-size:0.85rem;" onclick="msAddSchedule()">Add Schedule</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Overdue & Due Soon -->
+            <div class="ms-section-title">Overdue &amp; Due Soon</div>
+            <div class="ms-list" id="ms-due-list">
+                <div class="ms-empty">No services due. Set up vehicle maintenance schedules above.</div>
+            </div>
+
+            <!-- Upcoming -->
+            <div class="ms-section-title">Upcoming</div>
+            <div class="ms-list" id="ms-upcoming-list">
+                <div class="ms-empty">No upcoming services.</div>
+            </div>
+
+            <!-- Revenue Forecast -->
+            <div class="ms-section-title">90-Day Revenue Forecast</div>
+            <div id="ms-forecast-container">
+                <div class="ms-empty">Click "90-Day Forecast" to generate projections.</div>
+            </div>
+
+            <!-- Service Type Breakdown -->
+            <div class="ms-section-title">By Service Type</div>
+            <div class="ms-bar-chart" id="ms-service-chart">
+                <div class="ms-empty">No schedule data.</div>
+            </div>
+        </section>
+
         <section data-panel-id="knowledge-ingest" style="display:none;">
             <h2>Knowledge Ingestion</h2>
 
@@ -11015,6 +11269,7 @@
             { id: 'market-monitor', name: 'Market Intel' },
             { id: 'feedback', name: 'Feedback' },
             { id: 'warranty-recall', name: 'Warranty & Recalls' },
+            { id: 'maintenance-scheduler', name: 'Maintenance Calendar' },
             { id: 'knowledge-ingest', name: 'Knowledge Ingestion' },
             { id: 'diagnostics', name: 'Diagnostic Trees' },
             { id: 'reports', name: 'Scheduled Reports' },
@@ -11519,6 +11774,26 @@
                     }
                 } else if (data.type === "warranty_expiring_checked") {
                     alert("Expiring warranty check complete. " + (data.notifications_sent || 0) + " notification(s) sent.");
+
+                } else if (data.type === "maintenance_status") {
+                    msSchedules = data.schedules || [];
+                    msDue = data.due || [];
+                    msForecast = data.forecast || {};
+                    msStatus = data.status || {};
+                    renderMsAll();
+                } else if (data.type === "maintenance_schedule_added" || data.type === "maintenance_schedule_updated" || data.type === "maintenance_schedule_deleted") {
+                    // refreshed via broadcast
+                } else if (data.type === "maintenance_vehicle_setup") {
+                    alert("Created " + (data.count || 0) + " maintenance schedule(s) for vehicle.");
+                } else if (data.type === "maintenance_mileage_updated") {
+                    // refreshed via broadcast
+                } else if (data.type === "maintenance_service_recorded") {
+                    // refreshed via broadcast
+                } else if (data.type === "maintenance_reminders_generated") {
+                    alert("Generated " + (data.count || 0) + " maintenance reminder(s).");
+                } else if (data.type === "maintenance_forecast_result") {
+                    msForecast = data;
+                    renderMsForecast();
 
                 } else if (data.type === "tts_status") {
                     handleTTSStatus(data);
@@ -15431,6 +15706,204 @@
                 window.renderAgents = function() {
                     origRender.apply(this, arguments);
                     renderWrAll();
+                };
+            }
+        })();
+
+        // ---------------------------------------------------------------
+        // Maintenance Scheduler
+        // ---------------------------------------------------------------
+
+        var msSchedules = [];
+        var msDue = [];
+        var msForecast = {};
+        var msStatus = {};
+
+        function renderMsAll() {
+            renderMsStats();
+            renderMsDue();
+            renderMsUpcoming();
+            renderMsServiceChart();
+        }
+
+        function renderMsStats() {
+            var s = msStatus || {};
+            var el;
+            el = document.getElementById("ms-stat-schedules"); if (el) el.textContent = s.total_schedules ?? 0;
+            el = document.getElementById("ms-stat-vehicles"); if (el) el.textContent = s.total_vehicles ?? 0;
+            el = document.getElementById("ms-stat-overdue"); if (el) el.textContent = s.overdue ?? 0;
+            el = document.getElementById("ms-stat-due-soon"); if (el) el.textContent = s.due_soon ?? 0;
+            el = document.getElementById("ms-stat-upcoming"); if (el) el.textContent = s.upcoming ?? 0;
+            el = document.getElementById("ms-stat-revenue"); if (el) el.textContent = "$" + (s.actionable_revenue ?? 0).toLocaleString();
+        }
+
+        function msDueCard(d) {
+            var cls = "ms-card ms-card-" + (d.due_status || "ok");
+            var badge = "ms-card-badge ms-badge-" + (d.due_status || "ok");
+            var statusLabel = (d.due_status || "ok").replace("_", " ");
+            return '<div class="' + cls + '">' +
+                '<div class="ms-card-header">' +
+                    '<div class="ms-card-title">' + esc(d.label || d.service_type) + '</div>' +
+                    '<span class="' + badge + '">' + esc(statusLabel) + '</span>' +
+                '</div>' +
+                '<div class="ms-card-detail">' +
+                    'Vehicle: ' + esc(d.vehicle_id ? d.vehicle_id.substring(0, 8) : "N/A") +
+                    ' | Every ' + (d.interval_miles || 0).toLocaleString() + ' mi' +
+                    ' | ' + (d.miles_until_due <= 0 ? 'Overdue by ' + Math.abs(d.miles_until_due).toLocaleString() + ' mi' :
+                             d.miles_until_due.toLocaleString() + ' mi remaining') +
+                '</div>' +
+                '<div class="ms-card-detail">' +
+                    'Last: ' + (d.last_service_date || 'Never') +
+                    ' at ' + (d.last_service_miles || 0).toLocaleString() + ' mi' +
+                    ' | Current: ' + (d.current_mileage || 0).toLocaleString() + ' mi' +
+                    ' | Est. $' + (d.estimated_revenue || 0).toFixed(0) +
+                '</div>' +
+                '<div class="ms-card-actions">' +
+                    '<button onclick="msRecordService(\'' + (d.vehicle_id || "") + '\', \'' + (d.service_type || "") + '\')" title="Record Service">Mark Done</button>' +
+                    '<button onclick="msDeleteSchedule(\'' + (d.schedule_id || "") + '\')" title="Delete">Delete</button>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function renderMsDue() {
+            var container = document.getElementById("ms-due-list");
+            if (!container) return;
+            var items = msDue.filter(function(d) { return d.due_status === "overdue" || d.due_status === "due_soon"; });
+            if (items.length === 0) {
+                container.innerHTML = '<div class="ms-empty">No services currently due.</div>';
+                return;
+            }
+            container.innerHTML = items.map(function(d) { return msDueCard(d); }).join("");
+        }
+
+        function renderMsUpcoming() {
+            var container = document.getElementById("ms-upcoming-list");
+            if (!container) return;
+            var items = msDue.filter(function(d) { return d.due_status === "upcoming"; });
+            if (items.length === 0) {
+                container.innerHTML = '<div class="ms-empty">No upcoming services.</div>';
+                return;
+            }
+            container.innerHTML = items.map(function(d) { return msDueCard(d); }).join("");
+        }
+
+        function renderMsForecast() {
+            var container = document.getElementById("ms-forecast-container");
+            if (!container) return;
+            var fc = msForecast || {};
+            var windows = fc.windows || [];
+            if (windows.length === 0) {
+                container.innerHTML = '<div class="ms-empty">No forecast data. Click "90-Day Forecast".</div>';
+                return;
+            }
+            var totalRev = fc.total_estimated_revenue || 0;
+            var totalSvc = fc.total_services || 0;
+            var html = '<div style="font-size:0.85rem;margin-bottom:0.75rem;"><strong>' + totalSvc + ' service(s)</strong> projected — <strong style="color:#2e7d32;">$' + totalRev.toLocaleString() + '</strong> estimated revenue</div>';
+            windows.forEach(function(w) {
+                var count = (w.services || []).length;
+                html += '<div class="ms-forecast-window">' +
+                    '<div class="ms-forecast-header">' +
+                        '<span class="ms-forecast-label">' + esc(w.label) + '</span>' +
+                        '<span class="ms-forecast-revenue">$' + (w.revenue || 0).toFixed(0) + '</span>' +
+                    '</div>' +
+                    '<div class="ms-forecast-items">' + count + ' service(s): ' +
+                        (w.services || []).map(function(s) { return esc(s.label); }).join(", ") +
+                    '</div>' +
+                '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        function renderMsServiceChart() {
+            var container = document.getElementById("ms-service-chart");
+            if (!container) return;
+            // Group schedules by service_type
+            var counts = {};
+            msSchedules.forEach(function(s) {
+                if (!counts[s.service_type]) counts[s.service_type] = { label: s.label || s.service_type, count: 0 };
+                counts[s.service_type].count++;
+            });
+            var entries = Object.values(counts).sort(function(a, b) { return b.count - a.count; });
+            if (entries.length === 0) {
+                container.innerHTML = '<div class="ms-empty">No schedule data.</div>';
+                return;
+            }
+            var maxCount = entries[0].count;
+            container.innerHTML = entries.map(function(e) {
+                var pct = maxCount > 0 ? (e.count / maxCount * 100) : 0;
+                return '<div class="ms-bar-row">' +
+                    '<div class="ms-bar-label">' + esc(e.label) + '</div>' +
+                    '<div class="ms-bar-track"><div class="ms-bar-fill" style="width:' + pct + '%"></div></div>' +
+                    '<div class="ms-bar-value">' + e.count + '</div>' +
+                '</div>';
+            }).join("");
+        }
+
+        function msSetupVehicle() {
+            var vid = (document.getElementById("ms-setup-vehicle") || {}).value || "";
+            var cid = (document.getElementById("ms-setup-customer") || {}).value || "";
+            var make = (document.getElementById("ms-setup-make") || {}).value || "";
+            var model = (document.getElementById("ms-setup-model") || {}).value || "";
+            if (!vid || !make) { alert("Vehicle ID and Make are required."); return; }
+            ws.send(JSON.stringify({
+                type: "maintenance_setup_vehicle",
+                vehicle_id: vid, customer_id: cid,
+                make: make, model: model,
+                current_mileage: parseInt((document.getElementById("ms-setup-mileage") || {}).value || "0") || 0,
+            }));
+            var det = document.getElementById("ms-setup-details");
+            if (det) det.removeAttribute("open");
+        }
+
+        function msAddSchedule() {
+            var vid = (document.getElementById("ms-add-vehicle") || {}).value || "";
+            if (!vid) { alert("Vehicle ID is required."); return; }
+            ws.send(JSON.stringify({
+                type: "maintenance_add_schedule",
+                vehicle_id: vid,
+                customer_id: (document.getElementById("ms-add-customer") || {}).value || "",
+                service_type: (document.getElementById("ms-add-type") || {}).value || "oil_change",
+                interval_miles: parseInt((document.getElementById("ms-add-interval") || {}).value || "0") || 0,
+                last_service_date: (document.getElementById("ms-add-last-date") || {}).value || "",
+                last_service_miles: parseInt((document.getElementById("ms-add-last-miles") || {}).value || "0") || 0,
+                current_mileage: parseInt((document.getElementById("ms-add-mileage") || {}).value || "0") || 0,
+                notes: (document.getElementById("ms-add-notes") || {}).value || "",
+            }));
+            var det = document.getElementById("ms-add-details");
+            if (det) det.removeAttribute("open");
+        }
+
+        function msDeleteSchedule(id) {
+            if (!confirm("Delete this maintenance schedule?")) return;
+            ws.send(JSON.stringify({ type: "maintenance_delete_schedule", schedule_id: id }));
+        }
+
+        function msRecordService(vehicleId, serviceType) {
+            var mileage = prompt("Current mileage?", "0");
+            if (mileage === null) return;
+            ws.send(JSON.stringify({
+                type: "maintenance_record_service",
+                vehicle_id: vehicleId,
+                service_type: serviceType,
+                mileage: parseInt(mileage) || 0,
+            }));
+        }
+
+        function msGenerateReminders() {
+            ws.send(JSON.stringify({ type: "maintenance_generate_reminders" }));
+        }
+
+        function msRequestForecast() {
+            ws.send(JSON.stringify({ type: "maintenance_forecast", days: 90 }));
+        }
+
+        // Hook into renderAgents
+        (function() {
+            var origRender = window.renderAgents;
+            if (origRender) {
+                window.renderAgents = function() {
+                    origRender.apply(this, arguments);
+                    renderMsAll();
                 };
             }
         })();

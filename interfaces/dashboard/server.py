@@ -58,6 +58,7 @@ from tools.doppler.ride_log import RideLogManager
 from tools.doppler.market_monitor import MarketMonitor
 from tools.doppler.feedback import FeedbackManager
 from tools.doppler.warranty import WarrantyRecallManager
+from tools.doppler.maintenance_scheduler import MaintenanceSchedulerManager
 from security.audit import SecurityAuditLog
 from security.auth import SessionManager
 from agents.content_agent import ContentAgent
@@ -476,6 +477,14 @@ async def broadcast_warranty_status():
     await broadcast_to_dashboards({
         "type": "warranty_status",
         **warranty_manager.to_broadcast_dict(),
+    })
+
+
+async def broadcast_maintenance_status():
+    """Push current maintenance scheduler state to all connected dashboard browsers."""
+    await broadcast_to_dashboards({
+        "type": "maintenance_status",
+        **maintenance_scheduler.to_broadcast_dict(),
     })
 
 
@@ -1318,6 +1327,15 @@ warranty_manager = WarrantyRecallManager(
     on_change=broadcast_warranty_status,
 )
 
+# Recurring Maintenance Scheduler — preventive maintenance tracking
+maintenance_scheduler = MaintenanceSchedulerManager(
+    db_path="data/maintenance_scheduler.db",
+    service_store=service_store,
+    crm_store=crm_store,
+    notification_manager=notification_manager,
+    on_change=broadcast_maintenance_status,
+)
+
 # Research agent — local in-process agent for research tasks
 research_agent = ResearchAgent(
     router=orchestrator.router,
@@ -1648,6 +1666,7 @@ async def lifespan(app: FastAPI):
     market_monitor.close()
     feedback_manager.close()
     warranty_manager.close()
+    maintenance_scheduler.close()
     research_store.close()
     scout_store.close()
     market_analyzer.close()
@@ -1713,6 +1732,7 @@ app.state.ride_log_manager = ride_log_manager
 app.state.market_monitor = market_monitor
 app.state.feedback_manager = feedback_manager
 app.state.warranty_manager = warranty_manager
+app.state.maintenance_scheduler = maintenance_scheduler
 app.state.session_manager = session_manager
 app.state.deployer = deployer
 app.state.backup_manager = backup_manager
@@ -2905,6 +2925,12 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "warranty_status",
         **warranty_manager.to_broadcast_dict(),
+    })
+
+    # Send current maintenance scheduler status
+    await websocket.send_json({
+        "type": "maintenance_status",
+        **maintenance_scheduler.to_broadcast_dict(),
     })
 
     # Send current research results
@@ -4668,6 +4694,116 @@ async def dashboard_websocket(websocket: WebSocket):
                     "type": "warranty_expiring_checked",
                     "ok": True,
                     "notifications_sent": count,
+                })
+
+            # ================================================================
+            # MAINTENANCE SCHEDULER
+            # ================================================================
+
+            elif msg.get("type") == "maintenance_add_schedule":
+                s = maintenance_scheduler.add_schedule(
+                    vehicle_id=msg.get("vehicle_id", ""),
+                    customer_id=msg.get("customer_id", ""),
+                    service_type=msg.get("service_type", "oil_change"),
+                    interval_miles=int(msg.get("interval_miles", 0)),
+                    interval_months=int(msg.get("interval_months", 0)),
+                    last_service_date=msg.get("last_service_date", ""),
+                    last_service_miles=int(msg.get("last_service_miles", 0)),
+                    current_mileage=int(msg.get("current_mileage", 0)),
+                    notes=msg.get("notes", ""),
+                )
+                await websocket.send_json({
+                    "type": "maintenance_schedule_added",
+                    "ok": True,
+                    "schedule": s.to_dict(),
+                })
+                await broadcast_maintenance_status()
+
+            elif msg.get("type") == "maintenance_update_schedule":
+                sid = msg.get("schedule_id", "")
+                fields = {k: v for k, v in msg.items()
+                          if k not in ("type", "schedule_id")}
+                for int_f in ("interval_miles", "interval_months",
+                              "last_service_miles", "current_mileage", "enabled"):
+                    if int_f in fields:
+                        fields[int_f] = int(fields[int_f])
+                s = maintenance_scheduler.update_schedule(sid, **fields)
+                await websocket.send_json({
+                    "type": "maintenance_schedule_updated",
+                    "ok": s is not None,
+                    "schedule": s.to_dict() if s else None,
+                })
+                await broadcast_maintenance_status()
+
+            elif msg.get("type") == "maintenance_delete_schedule":
+                sid = msg.get("schedule_id", "")
+                ok = maintenance_scheduler.delete_schedule(sid)
+                await websocket.send_json({
+                    "type": "maintenance_schedule_deleted",
+                    "ok": ok,
+                    "schedule_id": sid,
+                })
+                await broadcast_maintenance_status()
+
+            elif msg.get("type") == "maintenance_setup_vehicle":
+                created = maintenance_scheduler.setup_vehicle(
+                    vehicle_id=msg.get("vehicle_id", ""),
+                    customer_id=msg.get("customer_id", ""),
+                    make=msg.get("make", ""),
+                    model=msg.get("model", ""),
+                    current_mileage=int(msg.get("current_mileage", 0)),
+                )
+                await websocket.send_json({
+                    "type": "maintenance_vehicle_setup",
+                    "ok": True,
+                    "count": len(created),
+                    "schedules": [s.to_dict() for s in created],
+                })
+                await broadcast_maintenance_status()
+
+            elif msg.get("type") == "maintenance_update_mileage":
+                vid = msg.get("vehicle_id", "")
+                miles = int(msg.get("mileage", 0))
+                count = maintenance_scheduler.update_mileage(vid, miles)
+                await websocket.send_json({
+                    "type": "maintenance_mileage_updated",
+                    "ok": count > 0,
+                    "vehicle_id": vid,
+                    "mileage": miles,
+                    "schedules_updated": count,
+                })
+                await broadcast_maintenance_status()
+
+            elif msg.get("type") == "maintenance_record_service":
+                sched = maintenance_scheduler.record_service(
+                    vehicle_id=msg.get("vehicle_id", ""),
+                    service_type=msg.get("service_type", ""),
+                    date=msg.get("date", ""),
+                    mileage=int(msg.get("mileage", 0)),
+                )
+                await websocket.send_json({
+                    "type": "maintenance_service_recorded",
+                    "ok": sched is not None,
+                    "schedule": sched.to_dict() if sched else None,
+                })
+                await broadcast_maintenance_status()
+
+            elif msg.get("type") == "maintenance_generate_reminders":
+                reminders = maintenance_scheduler.generate_reminders()
+                await websocket.send_json({
+                    "type": "maintenance_reminders_generated",
+                    "ok": True,
+                    "count": len(reminders),
+                    "reminders": reminders,
+                })
+
+            elif msg.get("type") == "maintenance_forecast":
+                days = int(msg.get("days", 90))
+                forecast = maintenance_scheduler.maintenance_forecast(days)
+                await websocket.send_json({
+                    "type": "maintenance_forecast_result",
+                    "ok": True,
+                    **forecast,
                 })
 
             elif msg.get("type") == "research_result_delete":
