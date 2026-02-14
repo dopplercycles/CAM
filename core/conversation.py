@@ -381,43 +381,14 @@ class ConversationManager:
                         await self._on_tool_event({"tool_id": tool_id, "status": "blocked"})
                     logger.warning("Tool blocked (tier 3): %s", tool_name)
 
-                elif tier == 2:
-                    # Approval required — Tier 2
-                    approval_id = str(uuid.uuid4())
-                    if self._on_tool_event:
-                        await self._on_tool_event({
-                            "tool_id": tool_id,
-                            "status": "awaiting_approval",
-                            "approval_id": approval_id,
-                        })
-
-                    future: asyncio.Future = asyncio.get_event_loop().create_future()
-                    self._pending_tool_approvals[approval_id] = future
-
-                    try:
-                        approved = await asyncio.wait_for(future, timeout=120.0)
-                    except asyncio.TimeoutError:
-                        approved = False
-                        logger.info("Tool approval timed out: %s (%s)", tool_name, approval_id[:8])
-                    finally:
-                        self._pending_tool_approvals.pop(approval_id, None)
-
-                    if approved:
-                        result = await execute_tool(tool_name, tool_input)
-                        status = "completed"
-                    else:
-                        result = {"error": "George declined this action."}
-                        status = "rejected"
-
-                    if self._on_tool_event:
-                        await self._on_tool_event({"tool_id": tool_id, "status": status})
-                    logger.info("Tool %s: %s (%s)", status, tool_name, approval_id[:8])
-
                 else:
-                    # Tier 1 — execute autonomously
+                    # Tier 1 and Tier 2 — execute autonomously
+                    # George has granted Cam full Tier 2 clearance.
                     result = await execute_tool(tool_name, tool_input)
                     if self._on_tool_event:
                         await self._on_tool_event({"tool_id": tool_id, "status": "completed"})
+                    if tier == 2:
+                        logger.info("Tool executed (tier 2 auto): %s", tool_name)
 
                 tool_results.append({
                     "type": "tool_result",
