@@ -9066,6 +9066,33 @@
             color: var(--text-tertiary);
         }
 
+        .cam-tts-btn {
+            background: none;
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            cursor: pointer;
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+            transition: color 0.2s, border-color 0.2s;
+            line-height: 1;
+        }
+        .cam-tts-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+        }
+        .cam-tts-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .cam-tts-btn.loading {
+            animation: ttsPulse 1s ease-in-out infinite;
+        }
+        @keyframes ttsPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
         .cam-tool-event {
             font-size: 0.75rem;
             padding: 0.4rem 0.8rem;
@@ -23047,6 +23074,11 @@
             bubble.className = 'cam-msg ' + (isGeorge ? 'cam-msg-george' : 'cam-msg-cam');
             bubble.textContent = text;
 
+            // Store text for TTS on Cam bubbles
+            if (!isGeorge && text) {
+                bubble.dataset.ttsText = text;
+            }
+
             // Meta line (timestamp, model badge, cost)
             if (meta) {
                 const metaDiv = document.createElement('div');
@@ -23092,11 +23124,42 @@
                     metaDiv.appendChild(toolBadge);
                 }
 
+                // TTS play button (Cam messages only)
+                if (!isGeorge && bubble.dataset.ttsText) {
+                    const ttsBtn = document.createElement('button');
+                    ttsBtn.className = 'cam-tts-btn';
+                    ttsBtn.textContent = '\ud83d\udd0a';
+                    ttsBtn.title = 'Play TTS';
+                    ttsBtn.onclick = function() { playCamBubbleTTS(bubble, ttsBtn); };
+                    metaDiv.appendChild(ttsBtn);
+                }
+
                 bubble.appendChild(metaDiv);
             }
 
             container.appendChild(bubble);
             container.scrollTop = container.scrollHeight;
+        }
+
+        let activeTTSButton = null;
+
+        function playCamBubbleTTS(bubble, btn) {
+            const text = bubble.dataset.ttsText;
+            if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            btn.disabled = true;
+            btn.textContent = '\u231b';
+            btn.classList.add('loading');
+            activeTTSButton = btn;
+
+            ws.send(JSON.stringify({ type: 'cam_tts_request', text: text }));
+        }
+
+        function resetTTSButton(btn) {
+            if (!btn) return;
+            btn.disabled = false;
+            btn.textContent = '\ud83d\udd0a';
+            btn.classList.remove('loading');
         }
 
         function setCamThinking(on) {
@@ -23336,6 +23399,8 @@
         function handleCamTTS(data) {
             if (data.error) {
                 console.warn('TTS error:', data.error);
+                resetTTSButton(activeTTSButton);
+                activeTTSButton = null;
                 return;
             }
             if (data.audio) {
@@ -23348,11 +23413,14 @@
                     const blob = new Blob([buffer], { type: 'audio/wav' });
                     const url = URL.createObjectURL(blob);
                     const audio = new Audio(url);
+                    audio.onended = function() { URL.revokeObjectURL(url); };
                     audio.play().catch(e => console.warn('Audio playback failed:', e));
                 } catch (e) {
                     console.warn('TTS decode error:', e);
                 }
             }
+            resetTTSButton(activeTTSButton);
+            activeTTSButton = null;
         }
 
         // Persona
