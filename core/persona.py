@@ -17,6 +17,7 @@ Usage:
 """
 
 import logging
+import os
 import random
 from pathlib import Path
 
@@ -35,6 +36,57 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("cam.persona")
+
+
+# ---------------------------------------------------------------------------
+# Reference doc loader — mtime-cached, reused by all callers
+# ---------------------------------------------------------------------------
+
+# Cache: path → (mtime, content)
+_ref_doc_cache: dict[str, tuple[float, str]] = {}
+
+
+def load_reference_doc(path: str) -> str:
+    """Read a reference doc from disk, cached by file mtime.
+
+    Re-reads automatically when the file changes on disk — edits are
+    live on the next conversation turn with no restart needed.
+
+    Returns empty string if the file doesn't exist or can't be read.
+
+    Args:
+        path: Filesystem path to the reference doc (absolute or relative
+              to the project root).
+    """
+    if not path:
+        return ""
+
+    # Resolve relative paths against the project root
+    resolved = Path(path)
+    if not resolved.is_absolute():
+        project_root = Path(__file__).resolve().parent.parent
+        resolved = project_root / path
+
+    try:
+        mtime = os.path.getmtime(resolved)
+    except OSError:
+        return ""
+
+    cached = _ref_doc_cache.get(str(resolved))
+    if cached and cached[0] == mtime:
+        return cached[1]
+
+    try:
+        content = resolved.read_text(encoding="utf-8")
+        _ref_doc_cache[str(resolved)] = (mtime, content)
+        logger.info(
+            "Reference doc loaded: %s (%d chars)",
+            resolved.name, len(content),
+        )
+        return content
+    except OSError as e:
+        logger.warning("Failed to read reference doc %s: %s", resolved, e)
+        return ""
 
 
 # ---------------------------------------------------------------------------

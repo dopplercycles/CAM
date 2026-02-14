@@ -133,6 +133,7 @@ class ContentAgent:
         event_logger,
         on_model_call: Callable | None = None,
         tts_pipeline=None,
+        reference_doc_path: str = "",
     ):
         self.router = router
         self.persona = persona
@@ -141,10 +142,12 @@ class ContentAgent:
         self.event_logger = event_logger
         self._on_model_call = on_model_call
         self.tts = tts_pipeline
+        self._reference_doc_path = reference_doc_path
 
         logger.info(
-            "ContentAgent initialized (tts=%s)",
+            "ContentAgent initialized (tts=%s, reference_doc=%s)",
             "available" if tts_pipeline else "none",
+            reference_doc_path or "none",
         )
 
     # -------------------------------------------------------------------
@@ -297,7 +300,16 @@ class ContentAgent:
         Returns:
             The model's response text.
         """
-        system_prompt = self.persona.build_system_prompt() + CONTENT_SYSTEM_PROMPT
+        # Build system prompt: persona + reference doc + content instructions
+        parts = [self.persona.build_system_prompt()]
+        if self._reference_doc_path:
+            from core.persona import load_reference_doc
+            ref_doc = load_reference_doc(self._reference_doc_path)
+            if ref_doc:
+                parts.append(f"\n\n## System Reference\n{ref_doc}")
+        parts.append(CONTENT_SYSTEM_PROMPT)
+        system_prompt = "".join(parts)
+
         prompt = task.description + ltm_context
 
         logger.info(

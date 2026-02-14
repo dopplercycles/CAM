@@ -124,7 +124,7 @@ class User:
 # ---------------------------------------------------------------------------
 
 ADMIN_ONLY_PANELS: set[str] = {
-    "settings", "security", "self-test", "launch-readiness",
+    "cam-chat", "settings", "security", "self-test", "launch-readiness",
     "plugin-manager", "agent-deploy", "deploy", "backup",
     "performance", "context", "memory", "msgbus", "webhooks",
     "offline-mode", "persona", "training", "user-management",
@@ -194,6 +194,12 @@ WS_PERMISSIONS: dict[str, Role] = {
     "webhook_delete": Role.ADMIN,
     "webhook_toggle": Role.ADMIN,
     "webhook_test": Role.ADMIN,
+    "set_model": Role.ADMIN,
+    "tool_approval_response": Role.ADMIN,
+    "cam_chat_message": Role.ADMIN,
+    "cam_chat_history": Role.ADMIN,
+    "cam_voice_input": Role.ADMIN,
+    "cam_tts_request": Role.ADMIN,
     "bus_publish": Role.ADMIN,
     "user_list": Role.ADMIN,
     "user_add": Role.ADMIN,

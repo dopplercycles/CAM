@@ -1558,6 +1558,7 @@ class BusinessAgent:
         event_logger,
         on_model_call: Callable | None = None,
         crm_store=None,
+        reference_doc_path: str = "",
     ):
         self.router = router
         self.persona = persona
@@ -1566,8 +1567,10 @@ class BusinessAgent:
         self.event_logger = event_logger
         self._on_model_call = on_model_call
         self.crm_store = crm_store
+        self._reference_doc_path = reference_doc_path
 
-        logger.info("BusinessAgent initialized")
+        logger.info("BusinessAgent initialized (reference_doc=%s)",
+                     reference_doc_path or "none")
 
     # -------------------------------------------------------------------
     # Detection
@@ -1770,7 +1773,15 @@ class BusinessAgent:
         Returns:
             The model's response text.
         """
-        system_prompt = self.persona.build_system_prompt() + BUSINESS_SYSTEM_PROMPT
+        # Build system prompt: persona + reference doc + business instructions
+        parts = [self.persona.build_system_prompt()]
+        if self._reference_doc_path:
+            from core.persona import load_reference_doc
+            ref_doc = load_reference_doc(self._reference_doc_path)
+            if ref_doc:
+                parts.append(f"\n\n## System Reference\n{ref_doc}")
+        parts.append(BUSINESS_SYSTEM_PROMPT)
+        system_prompt = "".join(parts)
 
         # Build user prompt
         parts = [f"Business task: {task.description}"]

@@ -122,6 +122,7 @@ class ResearchAgent:
         event_logger,
         web_tool=None,
         on_model_call: Callable | None = None,
+        reference_doc_path: str = "",
     ):
         self.router = router
         self.persona = persona
@@ -129,6 +130,7 @@ class ResearchAgent:
         self.store = research_store
         self.event_logger = event_logger
         self._on_model_call = on_model_call
+        self._reference_doc_path = reference_doc_path
 
         # Create WebTool — None if import fails (graceful degradation)
         self.web = web_tool
@@ -141,8 +143,9 @@ class ResearchAgent:
                 self.web = None
 
         logger.info(
-            "ResearchAgent initialized (web=%s)",
+            "ResearchAgent initialized (web=%s, reference_doc=%s)",
             "available" if self.web else "unavailable",
+            reference_doc_path or "none",
         )
 
     # -------------------------------------------------------------------
@@ -387,7 +390,15 @@ class ResearchAgent:
         Returns:
             The model's synthesized response text.
         """
-        system_prompt = self.persona.build_system_prompt() + RESEARCH_SYSTEM_PROMPT
+        # Build system prompt: persona + reference doc + research instructions
+        parts = [self.persona.build_system_prompt()]
+        if self._reference_doc_path:
+            from core.persona import load_reference_doc
+            ref_doc = load_reference_doc(self._reference_doc_path)
+            if ref_doc:
+                parts.append(f"\n\n## System Reference\n{ref_doc}")
+        parts.append(RESEARCH_SYSTEM_PROMPT)
+        system_prompt = "".join(parts)
 
         # Build user prompt
         parts = [f"Research task: {task.description}"]

@@ -37,7 +37,7 @@ from core.file_transfer import FileTransferManager, chunk_file_data, compute_che
 from core.health_monitor import HealthMonitor
 from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory, EpisodicMemory
 from core.notifications import NotificationManager
-from core.persona import Persona
+from core.persona import Persona, load_reference_doc
 from interfaces.telegram.bot import TelegramBot
 from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
 from core.swarm import SwarmTask, SwarmStatus
@@ -268,10 +268,11 @@ async def broadcast_agent_status():
 
 
 async def broadcast_model_assignments():
-    """Push current model routing table and overrides to all dashboards."""
+    """Push current model routing table, overrides, and available models to all dashboards."""
     await broadcast_to_dashboards({
         "type": "model_assignments",
         **orchestrator.router.get_model_assignments(),
+        "available_models": orchestrator.router.get_available_models(),
     })
 
 
@@ -1303,6 +1304,10 @@ report_engine = ReportEngine(
 # TTS pipeline — Piper TTS with graceful fallback
 tts_pipeline = TTSPipeline(config=config)
 
+# Reference doc paths — resolved from config for Cam and agents
+_ref_docs = config.reference_docs.to_dict()
+_cam_ref_doc_path = _ref_docs.get("cam", "")
+
 # Conversation manager — handles George-to-Cam chat via Claude Opus
 conversation_manager = ConversationManager(
     model_router=orchestrator.router,
@@ -1315,7 +1320,18 @@ conversation_manager = ConversationManager(
     finance_tracker=finance_tracker,
     task_queue=task_queue,
     analytics=analytics,
+    reference_doc_path=_cam_ref_doc_path,
 )
+
+# Tool event callback — broadcasts tool activity to dashboard chat
+async def _on_tool_event(event):
+    """Broadcast tool execution events to dashboard chat."""
+    await broadcast_to_dashboards({
+        "type": "cam_tool_event",
+        **event,
+    })
+
+conversation_manager._on_tool_event = _on_tool_event
 
 # Content agent — local in-process agent for content tasks
 content_agent = ContentAgent(
@@ -1326,6 +1342,7 @@ content_agent = ContentAgent(
     event_logger=event_logger,
     on_model_call=on_model_call,
     tts_pipeline=tts_pipeline,
+    reference_doc_path=_cam_ref_doc_path,
 )
 
 # Content pipeline manager — tracks content through research → TTS → package
@@ -1474,6 +1491,7 @@ research_agent = ResearchAgent(
     research_store=research_store,
     event_logger=event_logger,
     on_model_call=on_model_call,
+    reference_doc_path=_cam_ref_doc_path,
 )
 
 # Business agent — local in-process agent for business tasks
@@ -1485,6 +1503,7 @@ business_agent = BusinessAgent(
     event_logger=event_logger,
     on_model_call=on_model_call,
     crm_store=crm_store,
+    reference_doc_path=_cam_ref_doc_path,
 )
 
 # Doppler Scout — motorcycle listing scraper with deal scoring
@@ -2743,6 +2762,25 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
                     )
                     event_logger.info("agent", f"Agent '{name}' connected from {ip}",
                                       agent_id=agent_id, ip=ip)
+
+                    # Send reference doc to the newly connected agent
+                    try:
+                        ref_docs = config.reference_docs.to_dict()
+                        ref_path = ref_docs.get(agent_id, ref_docs.get("cam", ""))
+                        if ref_path:
+                            ref_content = load_reference_doc(ref_path)
+                            if ref_content:
+                                await websocket.send_json({
+                                    "type": "reference_doc",
+                                    "content": ref_content,
+                                })
+                                logger.info(
+                                    "Reference doc sent to agent '%s' (%d chars)",
+                                    agent_id, len(ref_content),
+                                )
+                    except Exception:
+                        logger.debug("Failed to send reference doc to %s", agent_id, exc_info=True)
+
                 else:
                     # Subsequent heartbeat — update via registry
                     registry.update_heartbeat(
@@ -3010,6 +3048,7 @@ async def dashboard_websocket(websocket: WebSocket):
     await websocket.send_json({
         "type": "model_assignments",
         **orchestrator.router.get_model_assignments(),
+        "available_models": orchestrator.router.get_available_models(),
     })
 
     # Also send current kill switch state
@@ -7160,6 +7199,7 @@ async def dashboard_websocket(websocket: WebSocket):
                             "cost": chat_resp.cost,
                             "intent": chat_resp.intent,
                             "timestamp": chat_resp.timestamp,
+                            "tool_calls_made": chat_resp.tool_calls_made,
                         })
                         # After a model switch, broadcast new assignments + agent status
                         if chat_resp.intent == "model_switch":
@@ -7171,6 +7211,65 @@ async def dashboard_websocket(websocket: WebSocket):
                             "type": "cam_chat_error",
                             "error": str(e),
                         })
+
+            elif msg.get("type") == "set_model":
+                # Runtime model switch via dashboard dropdown
+                try:
+                    target = msg.get("target", "")
+                    model = (msg.get("model") or "").strip()
+
+                    if target == "cam":
+                        # Switch Cam's boss-tier model
+                        old_model = orchestrator.router._models.get("boss", "unknown")
+                        if model:
+                            orchestrator.router._models["boss"] = model
+                            logger.info("Dashboard model switch: boss tier %s → %s", old_model, model)
+                        # Broadcast updated assignments to all dashboards
+                        await broadcast_model_assignments()
+
+                    elif target:
+                        # Switch a specific agent's model
+                        agent_info = registry.get_by_id(target)
+                        if agent_info is None:
+                            await websocket.send_json({
+                                "type": "set_model_error",
+                                "error": f"Unknown agent: {target}",
+                            })
+                        elif model:
+                            # Set override
+                            orchestrator.router.set_agent_model(target, model)
+                            agent_info.model_override = model
+                            logger.info("Dashboard model switch: agent %s → %s", target, model)
+                            await broadcast_model_assignments()
+                            await broadcast_agent_status()
+                        else:
+                            # Empty model = clear override
+                            orchestrator.router.clear_agent_model(target)
+                            agent_info.model_override = None
+                            logger.info("Dashboard model switch: agent %s → default", target)
+                            await broadcast_model_assignments()
+                            await broadcast_agent_status()
+                    else:
+                        await websocket.send_json({
+                            "type": "set_model_error",
+                            "error": "Missing target",
+                        })
+                except Exception as e:
+                    logger.error("set_model error: %s", e, exc_info=True)
+                    await websocket.send_json({
+                        "type": "set_model_error",
+                        "error": str(e),
+                    })
+
+            elif msg.get("type") == "tool_approval_response":
+                # George approves or rejects a Tier 2 tool call
+                approval_id = msg.get("approval_id", "")
+                approved = msg.get("approved", False)
+                conversation_manager.resolve_tool_approval(approval_id, approved)
+                event_logger.info(
+                    "security",
+                    f"Tool {'approved' if approved else 'rejected'} from dashboard ({approval_id[:8]})",
+                )
 
             elif msg.get("type") == "cam_chat_history":
                 try:

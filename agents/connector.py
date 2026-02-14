@@ -102,6 +102,10 @@ _RECEIVE_DIR: str = os.path.expanduser("~/receive")
 # In-progress incoming file transfers: transfer_id → {metadata, chunks: {index: bytes}}
 _pending_receives: dict = {}
 
+# Reference doc received from the dashboard — cached in memory for future use
+# when the connector gains model-calling capabilities.
+_reference_doc: str = ""
+
 
 def parse_command(text: str) -> tuple[str, dict[str, str]]:
     """Parse a command string into (command_name, params_dict).
@@ -478,6 +482,11 @@ async def listen_for_commands(ws):
         elif msg_type == "ping":
             ping_id = msg.get("ping_id")
             await ws.send(json.dumps({"type": "pong", "ping_id": ping_id}))
+
+        elif msg_type == "reference_doc":
+            global _reference_doc
+            _reference_doc = msg.get("content", "")
+            logger.info("Reference doc received (%d chars)", len(_reference_doc))
 
         elif msg_type == "file_transfer_start":
             # Server wants to send us a file — set up receive buffer

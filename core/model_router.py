@@ -96,6 +96,9 @@ class ModelResponse:
     latency_ms: float = 0.0
     cost_usd: float = 0.0
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    tool_calls: list[dict] | None = None      # [{id, name, input}, ...]
+    stop_reason: str = "end_turn"              # "end_turn" | "tool_use"
+    raw_content: list | None = None            # Raw response.content for tool loop
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +182,7 @@ class ModelRouter:
         model_override: str | None = None,
         system_prompt: str | None = None,
         messages: list[dict] | None = None,
+        tools: list[dict] | None = None,
     ) -> ModelResponse:
         """Route a prompt to the appropriate model.
 
@@ -199,6 +203,8 @@ class ModelRouter:
                              multi-turn conversations. If provided,
                              used instead of wrapping prompt in a
                              single user message.
+            tools:           Optional list of tool definitions in Claude
+                             API format. Only supported for Claude backend.
 
         Returns:
             A ModelResponse with the text and metadata.
@@ -214,7 +220,7 @@ class ModelRouter:
 
         # Route to the right backend — Claude API models go to _call_claude
         if model.startswith("claude"):
-            response = await self._call_claude(prompt, model, system_prompt, messages)
+            response = await self._call_claude(prompt, model, system_prompt, messages, tools)
         elif model in ("kimi-k2.5",):
             response = await self._call_moonshot(prompt, model, system_prompt)
         else:
@@ -341,6 +347,7 @@ class ModelRouter:
         model: str,
         system_prompt: str | None = None,
         messages: list[dict] | None = None,
+        tools: list[dict] | None = None,
     ) -> ModelResponse:
         """Call the Claude API for complex/nuanced/boss-tier tasks.
 
@@ -354,6 +361,7 @@ class ModelRouter:
             model:         Claude model name (e.g. "claude-opus-4-6").
             system_prompt: Optional system message.
             messages:      Optional pre-built message list for multi-turn.
+            tools:         Optional tool definitions for tool-use.
 
         Returns:
             ModelResponse with the result and token/cost tracking.
@@ -395,6 +403,8 @@ class ModelRouter:
             }
             if system_prompt:
                 kwargs["system"] = system_prompt
+            if tools:
+                kwargs["tools"] = tools
 
             response = await client.messages.create(**kwargs)
         except anthropic.AuthenticationError as e:
@@ -414,11 +424,20 @@ class ModelRouter:
 
         elapsed_ms = (time.perf_counter() - start) * 1000
 
-        # Extract text from response content blocks
+        # Extract text and tool_use blocks from response content
         text = ""
+        tool_calls = []
         for block in response.content:
             if block.type == "text":
                 text += block.text
+            elif block.type == "tool_use":
+                tool_calls.append({
+                    "id": block.id,
+                    "name": block.name,
+                    "input": block.input,
+                })
+
+        stop_reason = response.stop_reason  # "end_turn" or "tool_use"
 
         # Token counts from the API response
         prompt_tokens = response.usage.input_tokens
@@ -441,6 +460,9 @@ class ModelRouter:
             total_tokens=total_tokens,
             latency_ms=round(elapsed_ms, 1),
             cost_usd=round(cost_usd, 6),
+            tool_calls=tool_calls if tool_calls else None,
+            stop_reason=stop_reason or "end_turn",
+            raw_content=response.content,
         )
 
     # -------------------------------------------------------------------
@@ -558,6 +580,16 @@ class ModelRouter:
         removed = self._agent_model_overrides.pop(agent_id, None)
         if removed:
             logger.info("Model override cleared: %s (was %s)", agent_id, removed)
+
+    def get_available_models(self) -> list[str]:
+        """Return deduplicated list of all known model IDs.
+
+        Combines models from the routing table and any active agent overrides.
+        Used by the dashboard to populate model selector dropdowns.
+        """
+        all_models = set(self._models.values())
+        all_models.update(self._agent_model_overrides.values())
+        return sorted(all_models)
 
     def get_model_assignments(self) -> dict:
         """Return current model routing table and any agent overrides.

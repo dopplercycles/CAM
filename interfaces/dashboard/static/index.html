@@ -8934,26 +8934,48 @@
             margin-bottom: 0;
         }
 
-        .cam-model-indicator {
+        .model-selector {
             font-size: 0.65rem;
-            padding: 0.15rem 0.5rem;
+            padding: 0.15rem 0.4rem;
             border-radius: 8px;
             background: #1a2a3a;
             color: #6aabff;
             font-family: monospace;
+            border: 1px solid #2a3a4a;
+            cursor: pointer;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%236aabff' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.4rem center;
+            padding-right: 1.2rem;
             margin-left: auto;
             margin-right: 0.5rem;
         }
 
-        .agent-model-badge {
+        .model-selector:hover {
+            border-color: #6aabff;
+        }
+
+        .model-selector:focus {
+            border-color: #6aabff;
+            box-shadow: 0 0 0 1px rgba(106, 171, 255, 0.3);
+        }
+
+        .model-selector option {
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .model-selector--agent {
             font-size: 0.6rem;
-            padding: 0.1rem 0.4rem;
+            padding: 0.1rem 0.3rem;
             border-radius: 6px;
-            background: #1a2a3a;
-            color: #6aabff;
-            font-family: monospace;
             margin-left: 0.3rem;
-            white-space: nowrap;
+            margin-right: 0;
+            padding-right: 1rem;
         }
 
         .cam-status-indicator {
@@ -9042,6 +9064,71 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.6rem;
             color: var(--text-tertiary);
+        }
+
+        .cam-tool-event {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+            margin: 0.3rem 1rem;
+            background: #0d1a2a;
+            border-left: 3px solid #3b82f6;
+            border-radius: 4px;
+            color: #8b949e;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.4;
+        }
+        .cam-tool-event.awaiting_approval {
+            border-left-color: #f59e0b;
+            background: #1a1500;
+        }
+        .cam-tool-event.completed {
+            border-left-color: #22c55e;
+        }
+        .cam-tool-event.rejected {
+            border-left-color: #ef4444;
+        }
+        .cam-tool-event.blocked {
+            border-left-color: #ef4444;
+            opacity: 0.7;
+        }
+        .cam-tool-event.running {
+            border-left-color: #3b82f6;
+        }
+        .tool-approval-btns {
+            display: inline-flex;
+            gap: 0.4rem;
+            margin-left: 0.6rem;
+        }
+        .tool-approval-btns button {
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #444;
+            font-size: 0.7rem;
+            cursor: pointer;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .tool-approval-btns button.approve {
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+        .tool-approval-btns button.approve:hover {
+            background: #22c55e;
+            color: #000;
+        }
+        .tool-approval-btns button.reject {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .tool-approval-btns button.reject:hover {
+            background: #ef4444;
+            color: #000;
+        }
+        .cam-tool-input-summary {
+            color: #6b7280;
+            font-size: 0.65rem;
+            margin-top: 0.15rem;
+            word-break: break-all;
         }
 
         .cam-thinking {
@@ -10307,7 +10394,7 @@
         <section class="section cam-chat-section" id="cam-chat-section" data-panel-id="cam-chat">
             <div class="cam-chat-header">
                 <h2>Talk to Cam</h2>
-                <span class="cam-model-indicator" id="camModelIndicator" title="Current boss-tier model"></span>
+                <select class="model-selector" id="camModelSelector" title="Current boss-tier model" onchange="setCamModel(this.value)"></select>
                 <span class="cam-status-indicator" id="camStatusIndicator">idle</span>
             </div>
             <div class="cam-chat-messages" id="camChatMessages">
@@ -14177,6 +14264,8 @@
                     renderCamChatHistory(data);
                 } else if (data.type === "cam_chat_error") {
                     handleCamChatError(data);
+                } else if (data.type === "cam_tool_event") {
+                    handleCamToolEvent(data);
                 } else if (data.type === "cam_voice_result") {
                     handleCamVoiceResult(data);
                 } else if (data.type === "cam_tts_result") {
@@ -14409,7 +14498,14 @@
                 <div class="agent-card">
                     <div class="agent-card-header">
                         <div class="agent-name">${escapeHtml(agent.name)}</div>
-                        ${agent.model_override ? `<span class="agent-model-badge" title="Model override (runtime)">${escapeHtml(agent.model_override)}</span>` : ''}
+                        <select class="model-selector model-selector--agent"
+                                title="Model override (select default to clear)"
+                                onchange="setAgentModel('${agentId}', this.value)">
+                            <option value=""${!agent.model_override ? ' selected' : ''}>default</option>
+                            ${(window.availableModels || []).map(m =>
+                                `<option value="${escapeHtml(m)}"${agent.model_override === m ? ' selected' : ''}>${escapeHtml(m)}</option>`
+                            ).join('')}
+                        </select>
                         <div class="agent-status-badge ${statusClass}">
                             <div class="dot"></div>
                             ${agent.status}
@@ -22856,18 +22952,42 @@
         // ---------------------------------------------------------------
         var camChatWaiting = false;
         var currentModelAssignments = { routing: {}, agent_overrides: {} };
+        window.availableModels = [];
 
         function handleModelAssignments(data) {
             currentModelAssignments = {
                 routing: data.routing || {},
                 agent_overrides: data.agent_overrides || {},
             };
-            // Update the boss model indicator in the Cam chat header
+            // Update available models list
+            if (data.available_models) {
+                window.availableModels = data.available_models;
+            }
+            // Rebuild Cam model selector
             var bossModel = currentModelAssignments.routing.boss || '';
-            var indicator = document.getElementById('camModelIndicator');
-            if (indicator) {
-                indicator.textContent = bossModel;
-                indicator.style.display = bossModel ? 'inline-block' : 'none';
+            var selector = document.getElementById('camModelSelector');
+            if (selector) {
+                var opts = window.availableModels.map(function(m) {
+                    return '<option value="' + escapeHtml(m) + '"' + (m === bossModel ? ' selected' : '') + '>' + escapeHtml(m) + '</option>';
+                }).join('');
+                selector.innerHTML = opts;
+                selector.style.display = window.availableModels.length ? 'inline-block' : 'none';
+            }
+            // Re-render agent cards so their dropdowns update
+            if (typeof renderAgents === 'function') {
+                renderAgents();
+            }
+        }
+
+        function setCamModel(model) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "set_model", target: "cam", model: model }));
+            }
+        }
+
+        function setAgentModel(agentId, model) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "set_model", target: agentId, model: model }));
             }
         }
         var camVoiceRecording = false;
@@ -22953,6 +23073,14 @@
                     metaDiv.appendChild(intent);
                 }
 
+                if (meta.tool_calls_made && meta.tool_calls_made > 0) {
+                    const toolBadge = document.createElement('span');
+                    toolBadge.className = 'cam-msg-model-badge';
+                    toolBadge.style.color = '#3b82f6';
+                    toolBadge.textContent = '\u2699\ufe0f ' + meta.tool_calls_made + ' tool round' + (meta.tool_calls_made > 1 ? 's' : '');
+                    metaDiv.appendChild(toolBadge);
+                }
+
                 bubble.appendChild(metaDiv);
             }
 
@@ -22991,6 +23119,7 @@
                 model: data.model,
                 cost: data.cost,
                 intent: data.intent,
+                tool_calls_made: data.tool_calls_made || 0,
             });
 
             // Add a small TTS play button if response is short enough
@@ -23008,6 +23137,102 @@
             errDiv.textContent = 'Error: ' + (data.error || 'Unknown error');
             container.appendChild(errDiv);
             container.scrollTop = container.scrollHeight;
+        }
+
+        function handleCamToolEvent(data) {
+            var container = document.getElementById('camChatMessages');
+            if (!container) return;
+
+            // Remove empty placeholder if present
+            var empty = document.getElementById('camChatEmpty');
+            if (empty) empty.remove();
+
+            var toolId = data.tool_id || '';
+            var elId = 'tool-' + (data.approval_id || toolId);
+            var existing = document.getElementById(elId);
+
+            // Status update for an existing tool event div
+            if (existing && (data.status === 'completed' || data.status === 'rejected' || data.status === 'blocked')) {
+                existing.className = 'cam-tool-event ' + data.status;
+                var btns = existing.querySelector('.tool-approval-btns');
+                if (btns) btns.remove();
+                var statusSpan = existing.querySelector('.tool-status');
+                if (statusSpan) {
+                    var icons = {completed: '\u2705', rejected: '\u274c', blocked: '\ud83d\udeab'};
+                    statusSpan.textContent = (icons[data.status] || '') + ' ' + data.status;
+                }
+                container.scrollTop = container.scrollHeight;
+                return;
+            }
+
+            // New tool event — create div
+            var div = document.createElement('div');
+            div.className = 'cam-tool-event ' + (data.status || 'running');
+            div.id = elId;
+
+            var tierLabels = {1: 'Tier 1 \u2022 auto', 2: 'Tier 2 \u2022 approval', 3: 'Tier 3 \u2022 blocked'};
+            var icons = {running: '\u2699\ufe0f', awaiting_approval: '\u23f3', completed: '\u2705', blocked: '\ud83d\udeab', rejected: '\u274c'};
+            var icon = icons[data.status] || '\u2699\ufe0f';
+
+            var html = '<span class="tool-status">' + icon + ' ' + (data.status || 'running') + '</span>';
+            html += ' <strong>' + (data.tool_name || 'unknown') + '</strong>';
+            html += ' <span style="color:#555">(' + (tierLabels[data.tier] || 'unknown tier') + ')</span>';
+
+            // Show input summary for context
+            if (data.tool_input) {
+                var summary = '';
+                if (data.tool_name === 'run_command' && data.tool_input.command) {
+                    summary = data.tool_input.command;
+                } else if (data.tool_name === 'read_file' && data.tool_input.path) {
+                    summary = data.tool_input.path;
+                } else if (data.tool_name === 'write_file' && data.tool_input.path) {
+                    summary = data.tool_input.path;
+                } else if (data.tool_name === 'list_directory' && data.tool_input.path) {
+                    summary = data.tool_input.path;
+                } else if (data.tool_name === 'web_search' && data.tool_input.query) {
+                    summary = data.tool_input.query;
+                } else if (data.tool_name === 'web_fetch' && data.tool_input.url) {
+                    summary = data.tool_input.url;
+                } else if (data.tool_name === 'system_status') {
+                    summary = data.tool_input.detail || 'summary';
+                }
+                if (summary) {
+                    html += '<div class="cam-tool-input-summary">' + summary.substring(0, 200) + '</div>';
+                }
+            }
+
+            // Approval buttons for Tier 2
+            if (data.status === 'awaiting_approval' && data.approval_id) {
+                html += '<span class="tool-approval-btns">';
+                html += '<button class="approve" onclick="approveTool(\'' + data.approval_id + '\', true)">Approve</button>';
+                html += '<button class="reject" onclick="approveTool(\'' + data.approval_id + '\', false)">Reject</button>';
+                html += '</span>';
+            }
+
+            div.innerHTML = html;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function approveTool(approvalId, approved) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'tool_approval_response',
+                    approval_id: approvalId,
+                    approved: approved,
+                }));
+            }
+            // Update the tool event div immediately
+            var el = document.getElementById('tool-' + approvalId);
+            if (el) {
+                el.className = 'cam-tool-event ' + (approved ? 'running' : 'rejected');
+                var btns = el.querySelector('.tool-approval-btns');
+                if (btns) btns.remove();
+                var statusSpan = el.querySelector('.tool-status');
+                if (statusSpan) {
+                    statusSpan.textContent = approved ? '\u2699\ufe0f running' : '\u274c rejected';
+                }
+            }
         }
 
         function renderCamChatHistory(data) {

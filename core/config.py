@@ -204,6 +204,9 @@ _DEFAULTS: dict[str, Any] = {
         "to_address": "",
         "use_tls": True,
     },
+    "reference_docs": {
+        "cam": "docs/cam-system-reference.md",
+    },
     "knowledge": {
         "db_path": "data/knowledge_ingest.db",
         "inbox_dir": "data/knowledge/inbox",
@@ -276,6 +279,13 @@ class ConfigSection:
             raise AttributeError(
                 f"Config has no key '{name}'. Available: {list(self._data.keys())}"
             )
+        if isinstance(value, dict):
+            return ConfigSection(value)
+        return value
+
+    def get(self, name: str, default: Any = None) -> Any:
+        """Dict-style get with a default value."""
+        value = self._data.get(name, default)
         if isinstance(value, dict):
             return ConfigSection(value)
         return value

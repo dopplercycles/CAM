@@ -23,13 +23,22 @@ Usage:
     print(response.text)
 """
 
+import asyncio
+import json
 import logging
 import re
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger("cam.conversation")
+
+# Tool-use imports — Claude API tool definitions and executor
+from tools.tool_registry import TOOL_DEFINITIONS, classify_tool_tier, execute_tool
+
+# Maximum tool-use rounds before forcing a text response
+_MAX_TOOL_ROUNDS = 10
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +65,7 @@ class ChatResponse:
     cost: float
     intent: str
     timestamp: str
+    tool_calls_made: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +231,7 @@ class ConversationManager:
         finance_tracker=None,
         task_queue=None,
         analytics=None,
+        reference_doc_path: str = "",
     ):
         self._router = model_router
         self._persona = persona
@@ -232,8 +243,31 @@ class ConversationManager:
         self._finance_tracker = finance_tracker
         self._task_queue = task_queue
         self._analytics = analytics
+        self._reference_doc_path = reference_doc_path
 
-        logger.info("ConversationManager initialized")
+        # Tool-use state: pending approval futures and event callback
+        self._pending_tool_approvals: dict[str, asyncio.Future] = {}
+        self._on_tool_event = None  # async callback set by server.py
+
+        logger.info("ConversationManager initialized (reference_doc=%s)",
+                     reference_doc_path or "none")
+
+    # -------------------------------------------------------------------
+    # Tool approval resolution (called from dashboard WS handler)
+    # -------------------------------------------------------------------
+
+    def resolve_tool_approval(self, approval_id: str, approved: bool):
+        """Resolve a pending Tier 2 tool approval from the dashboard.
+
+        Args:
+            approval_id: UUID of the pending approval.
+            approved:    True to approve, False to reject.
+        """
+        future = self._pending_tool_approvals.get(approval_id)
+        if future is not None and not future.done():
+            future.set_result(approved)
+            logger.info("Tool approval resolved: %s → %s", approval_id[:8],
+                        "approved" if approved else "rejected")
 
     # -------------------------------------------------------------------
     # Main chat method
@@ -303,13 +337,127 @@ class ConversationManager:
         # 4. Build message list with recent chat history
         messages = await self._build_messages(message)
 
-        # 5. Route to Claude Opus via "boss" complexity tier
+        # 5. Route to Claude Opus via "boss" complexity tier (with tools)
         response = await self._router.route(
             prompt=message,
             task_complexity="boss",
             system_prompt=system_prompt,
             messages=messages,
+            tools=TOOL_DEFINITIONS,
         )
+
+        # 5b. Tool-use loop — execute tools until Claude finishes or limit hit
+        total_input_tokens = response.prompt_tokens
+        total_output_tokens = response.response_tokens
+        total_cost = response.cost_usd
+        tool_rounds = 0
+
+        while response.stop_reason == "tool_use" and tool_rounds < _MAX_TOOL_ROUNDS:
+            tool_rounds += 1
+            tool_results = []
+
+            for call in (response.tool_calls or []):
+                tool_name = call["name"]
+                tool_input = call["input"]
+                tool_id = call["id"]
+                tier = classify_tool_tier(tool_name, tool_input)
+
+                logger.info("Tool call: %s (tier=%d, id=%s)", tool_name, tier, tool_id[:8])
+
+                # Notify dashboard of tool call
+                if self._on_tool_event:
+                    await self._on_tool_event({
+                        "tool_id": tool_id,
+                        "tool_name": tool_name,
+                        "tool_input": tool_input,
+                        "tier": tier,
+                        "status": "running" if tier == 1 else "awaiting_approval",
+                    })
+
+                if tier == 3:
+                    # Blocked — Constitutional Tier 3
+                    result = {"error": f"Blocked: {tool_name} on this input is prohibited by the constitution."}
+                    if self._on_tool_event:
+                        await self._on_tool_event({"tool_id": tool_id, "status": "blocked"})
+                    logger.warning("Tool blocked (tier 3): %s", tool_name)
+
+                elif tier == 2:
+                    # Approval required — Tier 2
+                    approval_id = str(uuid.uuid4())
+                    if self._on_tool_event:
+                        await self._on_tool_event({
+                            "tool_id": tool_id,
+                            "status": "awaiting_approval",
+                            "approval_id": approval_id,
+                        })
+
+                    future: asyncio.Future = asyncio.get_event_loop().create_future()
+                    self._pending_tool_approvals[approval_id] = future
+
+                    try:
+                        approved = await asyncio.wait_for(future, timeout=120.0)
+                    except asyncio.TimeoutError:
+                        approved = False
+                        logger.info("Tool approval timed out: %s (%s)", tool_name, approval_id[:8])
+                    finally:
+                        self._pending_tool_approvals.pop(approval_id, None)
+
+                    if approved:
+                        result = await execute_tool(tool_name, tool_input)
+                        status = "completed"
+                    else:
+                        result = {"error": "George declined this action."}
+                        status = "rejected"
+
+                    if self._on_tool_event:
+                        await self._on_tool_event({"tool_id": tool_id, "status": status})
+                    logger.info("Tool %s: %s (%s)", status, tool_name, approval_id[:8])
+
+                else:
+                    # Tier 1 — execute autonomously
+                    result = await execute_tool(tool_name, tool_input)
+                    if self._on_tool_event:
+                        await self._on_tool_event({"tool_id": tool_id, "status": "completed"})
+
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_id,
+                    "content": json.dumps(result) if isinstance(result, dict) else str(result),
+                })
+
+            # Build messages for next Claude call — assistant message with
+            # tool_use blocks, then user message with tool_results
+            assistant_content = []
+            if response.raw_content:
+                for block in response.raw_content:
+                    if hasattr(block, "type"):
+                        if block.type == "text" and block.text:
+                            assistant_content.append({"type": "text", "text": block.text})
+                        elif block.type == "tool_use":
+                            assistant_content.append({
+                                "type": "tool_use",
+                                "id": block.id,
+                                "name": block.name,
+                                "input": block.input,
+                            })
+
+            messages.append({"role": "assistant", "content": assistant_content})
+            messages.append({"role": "user", "content": tool_results})
+
+            # Call Claude again with tool results
+            response = await self._router.route(
+                prompt=message,
+                task_complexity="boss",
+                system_prompt=system_prompt,
+                messages=messages,
+                tools=TOOL_DEFINITIONS,
+            )
+            total_input_tokens += response.prompt_tokens
+            total_output_tokens += response.response_tokens
+            total_cost += response.cost_usd
+
+        if tool_rounds > 0:
+            logger.info("Tool loop completed: %d rounds", tool_rounds)
 
         # 6. Record Cam's response in episodic memory
         self._episodic.record(
@@ -319,7 +467,8 @@ class ConversationManager:
             metadata={
                 "intent": intent,
                 "model": response.model,
-                "cost": response.cost_usd,
+                "cost": total_cost,
+                "tool_rounds": tool_rounds,
                 "source": "dashboard",
             },
         )
@@ -331,16 +480,18 @@ class ConversationManager:
         result = ChatResponse(
             text=response.text,
             model_used=response.model,
-            input_tokens=response.prompt_tokens,
-            output_tokens=response.response_tokens,
-            cost=response.cost_usd,
+            input_tokens=total_input_tokens,
+            output_tokens=total_output_tokens,
+            cost=total_cost,
             intent=intent,
             timestamp=timestamp,
+            tool_calls_made=tool_rounds,
         )
 
         logger.info(
-            "Chat response: model=%s, tokens=%d+%d, cost=$%.6f",
-            result.model_used, result.input_tokens, result.output_tokens, result.cost,
+            "Chat response: model=%s, tokens=%d+%d, cost=$%.6f, tools=%d",
+            result.model_used, result.input_tokens, result.output_tokens,
+            result.cost, result.tool_calls_made,
         )
 
         return result
@@ -428,10 +579,11 @@ class ConversationManager:
     # -------------------------------------------------------------------
 
     async def _build_system_prompt(self, intent: str) -> str:
-        """Build the system prompt with persona + live system state.
+        """Build the system prompt with persona + reference doc + live system state.
 
-        The system prompt gives Cam context about who it is and the
-        current state of the system, so responses are informed.
+        The system prompt gives Cam context about who it is, complete
+        operational knowledge from the reference doc, and the current
+        state of the system, so responses are informed.
 
         Args:
             intent: The classified intent of the user message.
@@ -449,6 +601,13 @@ class ConversationManager:
             "Use your personality — you're Cam, the AI operations manager. "
             "Don't be stiff or overly formal. George is a friend and colleague."
         )
+
+        # Inject reference doc (auto-reloads on file change)
+        if self._reference_doc_path:
+            from core.persona import load_reference_doc
+            ref_doc = load_reference_doc(self._reference_doc_path)
+            if ref_doc:
+                parts.append(f"## System Reference\n{ref_doc}")
 
         # For status queries, inject live system state
         if intent in ("status_query", "command", "question"):

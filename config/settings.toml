@@ -34,15 +34,38 @@ routine = "gpt-oss:20b"
 agentic = "kimi-k2.5"
 complex = "claude"
 nuanced = "claude"
+boss = "claude-opus-4-6"            # George-to-Cam — always the best model
 # Tier-based routing (auto-classifier → task_classifier.py)
 # Tier 1 = small/fast, Tier 2 = medium, Tier 3 = large/reasoning
 tier1 = "phi4-mini:3.8b"          # small/fast local model for simple tasks
 tier2 = "gpt-oss:20b"
 tier3 = "glm-4.7-flash"
 
+[models.claude]
+api_key_env = "ANTHROPIC_API_KEY"   # env var name (never store the key in config)
+default_model = "claude-opus-4-6"   # default for boss/complex tasks
+sonnet_model = "claude-sonnet-4-5-20250929"  # cheaper alternative for delegated tasks
+
+[models.delegation]
+# Maps intent categories to model tiers for automatic delegation
+conversation = "boss"               # George chatting with Cam → best model
+status_query = "boss"               # System status questions → best model (needs reasoning)
+command = "boss"                    # Task commands → best model (needs judgment)
+question = "boss"                   # General questions → best model
+delegated_simple = "simple"         # Cam delegates simple sub-tasks → local model
+delegated_complex = "complex"       # Cam delegates complex sub-tasks → Claude Sonnet
+
 [models.costs.claude]
 input = 3.00                        # USD per million input tokens
 output = 15.00                      # USD per million output tokens
+
+[models.costs."claude-opus-4-6"]
+input = 15.00                       # USD per million input tokens
+output = 75.00                      # USD per million output tokens
+
+[models.costs."claude-sonnet-4-5-20250929"]
+input = 3.00
+output = 15.00
 
 [models.costs."kimi-k2.5"]
 input = 0.50
@@ -215,6 +238,12 @@ avg_speed_mph = 30.0
 road_factor = 1.4
 reminder_check_interval = 300
 default_duration = 60
+
+[reference_docs]
+cam = "docs/cam-system-reference.md"
+# Per-agent (optional — falls back to cam doc if not set)
+# firehorseclawd = "docs/firehorseclawd-reference.md"
+# nova = "docs/nova-reference.md"
 
 [knowledge]
 db_path = "data/knowledge_ingest.db"
