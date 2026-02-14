@@ -515,7 +515,7 @@ class ModelRouter:
         try:
             client = openai.AsyncOpenAI(
                 api_key=api_key,
-                base_url="https://api.moonshot.cn/v1",
+                base_url="https://api.moonshot.ai/v1",
             )
             response = await client.chat.completions.create(
                 model=model,

@@ -449,8 +449,11 @@ class KnowledgeIngest:
                     doc = self.ingest_bytes(data, filepath.name, source="inbox")
                     results.append(doc)
 
-                    # Move to processed on success
-                    if doc.status == "completed":
+                    # Move to processed on success or duplicate
+                    if doc.status == "completed" or (
+                        doc.status == "failed" and doc.error
+                        and doc.error.startswith("Duplicate")
+                    ):
                         dest = self._processed_dir / filepath.name
                         # Handle name collision in processed dir
                         if dest.exists():
@@ -461,7 +464,7 @@ class KnowledgeIngest:
                                 dest = self._processed_dir / f"{stem}_{counter}{suffix}"
                                 counter += 1
                         shutil.move(str(filepath), str(dest))
-                        logger.info("Moved %s to processed/", filepath.name)
+                        logger.info("Moved %s to processed/ (%s)", filepath.name, doc.status)
 
                 except Exception as e:
                     logger.error("Failed to process inbox file %s: %s", filepath.name, e)

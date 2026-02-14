@@ -7185,32 +7185,37 @@ async def dashboard_websocket(websocket: WebSocket):
                 })
 
             # --- Cam Chat: George-to-Cam conversation ---
+            # NOTE: chat() is launched as a background task so the WS
+            # receive loop stays free to process tool_approval_response
+            # messages while chat() awaits Tier 2 approval Futures.
             elif msg.get("type") == "cam_chat_message":
                 cam_msg = msg.get("message", "").strip()
                 if cam_msg:
-                    try:
-                        chat_resp = await conversation_manager.chat(cam_msg)
-                        await broadcast_to_dashboards({
-                            "type": "cam_chat_response",
-                            "text": chat_resp.text,
-                            "model": chat_resp.model_used,
-                            "input_tokens": chat_resp.input_tokens,
-                            "output_tokens": chat_resp.output_tokens,
-                            "cost": chat_resp.cost,
-                            "intent": chat_resp.intent,
-                            "timestamp": chat_resp.timestamp,
-                            "tool_calls_made": chat_resp.tool_calls_made,
-                        })
-                        # After a model switch, broadcast new assignments + agent status
-                        if chat_resp.intent == "model_switch":
-                            await broadcast_model_assignments()
-                            await broadcast_agent_status()
-                    except Exception as e:
-                        logger.error("Cam chat error: %s", e, exc_info=True)
-                        await websocket.send_json({
-                            "type": "cam_chat_error",
-                            "error": str(e),
-                        })
+                    async def _run_cam_chat(message: str):
+                        try:
+                            chat_resp = await conversation_manager.chat(message)
+                            await broadcast_to_dashboards({
+                                "type": "cam_chat_response",
+                                "text": chat_resp.text,
+                                "model": chat_resp.model_used,
+                                "input_tokens": chat_resp.input_tokens,
+                                "output_tokens": chat_resp.output_tokens,
+                                "cost": chat_resp.cost,
+                                "intent": chat_resp.intent,
+                                "timestamp": chat_resp.timestamp,
+                                "tool_calls_made": chat_resp.tool_calls_made,
+                            })
+                            # After a model switch, broadcast new assignments + agent status
+                            if chat_resp.intent == "model_switch":
+                                await broadcast_model_assignments()
+                                await broadcast_agent_status()
+                        except Exception as e:
+                            logger.error("Cam chat error: %s", e, exc_info=True)
+                            await broadcast_to_dashboards({
+                                "type": "cam_chat_error",
+                                "error": str(e),
+                            })
+                    asyncio.create_task(_run_cam_chat(cam_msg))
 
             elif msg.get("type") == "set_model":
                 # Runtime model switch via dashboard dropdown

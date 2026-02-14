@@ -22973,6 +22973,17 @@
                 selector.innerHTML = opts;
                 selector.style.display = window.availableModels.length ? 'inline-block' : 'none';
             }
+            // Sync agent_overrides into the agents array so renderAgents()
+            // picks up the new model_override values immediately (the
+            // agent_status broadcast may arrive slightly later).
+            var overrides = data.agent_overrides || {};
+            agents.forEach(function(agent) {
+                if (overrides.hasOwnProperty(agent.agent_id)) {
+                    agent.model_override = overrides[agent.agent_id];
+                } else {
+                    agent.model_override = null;
+                }
+            });
             // Re-render agent cards so their dropdowns update
             if (typeof renderAgents === 'function') {
                 renderAgents();
