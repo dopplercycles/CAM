@@ -24,6 +24,7 @@ Usage:
 """
 
 import asyncio
+import difflib
 import json
 import logging
 import re
@@ -39,6 +40,18 @@ from tools.tool_registry import TOOL_DEFINITIONS, classify_tool_tier, execute_to
 
 # Maximum tool-use rounds before forcing a text response
 _MAX_TOOL_ROUNDS = 10
+
+# Repetition detection — prevents Cam from saying the same thing across chat() calls
+_REPETITION_THRESHOLD = 0.80  # 80% word-level similarity = repeated
+_RECENT_CAM_CHECK = 3         # compare against last 3 Cam messages
+
+# Task state machine progression order
+_TASK_STATE_ORDER = ["idle", "started", "in_progress", "completing", "done"]
+
+
+def _text_similarity(a: str, b: str) -> float:
+    """Return 0.0–1.0 similarity ratio between two strings (word-level)."""
+    return difflib.SequenceMatcher(None, a.lower().split(), b.lower().split()).ratio()
 
 
 # ---------------------------------------------------------------------------
@@ -249,6 +262,11 @@ class ConversationManager:
         self._pending_tool_approvals: dict[str, asyncio.Future] = {}
         self._on_tool_event = None  # async callback set by server.py
 
+        # Repetition detection & task state machine
+        self._recent_cam_texts: list[str] = []
+        self._task_state: str = "idle"
+        self._task_summary: list[str] = []
+
         logger.info("ConversationManager initialized (reference_doc=%s)",
                      reference_doc_path or "none")
 
@@ -268,6 +286,44 @@ class ConversationManager:
             future.set_result(approved)
             logger.info("Tool approval resolved: %s → %s", approval_id[:8],
                         "approved" if approved else "rejected")
+
+    # -------------------------------------------------------------------
+    # Repetition detection & task state machine
+    # -------------------------------------------------------------------
+
+    def _detect_repetition(self, candidate: str) -> bool:
+        """Return True if candidate is >80% similar to any of the last 3 Cam messages."""
+        for prev in self._recent_cam_texts:
+            if _text_similarity(candidate, prev) >= _REPETITION_THRESHOLD:
+                return True
+        return False
+
+    def _advance_task_state(self, intent: str, tool_rounds: int) -> None:
+        """Move the task state forward based on intent and tool activity.
+
+        Only moves forward, never backward — reset happens via _reset_task_if_new().
+        """
+        current_idx = _TASK_STATE_ORDER.index(self._task_state)
+        if intent in ("command",) and self._task_state == "idle":
+            target = "started"
+        elif tool_rounds > 0 and current_idx < 2:
+            target = "in_progress"
+        elif tool_rounds == 0 and current_idx >= 2:
+            target = "completing"
+        else:
+            return  # no valid transition
+        target_idx = _TASK_STATE_ORDER.index(target)
+        if target_idx > current_idx:
+            self._task_state = target
+
+    def _reset_task_if_new(self, intent: str) -> None:
+        """Reset task state when George starts a new topic."""
+        if intent in ("conversation", "question", "status_query") and self._task_state in ("completing", "done"):
+            self._task_state = "idle"
+            self._task_summary.clear()
+        elif intent == "command" and self._task_state == "done":
+            self._task_state = "idle"
+            self._task_summary.clear()
 
     # -------------------------------------------------------------------
     # Main chat method
@@ -429,6 +485,46 @@ class ConversationManager:
 
         if tool_rounds > 0:
             logger.info("Tool loop completed: %d rounds", tool_rounds)
+
+        # 5c. Task state machine — advance and check for repetition
+        self._reset_task_if_new(intent)
+        self._advance_task_state(intent, tool_rounds)
+
+        if self._detect_repetition(response.text):
+            logger.warning("Repetition detected — forcing progression")
+
+            summary = "; ".join(self._task_summary) if self._task_summary else "No steps recorded yet"
+            recovery_prompt = (
+                f"IMPORTANT: Your previous response was too similar to what you already said. "
+                f"Do NOT repeat yourself. "
+                f"Task state: {self._task_state}. "
+                f"Progress so far: {summary}. "
+                f"Summarize what has been accomplished and describe the NEXT concrete step."
+            )
+            messages.append({"role": "user", "content": recovery_prompt})
+
+            response = await self._router.route(
+                prompt=message,
+                task_complexity="boss",
+                system_prompt=system_prompt,
+                messages=messages,
+            )
+            total_input_tokens += response.prompt_tokens
+            total_output_tokens += response.response_tokens
+            total_cost += response.cost_usd
+
+        # Track for future repetition detection
+        self._recent_cam_texts.append(response.text)
+        if len(self._recent_cam_texts) > _RECENT_CAM_CHECK:
+            self._recent_cam_texts.pop(0)
+
+        # Record step in task summary (first 100 chars)
+        if self._task_state not in ("idle", "done"):
+            self._task_summary.append(response.text[:100])
+
+        # Transition to done if no tools and we were completing
+        if tool_rounds == 0 and self._task_state == "completing":
+            self._task_state = "done"
 
         # 6. Record Cam's response in episodic memory
         self._episodic.record(
