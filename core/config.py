@@ -234,6 +234,8 @@ _DEFAULTS: dict[str, Any] = {
     "conversation": {
         "check_in_frequency": "minimal",
         "suppress_tool_events": True,
+        "tool_batch_size": 3,
+        "max_batch_continuations": 10,
     },
 }
 

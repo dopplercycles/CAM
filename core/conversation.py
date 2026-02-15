@@ -30,7 +30,7 @@ import logging
 import re
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
@@ -53,6 +53,21 @@ _TASK_STATE_ORDER = ["idle", "started", "in_progress", "completing", "done"]
 _STEP_TIMEOUT_SECONDS = 90    # stall awareness after 90s without progress
 _STEP_CHECK_INTERVAL = 10     # check every 10 seconds
 
+# Batch tool execution — prevents output truncation on large operations
+_BATCH_SIZE = 3               # max tool calls per response before deferring
+_MAX_BATCH_CONTINUATIONS = 10 # max deferred batch rounds before stopping
+
+
+@dataclass
+class BatchState:
+    """Tracks deferred tool execution across batch rounds."""
+    active: bool = False
+    total_planned: int = 0
+    completed: int = 0
+    completed_tools: list[dict] = field(default_factory=list)
+    deferred_calls: list[dict] = field(default_factory=list)
+    batch_round: int = 0
+
 # Deep work mode prompts — injected into system prompt based on check_in_frequency
 _DEEP_WORK_MINIMAL = (
     "## Deep Work Protocol\n"
@@ -70,6 +85,15 @@ _DEEP_WORK_NORMAL = (
     "Work with minimal interruption. You may report at major milestones, but do not "
     "narrate every step or ask for permission to continue routine work. Deliver the "
     "complete result when finished."
+)
+
+_BATCH_PROTOCOL = (
+    "## Tool Batching Protocol\n"
+    "When you need to make multiple tool calls, use AT MOST 3 tool_use blocks per "
+    "response. If you have more operations planned, execute the first 3, then "
+    "continue with the next batch. Do NOT try to emit all tool calls in a single "
+    "response — this causes output truncation and nothing gets executed.\n"
+    "Example: if you need to write 10 files, write the first 3, then continue."
 )
 
 
@@ -299,6 +323,10 @@ class ConversationManager:
         self._stall_context: str = ""  # set by timeout checker, read by system prompt
         self._on_nudge_event = None  # async callback set by server.py
 
+        # Batch tool execution state
+        self._batch_state = BatchState()
+        self._on_batch_progress = None  # async callback set by server.py
+
         logger.info("ConversationManager initialized (reference_doc=%s)",
                      reference_doc_path or "none")
 
@@ -476,6 +504,11 @@ class ConversationManager:
         timestamp = datetime.now(timezone.utc).isoformat()
         intent = _classify_intent(message)
 
+        # Reset batch state when George sends a new message
+        if participant == "george" and self._batch_state.active:
+            logger.info("New George message — resetting batch state")
+            self._batch_state = BatchState()
+
         logger.info(
             "Chat from %s (intent=%s): %.80s%s",
             participant, intent, message,
@@ -528,17 +561,74 @@ class ConversationManager:
             tools=TOOL_DEFINITIONS,
         )
 
-        # 5b. Tool-use loop — execute tools until Claude finishes or limit hit
+        # 5b. Handle max_tokens truncation — Claude tried to emit too many
+        # tool calls and got cut off before completing any tool_use blocks.
+        if (response.stop_reason == "max_tokens"
+                and not response.tool_calls
+                and response.text):
+            logger.warning(
+                "max_tokens truncation detected — retrying with batch instruction"
+            )
+            retry_msg = (
+                "Your previous response was truncated (too many tool calls). "
+                "Please do only the FIRST 3 operations now. You can continue "
+                "with more in subsequent responses."
+            )
+            # Append Claude's truncated text + our retry instruction
+            messages.append({"role": "assistant", "content": response.text})
+            messages.append({"role": "user", "content": retry_msg})
+            response = await self._router.route(
+                prompt=message,
+                task_complexity="boss",
+                system_prompt=system_prompt,
+                messages=messages,
+                tools=TOOL_DEFINITIONS,
+            )
+
+        # 5c. Tool-use loop — execute tools until Claude finishes or limit hit
         total_input_tokens = response.prompt_tokens
         total_output_tokens = response.response_tokens
         total_cost = response.cost_usd
         tool_rounds = 0
+        total_tool_calls_executed = 0
+
+        # Read batch config (runtime-configurable via settings.toml)
+        try:
+            from core.config import get_config
+            conv_cfg = get_config().conversation
+            batch_size = getattr(conv_cfg, "tool_batch_size", _BATCH_SIZE)
+            max_continuations = getattr(conv_cfg, "max_batch_continuations", _MAX_BATCH_CONTINUATIONS)
+        except Exception:
+            batch_size = _BATCH_SIZE
+            max_continuations = _MAX_BATCH_CONTINUATIONS
 
         while response.stop_reason == "tool_use" and tool_rounds < _MAX_TOOL_ROUNDS:
             tool_rounds += 1
             tool_results = []
 
-            for call in (response.tool_calls or []):
+            all_calls = response.tool_calls or []
+
+            # Batch enforcement — if Claude emitted more than batch_size
+            # tool calls, execute the first batch and defer the rest
+            if len(all_calls) > batch_size:
+                calls_this_round = all_calls[:batch_size]
+                deferred = all_calls[batch_size:]
+                self._batch_state = BatchState(
+                    active=True,
+                    total_planned=len(all_calls) + self._batch_state.completed,
+                    completed=self._batch_state.completed,
+                    deferred_calls=deferred,
+                )
+                logger.info(
+                    "Batch enforcement: executing %d of %d tool calls, deferring %d",
+                    len(calls_this_round), len(all_calls), len(deferred),
+                )
+            else:
+                calls_this_round = all_calls
+
+            executed_tool_ids = set()
+
+            for call in calls_this_round:
                 tool_name = call["name"]
                 tool_input = call["input"]
                 tool_id = call["id"]
@@ -577,16 +667,27 @@ class ConversationManager:
                     "tool_use_id": tool_id,
                     "content": json.dumps(result) if isinstance(result, dict) else str(result),
                 })
+                executed_tool_ids.add(tool_id)
+                total_tool_calls_executed += 1
+
+                # Update batch state tracking
+                if self._batch_state.active:
+                    self._batch_state.completed += 1
+                    self._batch_state.completed_tools.append({
+                        "name": tool_name, "id": tool_id,
+                    })
 
             # Build messages for next Claude call — assistant message with
-            # tool_use blocks, then user message with tool_results
+            # tool_use blocks, then user message with tool_results.
+            # IMPORTANT: only include tool_use blocks we actually executed,
+            # otherwise Claude API expects tool_results for deferred ones.
             assistant_content = []
             if response.raw_content:
                 for block in response.raw_content:
                     if hasattr(block, "type"):
                         if block.type == "text" and block.text:
                             assistant_content.append({"type": "text", "text": block.text})
-                        elif block.type == "tool_use":
+                        elif block.type == "tool_use" and block.id in executed_tool_ids:
                             assistant_content.append({
                                 "type": "tool_use",
                                 "id": block.id,
@@ -610,9 +711,123 @@ class ConversationManager:
             total_cost += response.cost_usd
 
         if tool_rounds > 0:
-            logger.info("Tool loop completed: %d rounds", tool_rounds)
+            logger.info("Tool loop completed: %d rounds, %d tool calls executed",
+                        tool_rounds, total_tool_calls_executed)
 
-        # 5c. Task state machine — advance and check for repetition
+        # 5d. Deferred batch execution — process remaining tool calls
+        # that Claude emitted but we deferred for batching. These already
+        # have full tool input, so we execute them directly without
+        # re-prompting Claude (cheaper, more deterministic).
+        if self._batch_state.active and self._batch_state.deferred_calls:
+            logger.info(
+                "Starting deferred batch execution: %d calls remaining",
+                len(self._batch_state.deferred_calls),
+            )
+            while (self._batch_state.deferred_calls
+                   and self._batch_state.batch_round < max_continuations):
+                self._batch_state.batch_round += 1
+                next_batch = self._batch_state.deferred_calls[:batch_size]
+                self._batch_state.deferred_calls = self._batch_state.deferred_calls[batch_size:]
+
+                batch_assistant_content = []
+                batch_tool_results = []
+
+                for call in next_batch:
+                    tool_name = call["name"]
+                    tool_input = call["input"]
+                    tool_id = call["id"]
+                    tier = classify_tool_tier(tool_name, tool_input)
+
+                    logger.info(
+                        "Deferred tool call (batch %d): %s (tier=%d, id=%s)",
+                        self._batch_state.batch_round, tool_name, tier, tool_id[:8],
+                    )
+
+                    if self._on_tool_event:
+                        await self._on_tool_event({
+                            "tool_id": tool_id,
+                            "tool_name": tool_name,
+                            "tool_input": tool_input,
+                            "tier": tier,
+                            "status": "running" if tier == 1 else "awaiting_approval",
+                        })
+
+                    if tier == 3:
+                        result = {"error": f"Blocked: {tool_name} on this input is prohibited by the constitution."}
+                        if self._on_tool_event:
+                            await self._on_tool_event({"tool_id": tool_id, "status": "blocked"})
+                    else:
+                        result = await execute_tool(tool_name, tool_input)
+                        if self._on_tool_event:
+                            await self._on_tool_event({"tool_id": tool_id, "status": "completed"})
+
+                    batch_assistant_content.append({
+                        "type": "tool_use",
+                        "id": tool_id,
+                        "name": tool_name,
+                        "input": tool_input,
+                    })
+                    batch_tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tool_id,
+                        "content": json.dumps(result) if isinstance(result, dict) else str(result),
+                    })
+                    total_tool_calls_executed += 1
+                    self._batch_state.completed += 1
+                    self._batch_state.completed_tools.append({
+                        "name": tool_name, "id": tool_id,
+                    })
+
+                # Append to message history so the final Claude call has context
+                messages.append({"role": "assistant", "content": batch_assistant_content})
+                messages.append({"role": "user", "content": batch_tool_results})
+
+                # Fire batch progress callback
+                if self._on_batch_progress:
+                    try:
+                        await self._on_batch_progress({
+                            "completed": self._batch_state.completed,
+                            "total": self._batch_state.total_planned,
+                            "batch_round": self._batch_state.batch_round,
+                        })
+                    except Exception as e:
+                        logger.error("Batch progress callback error: %s", e)
+
+                logger.info(
+                    "Deferred batch %d complete: %d/%d operations done",
+                    self._batch_state.batch_round,
+                    self._batch_state.completed,
+                    self._batch_state.total_planned,
+                )
+
+            # All deferred calls done — one final Claude call for summary
+            tool_names_done = [t["name"] for t in self._batch_state.completed_tools]
+            seen = set()
+            unique_names = [n for n in tool_names_done if n not in seen and not seen.add(n)]
+            summary_prompt = (
+                f"All {self._batch_state.completed} operations complete. "
+                f"Tools used: {', '.join(unique_names)}. "
+                f"Summarize what was accomplished."
+            )
+            messages.append({"role": "user", "content": summary_prompt})
+            response = await self._router.route(
+                prompt=message,
+                task_complexity="boss",
+                system_prompt=system_prompt,
+                messages=messages,
+            )
+            total_input_tokens += response.prompt_tokens
+            total_output_tokens += response.response_tokens
+            total_cost += response.cost_usd
+            tool_rounds += self._batch_state.batch_round
+
+            logger.info(
+                "Deferred batch execution complete: %d total operations, %d batch rounds",
+                self._batch_state.completed, self._batch_state.batch_round,
+            )
+            self._batch_state = BatchState()  # reset
+
+        # 5e. Task state machine — advance and check for repetition
         self._reset_task_if_new(intent)
         self._advance_task_state(intent, tool_rounds)
 
@@ -681,13 +896,13 @@ class ConversationManager:
             cost=total_cost,
             intent=intent,
             timestamp=timestamp,
-            tool_calls_made=tool_rounds,
+            tool_calls_made=total_tool_calls_executed,
         )
 
         logger.info(
-            "Chat response: model=%s, tokens=%d+%d, cost=$%.6f, tools=%d",
+            "Chat response: model=%s, tokens=%d+%d, cost=$%.6f, tools=%d (rounds=%d)",
             result.model_used, result.input_tokens, result.output_tokens,
-            result.cost, result.tool_calls_made,
+            result.cost, result.tool_calls_made, tool_rounds,
         )
 
         return result
@@ -809,6 +1024,18 @@ class ConversationManager:
         elif freq == "normal":
             parts.append(_DEEP_WORK_NORMAL)
         # verbose: no extra instructions — legacy behavior
+
+        # Batch protocol — always injected to prevent output truncation
+        parts.append(_BATCH_PROTOCOL)
+
+        # Batch continuation context — when deferred calls are being executed
+        if self._batch_state.active:
+            parts.append(
+                f"## Batch Continuation\n"
+                f"Batch operation in progress: {self._batch_state.completed} of "
+                f"{self._batch_state.total_planned} operations completed so far. "
+                f"Remaining operations are being executed automatically."
+            )
 
         # Inject stall awareness if timeout checker flagged it
         if self._stall_context:

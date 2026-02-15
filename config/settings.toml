@@ -207,6 +207,9 @@ token_estimate_divisor = 4                # chars-per-token heuristic (len // th
 check_in_frequency = "minimal"
 # Suppress individual tool event broadcasts during active tasks
 suppress_tool_events = true
+# Batch tool execution — prevents output truncation on large operations
+tool_batch_size = 3                   # max tool calls per response before deferring
+max_batch_continuations = 10          # max deferred batch rounds
 
 [webhooks]
 enabled = true

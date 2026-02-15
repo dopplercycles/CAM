@@ -1410,6 +1410,18 @@ async def _on_nudge_event(response):
 
 conversation_manager._on_nudge_event = _on_nudge_event
 
+# Batch progress callback — broadcasts deferred batch execution progress
+async def _on_batch_progress(progress):
+    """Broadcast batch tool execution progress to dashboards."""
+    await broadcast_to_dashboards({
+        "type": "cam_batch_progress",
+        "completed": progress.get("completed", 0),
+        "total": progress.get("total", 0),
+        "batch_round": progress.get("batch_round", 0),
+    })
+
+conversation_manager._on_batch_progress = _on_batch_progress
+
 # Content agent — local in-process agent for content tasks
 content_agent = ContentAgent(
     router=orchestrator.router,

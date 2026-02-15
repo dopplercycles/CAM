@@ -14295,6 +14295,8 @@
                     handleCamToolEvent(data);
                 } else if (data.type === "cam_tool_summary") {
                     handleCamToolSummary(data);
+                } else if (data.type === "cam_batch_progress") {
+                    handleCamBatchProgress(data);
                 } else if (data.type === "cam_voice_result") {
                     handleCamVoiceResult(data);
                 } else if (data.type === "cam_tts_result") {
@@ -23190,6 +23192,9 @@
 
         function handleCamChatResponse(data) {
             setCamThinking(false);
+            // Remove batch progress indicator if present
+            var batchEl = document.getElementById('cam-batch-progress');
+            if (batchEl) batchEl.remove();
             addCamBubble('cam', data.text, {
                 timestamp: data.timestamp,
                 model: data.model,
@@ -23321,6 +23326,28 @@
             div.style.cssText = 'color:#888; font-size:0.85em; padding:2px 8px; margin:2px 0;';
             div.textContent = count + ' tool call' + (count !== 1 ? 's' : '') + (names ? ' (' + names + ')' : '');
             container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function handleCamBatchProgress(data) {
+            var container = document.getElementById('camChatMessages');
+            if (!container) return;
+            var elId = 'cam-batch-progress';
+            var existing = document.getElementById(elId);
+            var completed = data.completed || 0;
+            var total = data.total || 0;
+            var round = data.batch_round || 0;
+            var text = 'Batch ' + round + ': ' + completed + ' of ' + total + ' operations complete...';
+            if (existing) {
+                existing.textContent = text;
+            } else {
+                var div = document.createElement('div');
+                div.id = elId;
+                div.className = 'cam-tool-summary';
+                div.style.cssText = 'color:#888; font-size:0.85em; padding:2px 8px; margin:2px 0;';
+                div.textContent = text;
+                container.appendChild(div);
+            }
             container.scrollTop = container.scrollHeight;
         }
 
