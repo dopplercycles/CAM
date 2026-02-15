@@ -8,8 +8,7 @@ Tool Tiers (from CAM_CONSTITUTION.md):
     Tier 1 — Autonomous: read_file (safe paths), list_directory, system_status,
              web_search, web_fetch
     Tier 2 — Approval Required: run_command, write_file (code/config paths)
-    Tier 1 — Autonomous writes: data/notes/, data/research/, data/content/,
-             data/reports/, /tmp/
+    Tier 1 — Autonomous writes: data/ (all subdirectories), /tmp/
     Tier 3 — Blocked: read_file on sensitive paths, destructive commands
 
 Usage:
@@ -52,10 +51,7 @@ BLOCKED_PATH_PREFIXES = (
 
 # Autonomous write directories — Tier 1, Cam writes freely (working data)
 AUTONOMOUS_WRITE_DIRS = (
-    os.path.expanduser("~/CAM/data/notes/"),
-    os.path.expanduser("~/CAM/data/research/"),
-    os.path.expanduser("~/CAM/data/content/"),
-    os.path.expanduser("~/CAM/data/reports/"),
+    os.path.expanduser("~/CAM/data/"),
     "/tmp/",
 )
 
@@ -132,9 +128,8 @@ TOOL_DEFINITIONS = [
     {
         "name": "write_file",
         "description": (
-            "Write content to a file. Autonomous (Tier 1) for working data "
-            "directories: data/notes/, data/research/, data/content/, "
-            "data/reports/, and /tmp/. Requires approval (Tier 2) for code "
+            "Write content to a file. Autonomous (Tier 1) for all data/ "
+            "subdirectories and /tmp/. Requires approval (Tier 2) for code "
             "and config files."
         ),
         "input_schema": {
