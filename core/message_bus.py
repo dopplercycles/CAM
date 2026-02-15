@@ -74,6 +74,7 @@ CHANNELS = [
     "research_results",    # Research agent: findings, summaries, scout alerts
     "alerts",              # High-priority notifications across agents
     "system",              # System-level: startup, shutdown, config changes
+    "robot_events",        # ROS 2 bridge: robot status, navigation, e-stop events
 ]
 
 

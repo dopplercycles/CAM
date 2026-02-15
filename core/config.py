@@ -237,6 +237,16 @@ _DEFAULTS: dict[str, Any] = {
         "tool_batch_size": 3,
         "max_batch_continuations": 10,
     },
+    "ros2": {
+        "enabled": False,
+        "node_name": "cam_bridge",
+        "namespace": "/cam",
+        "discovery_interval": 10,
+        "heartbeat_timeout": 15,
+        "waypoints": {},
+        "routes": {},
+        "robots": [],
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

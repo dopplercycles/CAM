@@ -90,6 +90,15 @@ from tests.self_test import SelfTest
 from tests.integration_test import LaunchReadiness
 from tests.v1_validation import V1Validation
 
+# ROS 2 bridge — conditional import (graceful degradation)
+try:
+    from tools.ros2 import ROS2_AVAILABLE
+    if ROS2_AVAILABLE:
+        from tools.ros2 import CamRos2Bridge, RobotRegistry
+        from tools.ros2.tools import set_bridge as ros2_set_bridge, ROS2_TOOL_DEFINITIONS
+except ImportError:
+    ROS2_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Logging — CLAUDE.md says "comprehensive logging, if it happened there's a record"
@@ -136,6 +145,28 @@ message_bus = MessageBus(
     max_messages=config.message_bus.max_messages,
     event_logger=event_logger,
 )
+
+# ROS 2 bridge — robot fleet integration (Phase 6)
+robot_registry = None
+ros2_bridge = None
+if ROS2_AVAILABLE and getattr(getattr(config, 'ros2', None), 'enabled', False):
+    from tools.ros2 import RobotRegistry as _RobotRegistry, CamRos2Bridge as _CamRos2Bridge
+    robot_registry = _RobotRegistry(
+        heartbeat_timeout=getattr(getattr(config, 'ros2', None), 'heartbeat_timeout', 15),
+    )
+    ros2_bridge = _CamRos2Bridge(config, message_bus, event_logger, robot_registry)
+    ros2_set_bridge(ros2_bridge)
+    # Extend tool definitions so Claude can see robot tools
+    from tools.tool_registry import TOOL_DEFINITIONS
+    TOOL_DEFINITIONS.extend(ROS2_TOOL_DEFINITIONS)
+    logger.info("ROS 2 bridge initialized (%d robots configured, %d robot tools registered)",
+                len(getattr(getattr(config, 'ros2', None), 'robots', [])),
+                len(ROS2_TOOL_DEFINITIONS))
+else:
+    if not ROS2_AVAILABLE:
+        logger.info("ROS 2 bridge not available (rclpy not installed)")
+    else:
+        logger.info("ROS 2 bridge disabled in config (ros2.enabled = false)")
 
 # Analytics — SQLite-backed task history and model cost tracking
 # Note: db_path is read at construction — needs restart to change.
@@ -265,6 +296,20 @@ async def broadcast_agent_status():
     """
     data = registry.to_broadcast_list()
     await broadcast_to_dashboards({"type": "agent_status", "agents": data})
+
+
+async def broadcast_robot_status():
+    """Push current robot fleet status to all connected dashboard browsers.
+
+    Only active when the ROS 2 bridge is running.
+    """
+    if robot_registry is not None:
+        await broadcast_to_dashboards({
+            "type": "robot_status",
+            "robots": robot_registry.to_broadcast_list(),
+            "fleet_summary": robot_registry.get_status(),
+            "bridge": ros2_bridge.get_status() if ros2_bridge else None,
+        })
 
 
 async def broadcast_model_assignments():
@@ -1851,6 +1896,12 @@ async def lifespan(app: FastAPI):
     # Start step timeout checker for conversation manager
     conversation_manager.start_step_timeout()
 
+    # Start ROS 2 bridge if available
+    if ros2_bridge is not None:
+        await ros2_bridge.start()
+        ros2_bridge.set_broadcast_callback(broadcast_robot_status)
+        logger.info("ROS 2 bridge started")
+
     # Boot complete — log and notify
     event_logger.info("system", f"CAM Online (boot: {boot_duration}s)")
     logger.info("CAM Online — boot completed in %.2fs", boot_duration)
@@ -1863,6 +1914,10 @@ async def lifespan(app: FastAPI):
 
     # 0. Shut down plugins first
     plugin_manager.on_shutdown()
+
+    # 0.5. Stop ROS 2 bridge
+    if ros2_bridge is not None:
+        await ros2_bridge.stop()
 
     # 1. Notify connected agents
     shutdown_msg = {"type": "shutdown", "reason": "cam_shutdown"}
@@ -2006,6 +2061,8 @@ app.state.performance_monitor = performance_monitor
 app.state.access_control = access_control
 app.state.kill_switch = {"active": False}       # mutable container
 app.state.activate_kill_switch = activate_kill_switch
+app.state.robot_registry = robot_registry
+app.state.ros2_bridge = ros2_bridge
 
 # Wire up export manager with all data sources and register HTTP routes
 export_manager.set_managers(
@@ -3155,6 +3212,15 @@ async def dashboard_websocket(websocket: WebSocket):
     # Also send current kill switch state
     await websocket.send_json({"type": "kill_switch", "active": kill_switch_active})
 
+    # Send robot fleet status if ROS 2 bridge is active
+    if robot_registry is not None:
+        await websocket.send_json({
+            "type": "robot_status",
+            "robots": robot_registry.to_broadcast_list(),
+            "fleet_summary": robot_registry.get_status(),
+            "bridge": ros2_bridge.get_status() if ros2_bridge else None,
+        })
+
     # Send current task queue state
     await websocket.send_json({
         "type": "task_status",
@@ -3550,6 +3616,24 @@ async def dashboard_websocket(websocket: WebSocket):
 
             if msg.get("type") == "kill_switch":
                 await activate_kill_switch()
+                # Also e-stop all robots if ROS 2 bridge is active
+                if ros2_bridge is not None:
+                    await ros2_bridge.emergency_stop()
+                    await broadcast_robot_status()
+
+            elif msg.get("type") == "robot_e_stop":
+                # Emergency stop one or all robots
+                if ros2_bridge is not None:
+                    robot_id = msg.get("robot_id")  # None = all
+                    await ros2_bridge.emergency_stop(robot_id)
+                    await broadcast_robot_status()
+
+            elif msg.get("type") == "robot_clear_e_stop":
+                # Clear emergency stop
+                if ros2_bridge is not None:
+                    robot_id = msg.get("robot_id")  # None = all
+                    await ros2_bridge.clear_emergency_stop(robot_id)
+                    await broadcast_robot_status()
 
             elif msg.get("type") == "command":
                 # Route a command to a specific agent

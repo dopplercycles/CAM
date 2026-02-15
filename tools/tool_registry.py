@@ -29,6 +29,19 @@ from pathlib import Path
 
 logger = logging.getLogger("cam.tool_registry")
 
+# Conditionally import ROS 2 tools (graceful degradation)
+try:
+    from tools.ros2 import ROS2_AVAILABLE
+    if ROS2_AVAILABLE:
+        from tools.ros2.tools import ROS2_TOOL_DEFINITIONS, ROS2_EXECUTORS, classify_ros2_tier
+    else:
+        ROS2_TOOL_DEFINITIONS = []
+        ROS2_EXECUTORS = {}
+except ImportError:
+    ROS2_AVAILABLE = False
+    ROS2_TOOL_DEFINITIONS = []
+    ROS2_EXECUTORS = {}
+
 
 # ---------------------------------------------------------------------------
 # Security boundaries
@@ -315,6 +328,10 @@ def classify_tool_tier(tool_name: str, tool_input: dict) -> int:
     if tool_name == "web_fetch":
         return 1
 
+    # ROS 2 robot tools — delegate to ros2 tier classifier
+    if tool_name.startswith("robot_") and ROS2_AVAILABLE:
+        return classify_ros2_tier(tool_name, tool_input)
+
     # Unknown tool → block
     return 3
 
@@ -341,6 +358,7 @@ async def execute_tool(name: str, tool_input: dict) -> dict:
         "system_status": _exec_system_status,
         "web_search": _exec_web_search,
         "web_fetch": _exec_web_fetch,
+        **ROS2_EXECUTORS,
     }
 
     executor = executors.get(name)

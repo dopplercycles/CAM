@@ -13310,6 +13310,19 @@
             </div>
         </section>
 
+        <section data-panel-id="robots" style="display:none;">
+            <h2>Robot Fleet
+                <button class="btn-danger" id="robot-e-stop-all-btn" onclick="robotEStopAll()" style="float:right;padding:6px 16px;font-weight:bold;font-size:1rem;border-radius:6px;cursor:pointer;background:var(--danger);color:#fff;border:2px solid #b91c1c;" title="EMERGENCY STOP ALL ROBOTS">E-STOP ALL</button>
+            </h2>
+            <div id="robot-fleet-summary" style="margin-bottom:12px;color:var(--text-secondary);font-size:0.9rem;"></div>
+            <div id="robot-fleet-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+                <!-- Robot cards rendered by JS -->
+            </div>
+            <div id="robot-fleet-empty" style="color:var(--text-tertiary);text-align:center;padding:32px;">
+                No robots configured. Add robots in <code>[ros2.robots]</code> in settings.toml.
+            </div>
+        </section>
+
         <section class="agent-board-section" data-panel-id="agents">
             <h2>Agent Status Board</h2>
             <div id="agent-board">
@@ -13634,6 +13647,8 @@
                 if (data.type === "agent_status") {
                     agents = data.agents;
                     renderAgents();
+                } else if (data.type === "robot_status") {
+                    renderRobotFleet(data);
                 } else if (data.type === "kill_switch") {
                     setKillSwitchState(data.active);
                 } else if (data.type === "command_response") {
@@ -14470,6 +14485,108 @@
         // ---------------------------------------------------------------
         // Render agent cards
         // ---------------------------------------------------------------
+        // ---------------------------------------------------------------
+        // Robot Fleet Panel
+        // ---------------------------------------------------------------
+
+        function renderRobotFleet(data) {
+            const panel = document.querySelector('[data-panel-id="robots"]');
+            if (!panel) return;
+
+            const robots = data.robots || [];
+            const summary = data.fleet_summary || {};
+            const grid = document.getElementById('robot-fleet-grid');
+            const emptyMsg = document.getElementById('robot-fleet-empty');
+            const summaryEl = document.getElementById('robot-fleet-summary');
+
+            // Show panel when we receive robot data
+            if (robots.length > 0) {
+                panel.style.display = '';
+                emptyMsg.style.display = 'none';
+                grid.style.display = '';
+            } else {
+                emptyMsg.style.display = '';
+                grid.style.display = 'none';
+            }
+
+            // Summary line
+            if (summaryEl) {
+                const parts = [];
+                if (summary.online) parts.push(`${summary.online} online`);
+                if (summary.busy) parts.push(`${summary.busy} busy`);
+                if (summary.e_stop) parts.push(`${summary.e_stop} e-stopped`);
+                if (summary.offline) parts.push(`${summary.offline} offline`);
+                summaryEl.textContent = parts.length ? parts.join(' · ') + ` (${summary.total} total)` : '';
+            }
+
+            // Render robot cards
+            grid.innerHTML = robots.map(r => {
+                const statusColor = {
+                    'online': 'var(--success)',
+                    'busy': 'var(--warning)',
+                    'e_stop': 'var(--danger)',
+                    'offline': 'var(--text-tertiary)',
+                }[r.status] || 'var(--text-tertiary)';
+
+                const batteryBar = r.battery_pct !== null ? `
+                    <div style="margin-top:6px;">
+                        <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-secondary);">
+                            <span>Battery</span><span>${Math.round(r.battery_pct)}%</span>
+                        </div>
+                        <div style="background:var(--bg-tertiary);border-radius:4px;height:6px;margin-top:2px;">
+                            <div style="background:${r.battery_pct > 20 ? 'var(--success)' : 'var(--danger)'};width:${r.battery_pct}%;height:100%;border-radius:4px;transition:width 0.3s;"></div>
+                        </div>
+                    </div>` : '';
+
+                const positionStr = r.position ?
+                    `(${r.position.x.toFixed(1)}, ${r.position.y.toFixed(1)})` : 'Unknown';
+
+                const taskStr = r.current_task || 'Idle';
+
+                const eStopBtn = r.e_stop_active ?
+                    `<button onclick="robotClearEStop('${r.robot_id}')" style="padding:4px 10px;font-size:0.8rem;border-radius:4px;cursor:pointer;background:var(--warning);color:#000;border:none;">Clear E-Stop</button>` :
+                    `<button onclick="robotEStop('${r.robot_id}')" style="padding:4px 10px;font-size:0.8rem;border-radius:4px;cursor:pointer;background:var(--danger);color:#fff;border:none;">E-Stop</button>`;
+
+                return `
+                    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:14px;position:relative;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <span style="width:10px;height:10px;border-radius:50%;background:${statusColor};display:inline-block;flex-shrink:0;"></span>
+                            <strong style="color:var(--text-primary);font-size:1rem;">${r.name}</strong>
+                            <span style="color:var(--text-secondary);font-size:0.8rem;margin-left:auto;">${r.status}${r.e_stop_active ? ' (E-STOP)' : ''}</span>
+                        </div>
+                        <div style="font-size:0.85rem;color:var(--text-secondary);display:grid;grid-template-columns:auto 1fr;gap:2px 10px;">
+                            <span>Type:</span><span style="color:var(--text-value);">${r.robot_type}</span>
+                            <span>Position:</span><span style="color:var(--text-value);">${positionStr}</span>
+                            <span>Task:</span><span style="color:var(--text-value);">${taskStr}</span>
+                            <span>Capabilities:</span><span style="color:var(--text-value);">${(r.capabilities || []).join(', ') || 'none'}</span>
+                        </div>
+                        ${batteryBar}
+                        <div style="margin-top:10px;display:flex;gap:6px;">
+                            ${eStopBtn}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function robotEStop(robotId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'robot_e_stop', robot_id: robotId }));
+            }
+        }
+
+        function robotClearEStop(robotId) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'robot_clear_e_stop', robot_id: robotId }));
+            }
+        }
+
+        function robotEStopAll() {
+            if (!confirm('EMERGENCY STOP ALL ROBOTS?')) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'robot_e_stop' }));
+            }
+        }
+
         function renderAgents() {
             if (agents.length === 0) {
                 board.innerHTML = `

@@ -265,3 +265,53 @@ scan_interval = 30
 max_file_size = 10485760
 chunk_target_size = 1000
 chunk_overlap = 100
+
+# ---------------------------------------------------------------------------
+# ROS 2 Bridge — Phase 6 robot integration
+# ---------------------------------------------------------------------------
+
+[ros2]
+enabled = true
+node_name = "cam_bridge"
+namespace = "/cam"
+discovery_interval = 10                 # seconds between robot discovery scans
+heartbeat_timeout = 15                  # seconds without status before marking offline
+
+[ros2.waypoints]
+lab_entrance = { x = 0.0, y = 0.0 }
+charging_station = { x = 5.0, y = 2.0 }
+workbench = { x = 3.0, y = -1.0 }
+
+[ros2.routes]
+lab = ["lab_entrance", "workbench", "charging_station"]
+perimeter = ["lab_entrance", "front_door", "charging_station"]
+
+[[ros2.robots]]
+id = "p1"
+name = "P1"
+type = "mobile_base"
+capabilities = ["navigation", "lidar", "camera"]
+status_topic = "/p1/status"
+cmd_vel_topic = "/p1/cmd_vel"
+nav_action = "/p1/navigate_to_pose"
+e_stop_topic = "/p1/emergency_stop"
+
+[[ros2.robots]]
+id = "p2"
+name = "P2"
+type = "mobile_base"
+capabilities = ["navigation", "lidar", "camera"]
+status_topic = "/p2/status"
+cmd_vel_topic = "/p2/cmd_vel"
+nav_action = "/p2/navigate_to_pose"
+e_stop_topic = "/p2/emergency_stop"
+
+[[ros2.robots]]
+id = "p3"
+name = "P3"
+type = "mobile_base"
+capabilities = ["navigation", "lidar", "camera"]
+status_topic = "/p3/status"
+cmd_vel_topic = "/p3/cmd_vel"
+nav_action = "/p3/navigate_to_pose"
+e_stop_topic = "/p3/emergency_stop"
