@@ -7,7 +7,9 @@ Constitutional tier, and provides execution functions.
 Tool Tiers (from CAM_CONSTITUTION.md):
     Tier 1 — Autonomous: read_file (safe paths), list_directory, system_status,
              web_search, web_fetch
-    Tier 2 — Approval Required: run_command, write_file
+    Tier 2 — Approval Required: run_command, write_file (code/config paths)
+    Tier 1 — Autonomous writes: data/notes/, data/research/, data/content/,
+             data/reports/, /tmp/
     Tier 3 — Blocked: read_file on sensitive paths, destructive commands
 
 Usage:
@@ -48,7 +50,16 @@ BLOCKED_PATH_PREFIXES = (
     os.path.expanduser("~/.config/"),
 )
 
-# Allowed directories for write_file (Tier 2 still requires approval)
+# Autonomous write directories — Tier 1, Cam writes freely (working data)
+AUTONOMOUS_WRITE_DIRS = (
+    os.path.expanduser("~/CAM/data/notes/"),
+    os.path.expanduser("~/CAM/data/research/"),
+    os.path.expanduser("~/CAM/data/content/"),
+    os.path.expanduser("~/CAM/data/reports/"),
+    "/tmp/",
+)
+
+# Allowed directories for write_file (Tier 2 — requires approval for code/config)
 ALLOWED_WRITE_DIRS = (
     os.path.expanduser("~/CAM/"),
     "/tmp/cam-",
@@ -121,8 +132,10 @@ TOOL_DEFINITIONS = [
     {
         "name": "write_file",
         "description": (
-            "Write content to a file. Limited to the CAM project directory "
-            "and /tmp/cam-* paths. Always requires George's approval."
+            "Write content to a file. Autonomous (Tier 1) for working data "
+            "directories: data/notes/, data/research/, data/content/, "
+            "data/reports/, and /tmp/. Requires approval (Tier 2) for code "
+            "and config files."
         ),
         "input_schema": {
             "type": "object",
@@ -243,13 +256,20 @@ def _classify_read_tier(path: str) -> int:
 def _classify_write_tier(path: str) -> int:
     """Classify a write_file call's tier based on the target path.
 
-    Returns 2 for allowed paths, 3 for blocked paths.
+    Returns 1 for autonomous working dirs (data/notes, data/research, etc.),
+    2 for other allowed paths (code, config — needs approval), 3 for blocked.
     """
     try:
         resolved = str(Path(path).expanduser().resolve())
     except (ValueError, OSError):
         return 3
 
+    # Tier 1 — autonomous working directories (Cam writes freely)
+    for auto_dir in AUTONOMOUS_WRITE_DIRS:
+        if resolved.startswith(auto_dir):
+            return 1
+
+    # Tier 2 — allowed but needs approval (code, config, other project files)
     for allowed in ALLOWED_WRITE_DIRS:
         if resolved.startswith(allowed):
             return 2
