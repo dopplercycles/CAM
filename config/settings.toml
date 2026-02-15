@@ -130,8 +130,8 @@ task_timeout = 120.0                # seconds to wait for task result
 
 [tts]
 audio_dir = "data/audio"                    # where synthesized WAV files are stored
-voices_dir = "data/audio/voices"            # where Piper .onnx voice models live
-default_voice = "en_US-lessac-medium"       # Piper default voice model
+voices_dir = "models/voices"                # where Piper .onnx voice models live
+default_voice = "en_US-joe-medium"       # Piper default voice model (update after audition)
 sample_rate = 22050                         # audio sample rate in Hz
 
 [content_calendar]
