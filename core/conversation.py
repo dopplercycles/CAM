@@ -53,6 +53,25 @@ _TASK_STATE_ORDER = ["idle", "started", "in_progress", "completing", "done"]
 _STEP_TIMEOUT_SECONDS = 60    # auto-nudge after 60s without progress
 _STEP_CHECK_INTERVAL = 10     # check every 10 seconds
 
+# Deep work mode prompts — injected into system prompt based on check_in_frequency
+_DEEP_WORK_MINIMAL = (
+    "## Deep Work Protocol\n"
+    "Complete the ENTIRE task before responding. Do NOT give step-by-step progress "
+    "updates. Do NOT ask 'shall I continue?' or 'would you like me to proceed?' — "
+    "just finish the job. Only interrupt for:\n"
+    "- Genuine blockers where you cannot proceed without George's input\n"
+    "- Tier 2 approval requests (these are handled automatically)\n"
+    "- Errors that prevent completion\n"
+    "When finished, deliver ONE well-organized response with the complete result."
+)
+
+_DEEP_WORK_NORMAL = (
+    "## Work Mode\n"
+    "Work with minimal interruption. You may report at major milestones, but do not "
+    "narrate every step or ask for permission to continue routine work. Deliver the "
+    "complete result when finished."
+)
+
 
 def _text_similarity(a: str, b: str) -> float:
     """Return 0.0–1.0 similarity ratio between two strings (word-level)."""
@@ -782,6 +801,18 @@ class ConversationManager:
             "Use your personality — you're Cam, the AI operations manager. "
             "Don't be stiff or overly formal. George is a friend and colleague."
         )
+
+        # Inject deep work instructions based on check_in_frequency config
+        try:
+            from core.config import get_config
+            freq = getattr(get_config().conversation, "check_in_frequency", "minimal")
+        except Exception:
+            freq = "minimal"
+        if freq == "minimal":
+            parts.append(_DEEP_WORK_MINIMAL)
+        elif freq == "normal":
+            parts.append(_DEEP_WORK_NORMAL)
+        # verbose: no extra instructions — legacy behavior
 
         # Inject reference doc (auto-reloads on file change)
         if self._reference_doc_path:

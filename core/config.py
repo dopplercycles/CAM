@@ -231,6 +231,10 @@ _DEFAULTS: dict[str, Any] = {
             "kimi-k2.5": 128000,
         },
     },
+    "conversation": {
+        "check_in_frequency": "minimal",
+        "suppress_tool_events": True,
+    },
 }
 
 # Environment variable overrides: CAM_<SECTION>_<KEY> → value

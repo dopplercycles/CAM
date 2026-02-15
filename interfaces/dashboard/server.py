@@ -1324,31 +1324,78 @@ conversation_manager = ConversationManager(
 )
 
 # Tool event callback — broadcasts tool activity to dashboard chat
+# Batched tool events accumulate here when suppressed by deep work mode
+_batched_tool_events: list[dict] = []
+# Map tool_id → tool_name so status-update events (which lack tool_name) resolve
+_tool_id_names: dict[str, str] = {}
+
 async def _on_tool_event(event):
-    """Broadcast tool execution events to dashboard chat."""
-    await broadcast_to_dashboards({
-        "type": "cam_tool_event",
-        **event,
-    })
+    """Broadcast tool execution events to dashboard chat.
+
+    In minimal/normal mode with suppress_tool_events enabled, only
+    Tier 2 approval events are broadcast live. Other events are batched
+    and summarized after the response completes.
+    """
+    # Track tool_id → name from initial events that carry tool_name
+    tool_id = event.get("tool_id", "")
+    if event.get("tool_name") and tool_id:
+        _tool_id_names[tool_id] = event["tool_name"]
+
+    try:
+        conv_cfg = get_config().conversation
+        freq = getattr(conv_cfg, "check_in_frequency", "minimal")
+        suppress = getattr(conv_cfg, "suppress_tool_events", True)
+    except Exception:
+        freq = "minimal"
+        suppress = True
+
+    # Always broadcast Tier 2 approval events — George needs to see them
+    if event.get("status") == "awaiting_approval":
+        await broadcast_to_dashboards({"type": "cam_tool_event", **event})
+        return
+
+    # Also broadcast completion/rejection of approval events (status updates)
+    if event.get("tier") == 2 and event.get("status") in ("completed", "rejected", "blocked"):
+        await broadcast_to_dashboards({"type": "cam_tool_event", **event})
+        return
+
+    if freq == "verbose" or not suppress:
+        # Legacy behavior — broadcast everything
+        await broadcast_to_dashboards({"type": "cam_tool_event", **event})
+    else:
+        # Suppress and batch for later summary — only initial events (with tool_name)
+        if event.get("tool_name"):
+            _batched_tool_events.append(event)
 
 conversation_manager._on_tool_event = _on_tool_event
 
 # Nudge event callback — broadcasts auto-nudge results to dashboard chat
 async def _on_nudge_event(response):
-    """Broadcast auto-nudge events to dashboard chat."""
-    # System notice first
-    await broadcast_to_dashboards({
-        "type": "cam_chat_response",
-        "text": "[Auto-nudge: Cam was stuck for 60+ seconds — nudging to take action]",
-        "model": "",
-        "input_tokens": 0,
-        "output_tokens": 0,
-        "cost": 0.0,
-        "intent": "system_notice",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "tool_calls_made": 0,
-    })
-    # Then Cam's actual response
+    """Broadcast auto-nudge events to dashboard chat.
+
+    In minimal mode, the system notice ("[Auto-nudge...]") is suppressed
+    to reduce dashboard noise. The nudge still runs internally and Cam's
+    actual response still broadcasts.
+    """
+    try:
+        freq = getattr(get_config().conversation, "check_in_frequency", "minimal")
+    except Exception:
+        freq = "minimal"
+
+    # System notice — suppress in minimal mode
+    if freq != "minimal":
+        await broadcast_to_dashboards({
+            "type": "cam_chat_response",
+            "text": "[Auto-nudge: Cam was stuck for 60+ seconds — nudging to take action]",
+            "model": "",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "cost": 0.0,
+            "intent": "system_notice",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tool_calls_made": 0,
+        })
+    # Then Cam's actual response (always broadcast)
     await broadcast_to_dashboards({
         "type": "cam_chat_response",
         "text": response.text,
@@ -7227,6 +7274,8 @@ async def dashboard_websocket(websocket: WebSocket):
                 if cam_msg:
                     if cam_msg.lower().startswith("/unstick"):
                         async def _run_unstick():
+                            _batched_tool_events.clear()
+                            _tool_id_names.clear()
                             try:
                                 # Broadcast system notice first
                                 await broadcast_to_dashboards({
@@ -7253,6 +7302,22 @@ async def dashboard_websocket(websocket: WebSocket):
                                         "timestamp": resp.timestamp,
                                         "tool_calls_made": resp.tool_calls_made,
                                     })
+                                    # Send batched tool summary if events were suppressed
+                                    if _batched_tool_events:
+                                        tool_names = [e.get("tool_name", "unknown") for e in _batched_tool_events]
+                                        seen = set()
+                                        unique_names = []
+                                        for n in tool_names:
+                                            if n not in seen:
+                                                seen.add(n)
+                                                unique_names.append(n)
+                                        await broadcast_to_dashboards({
+                                            "type": "cam_tool_summary",
+                                            "tool_count": len(_batched_tool_events),
+                                            "tool_names": unique_names,
+                                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                                        })
+                                        _batched_tool_events.clear()
                                 else:
                                     await broadcast_to_dashboards({
                                         "type": "cam_chat_response",
@@ -7267,6 +7332,7 @@ async def dashboard_websocket(websocket: WebSocket):
                                     })
                             except Exception as e:
                                 logger.error("Unstick error: %s", e, exc_info=True)
+                                _batched_tool_events.clear()
                                 await broadcast_to_dashboards({
                                     "type": "cam_chat_error",
                                     "error": f"Unstick failed: {e}",
@@ -7274,6 +7340,8 @@ async def dashboard_websocket(websocket: WebSocket):
                         asyncio.create_task(_run_unstick())
                     else:
                         async def _run_cam_chat(message: str):
+                            _batched_tool_events.clear()
+                            _tool_id_names.clear()
                             try:
                                 chat_resp = await conversation_manager.chat(message)
                                 await broadcast_to_dashboards({
@@ -7287,12 +7355,30 @@ async def dashboard_websocket(websocket: WebSocket):
                                     "timestamp": chat_resp.timestamp,
                                     "tool_calls_made": chat_resp.tool_calls_made,
                                 })
+                                # Send batched tool summary if events were suppressed
+                                if _batched_tool_events:
+                                    tool_names = [e.get("tool_name", "unknown") for e in _batched_tool_events]
+                                    # Deduplicate while preserving order
+                                    seen = set()
+                                    unique_names = []
+                                    for n in tool_names:
+                                        if n not in seen:
+                                            seen.add(n)
+                                            unique_names.append(n)
+                                    await broadcast_to_dashboards({
+                                        "type": "cam_tool_summary",
+                                        "tool_count": len(_batched_tool_events),
+                                        "tool_names": unique_names,
+                                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                                    })
+                                    _batched_tool_events.clear()
                                 # After a model switch, broadcast new assignments + agent status
                                 if chat_resp.intent == "model_switch":
                                     await broadcast_model_assignments()
                                     await broadcast_agent_status()
                             except Exception as e:
                                 logger.error("Cam chat error: %s", e, exc_info=True)
+                                _batched_tool_events.clear()
                                 await broadcast_to_dashboards({
                                     "type": "cam_chat_error",
                                     "error": str(e),

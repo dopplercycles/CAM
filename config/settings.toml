@@ -199,6 +199,15 @@ token_estimate_divisor = 4                # chars-per-token heuristic (len // th
 "claude" = 200000
 "kimi-k2.5" = 128000
 
+[conversation]
+# How much Cam reports during multi-step tasks:
+#   "minimal"  — Only on completion or genuine blockers (default)
+#   "normal"   — Completion + major milestones
+#   "verbose"  — Every tool call and step (legacy behavior)
+check_in_frequency = "minimal"
+# Suppress individual tool event broadcasts during active tasks
+suppress_tool_events = true
+
 [webhooks]
 enabled = true
 db_path = "data/webhooks.db"

@@ -14293,6 +14293,8 @@
                     handleCamChatError(data);
                 } else if (data.type === "cam_tool_event") {
                     handleCamToolEvent(data);
+                } else if (data.type === "cam_tool_summary") {
+                    handleCamToolSummary(data);
                 } else if (data.type === "cam_voice_result") {
                     handleCamVoiceResult(data);
                 } else if (data.type === "cam_tts_result") {
@@ -23307,6 +23309,19 @@
                     statusSpan.textContent = approved ? '\u2699\ufe0f running' : '\u274c rejected';
                 }
             }
+        }
+
+        function handleCamToolSummary(data) {
+            var container = document.getElementById('camChatMessages');
+            if (!container) return;
+            var count = data.tool_count || 0;
+            var names = (data.tool_names || []).join(', ');
+            var div = document.createElement('div');
+            div.className = 'cam-tool-summary';
+            div.style.cssText = 'color:#888; font-size:0.85em; padding:2px 8px; margin:2px 0;';
+            div.textContent = count + ' tool call' + (count !== 1 ? 's' : '') + (names ? ' (' + names + ')' : '');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
         }
 
         function renderCamChatHistory(data) {
