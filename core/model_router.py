@@ -366,6 +366,15 @@ class ModelRouter:
         Returns:
             ModelResponse with the result and token/cost tracking.
         """
+        # Resolve bare "claude" alias to actual API model ID
+        if model == "claude":
+            try:
+                from core.config import get_config
+                model = get_config().models.claude.default_model
+            except Exception:
+                model = "claude-sonnet-4-5-20250929"
+            logger.info("Resolved bare 'claude' alias → %s", model)
+
         # Check SDK availability
         if not _HAS_ANTHROPIC:
             logger.warning("anthropic SDK not installed — returning error")
@@ -585,10 +594,22 @@ class ModelRouter:
         """Return deduplicated list of all known model IDs.
 
         Combines models from the routing table and any active agent overrides.
+        Resolves internal aliases (e.g. bare "claude") to real API model IDs
+        so the dashboard dropdown never sends an invalid model name.
         Used by the dashboard to populate model selector dropdowns.
         """
-        all_models = set(self._models.values())
-        all_models.update(self._agent_model_overrides.values())
+        # Resolve bare "claude" alias to actual model ID
+        try:
+            from core.config import get_config
+            claude_default = get_config().models.claude.default_model
+        except Exception:
+            claude_default = "claude-sonnet-4-5-20250929"
+
+        all_models = set()
+        for m in self._models.values():
+            all_models.add(claude_default if m == "claude" else m)
+        for m in self._agent_model_overrides.values():
+            all_models.add(claude_default if m == "claude" else m)
         return sorted(all_models)
 
     def get_model_assignments(self) -> dict:
