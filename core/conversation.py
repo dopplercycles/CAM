@@ -49,8 +49,8 @@ _RECENT_CAM_CHECK = 3         # compare against last 3 Cam messages
 # Task state machine progression order
 _TASK_STATE_ORDER = ["idle", "started", "in_progress", "completing", "done"]
 
-# Step timeout — auto-nudge Cam when stuck on the same step
-_STEP_TIMEOUT_SECONDS = 60    # auto-nudge after 60s without progress
+# Step timeout — internal stall detection
+_STEP_TIMEOUT_SECONDS = 90    # stall awareness after 90s without progress
 _STEP_CHECK_INTERVAL = 10     # check every 10 seconds
 
 # Deep work mode prompts — injected into system prompt based on check_in_frequency
@@ -291,12 +291,12 @@ class ConversationManager:
         self._task_state: str = "idle"
         self._task_summary: list[str] = []
 
-        # Step timeout — detects when Cam stalls on the same step
+        # Step timeout — internal stall detection
         self._last_action_time: float = 0.0
         self._last_step_count: int = 0
         self._last_task_state: str = "idle"
         self._step_timeout_task: asyncio.Task | None = None
-        self._nudging: bool = False
+        self._stall_context: str = ""  # set by timeout checker, read by system prompt
         self._on_nudge_event = None  # async callback set by server.py
 
         logger.info("ConversationManager initialized (reference_doc=%s)",
@@ -358,7 +358,7 @@ class ConversationManager:
             self._task_summary.clear()
 
     # -------------------------------------------------------------------
-    # Step timeout — auto-nudge when Cam stalls
+    # Step timeout — internal stall detection
     # -------------------------------------------------------------------
 
     def _update_action_timestamp(self) -> None:
@@ -366,9 +366,15 @@ class ConversationManager:
         self._last_action_time = time.monotonic()
         self._last_step_count = len(self._task_summary)
         self._last_task_state = self._task_state
+        self._stall_context = ""  # clear stall awareness on progress
 
     async def _check_step_timeout(self) -> None:
-        """Background loop: check every 10s if Cam is stuck on the same step."""
+        """Background loop: set stall context when Cam hasn't progressed.
+
+        Instead of injecting a message that looks like an external command,
+        this sets internal context that _build_system_prompt() includes
+        as part of Cam's own awareness on the next chat() call.
+        """
         logger.info("Step timeout checker started (timeout=%ds, interval=%ds)",
                      _STEP_TIMEOUT_SECONDS, _STEP_CHECK_INTERVAL)
         try:
@@ -386,54 +392,21 @@ class ConversationManager:
                 # Check if state AND summary are unchanged
                 state_same = self._task_state == self._last_task_state
                 summary_same = len(self._task_summary) == self._last_step_count
-                if state_same and summary_same:
-                    logger.warning(
-                        "Step timeout: %.0fs with no progress (state=%s, steps=%d)",
+                if state_same and summary_same and not self._stall_context:
+                    logger.info(
+                        "Stall detected: %.0fs with no progress (state=%s, steps=%d)",
                         elapsed, self._task_state, len(self._task_summary),
                     )
-                    await self._execute_nudge()
+                    summary = "; ".join(self._task_summary) if self._task_summary else "nothing yet"
+                    self._stall_context = (
+                        f"I've been on this step for {int(elapsed)} seconds without "
+                        f"making progress. Current state: {self._task_state}. "
+                        f"Progress so far: {summary}. "
+                        f"Time to move forward — try a different approach or "
+                        f"skip to the next step."
+                    )
         except asyncio.CancelledError:
             logger.info("Step timeout checker stopped")
-
-    async def _execute_nudge(self) -> "ChatResponse | None":
-        """Shared nudge logic for both auto-timeout and /unstick.
-
-        Sends a system-level prompt telling Cam to take concrete action NOW.
-        Guards against re-entrancy so overlapping nudges don't pile up.
-        """
-        if self._nudging:
-            logger.debug("Nudge already in progress, skipping")
-            return None
-
-        self._nudging = True
-        try:
-            summary = "; ".join(self._task_summary) if self._task_summary else "No steps recorded yet"
-            nudge_message = (
-                f"IMPORTANT SYSTEM NOTICE: You have been stuck on the same step for over 60 seconds. "
-                f"Task state: {self._task_state}. "
-                f"Progress so far: {summary}. "
-                f"You MUST take concrete action NOW. USE TOOLS to make progress on the current task. "
-                f"Do NOT just describe what you will do — actually DO it. "
-                f"If you are blocked, explain exactly what is blocking you."
-            )
-
-            response = await self.chat(nudge_message, participant="system")
-
-            # Fire callback so dashboard can broadcast the nudge
-            if self._on_nudge_event and response:
-                try:
-                    await self._on_nudge_event(response)
-                except Exception as e:
-                    logger.error("Nudge event callback error: %s", e)
-
-            # Reset the clock after nudging
-            self._update_action_timestamp()
-            return response
-        except Exception as e:
-            logger.error("Nudge execution failed: %s", e, exc_info=True)
-            return None
-        finally:
-            self._nudging = False
 
     def start_step_timeout(self) -> None:
         """Start the background step-timeout checker. Called by server lifespan."""
@@ -449,9 +422,33 @@ class ConversationManager:
             logger.info("Step timeout background task cancelled")
 
     async def unstick(self) -> "ChatResponse | None":
-        """Public API for /unstick command — immediate nudge from George."""
+        """Public API for /unstick command — immediate nudge from George.
+
+        Sets stall context and triggers a lightweight chat so Cam
+        re-evaluates with awareness that he's been stuck.
+        """
         logger.info("Manual unstick triggered by George")
-        return await self._execute_nudge()
+        summary = "; ".join(self._task_summary) if self._task_summary else "nothing yet"
+        self._stall_context = (
+            f"George noticed I've been stuck. Current state: {self._task_state}. "
+            f"Progress so far: {summary}. "
+            f"Time to move forward with a different approach."
+        )
+        try:
+            response = await self.chat(
+                "Hey Cam, you seem stuck — what's the situation?",
+                participant="george",
+            )
+            if self._on_nudge_event and response:
+                try:
+                    await self._on_nudge_event(response)
+                except Exception as e:
+                    logger.error("Nudge event callback error: %s", e)
+            self._update_action_timestamp()
+            return response
+        except Exception as e:
+            logger.error("Unstick failed: %s", e, exc_info=True)
+            return None
 
     # -------------------------------------------------------------------
     # Main chat method
@@ -515,8 +512,9 @@ class ConversationManager:
                 })
                 return switch_result
 
-        # 3. Build system prompt
+        # 3. Build system prompt (consumes stall context if set)
         system_prompt = await self._build_system_prompt(intent)
+        self._stall_context = ""  # consumed — clear so it doesn't repeat
 
         # 4. Build message list with recent chat history
         messages = await self._build_messages(message)
@@ -621,13 +619,11 @@ class ConversationManager:
         if self._detect_repetition(response.text):
             logger.warning("Repetition detected — forcing progression")
 
-            summary = "; ".join(self._task_summary) if self._task_summary else "No steps recorded yet"
+            summary = "; ".join(self._task_summary) if self._task_summary else "nothing yet"
             recovery_prompt = (
-                f"IMPORTANT: Your previous response was too similar to what you already said. "
-                f"Do NOT repeat yourself. "
-                f"Task state: {self._task_state}. "
-                f"Progress so far: {summary}. "
-                f"Summarize what has been accomplished and describe the NEXT concrete step."
+                f"I already covered that — let me move on. "
+                f"State: {self._task_state}. Done so far: {summary}. "
+                f"What's the next step?"
             )
             messages.append({"role": "user", "content": recovery_prompt})
 
@@ -813,6 +809,10 @@ class ConversationManager:
         elif freq == "normal":
             parts.append(_DEEP_WORK_NORMAL)
         # verbose: no extra instructions — legacy behavior
+
+        # Inject stall awareness if timeout checker flagged it
+        if self._stall_context:
+            parts.append(f"## Internal Awareness\n{self._stall_context}")
 
         # Inject reference doc (auto-reloads on file change)
         if self._reference_doc_path:
