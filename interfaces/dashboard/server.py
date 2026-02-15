@@ -1333,6 +1333,36 @@ async def _on_tool_event(event):
 
 conversation_manager._on_tool_event = _on_tool_event
 
+# Nudge event callback — broadcasts auto-nudge results to dashboard chat
+async def _on_nudge_event(response):
+    """Broadcast auto-nudge events to dashboard chat."""
+    # System notice first
+    await broadcast_to_dashboards({
+        "type": "cam_chat_response",
+        "text": "[Auto-nudge: Cam was stuck for 60+ seconds — nudging to take action]",
+        "model": "",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost": 0.0,
+        "intent": "system_notice",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "tool_calls_made": 0,
+    })
+    # Then Cam's actual response
+    await broadcast_to_dashboards({
+        "type": "cam_chat_response",
+        "text": response.text,
+        "model": response.model_used,
+        "input_tokens": response.input_tokens,
+        "output_tokens": response.output_tokens,
+        "cost": response.cost,
+        "intent": "auto_nudge",
+        "timestamp": response.timestamp,
+        "tool_calls_made": response.tool_calls_made,
+    })
+
+conversation_manager._on_nudge_event = _on_nudge_event
+
 # Content agent — local in-process agent for content tasks
 content_agent = ContentAgent(
     router=orchestrator.router,
@@ -1759,6 +1789,9 @@ async def lifespan(app: FastAPI):
     plugin_manager.set_app(app)
     plugin_manager.on_startup()
 
+    # Start step timeout checker for conversation manager
+    conversation_manager.start_step_timeout()
+
     # Boot complete — log and notify
     event_logger.info("system", f"CAM Online (boot: {boot_duration}s)")
     logger.info("CAM Online — boot completed in %.2fs", boot_duration)
@@ -1789,9 +1822,10 @@ async def lifespan(app: FastAPI):
     if telegram_bot:
         await telegram_bot.stop()
 
-    # 4. Stop orchestrator and scheduler
+    # 4. Stop orchestrator, scheduler, and step timeout
     orchestrator.stop()
     scheduler.stop()
+    conversation_manager.stop_step_timeout()
 
     # 5. Create emergency backup
     try:
@@ -7191,31 +7225,79 @@ async def dashboard_websocket(websocket: WebSocket):
             elif msg.get("type") == "cam_chat_message":
                 cam_msg = msg.get("message", "").strip()
                 if cam_msg:
-                    async def _run_cam_chat(message: str):
-                        try:
-                            chat_resp = await conversation_manager.chat(message)
-                            await broadcast_to_dashboards({
-                                "type": "cam_chat_response",
-                                "text": chat_resp.text,
-                                "model": chat_resp.model_used,
-                                "input_tokens": chat_resp.input_tokens,
-                                "output_tokens": chat_resp.output_tokens,
-                                "cost": chat_resp.cost,
-                                "intent": chat_resp.intent,
-                                "timestamp": chat_resp.timestamp,
-                                "tool_calls_made": chat_resp.tool_calls_made,
-                            })
-                            # After a model switch, broadcast new assignments + agent status
-                            if chat_resp.intent == "model_switch":
-                                await broadcast_model_assignments()
-                                await broadcast_agent_status()
-                        except Exception as e:
-                            logger.error("Cam chat error: %s", e, exc_info=True)
-                            await broadcast_to_dashboards({
-                                "type": "cam_chat_error",
-                                "error": str(e),
-                            })
-                    asyncio.create_task(_run_cam_chat(cam_msg))
+                    if cam_msg.lower().startswith("/unstick"):
+                        async def _run_unstick():
+                            try:
+                                # Broadcast system notice first
+                                await broadcast_to_dashboards({
+                                    "type": "cam_chat_response",
+                                    "text": "[Manual unstick: nudging Cam to take action...]",
+                                    "model": "",
+                                    "input_tokens": 0,
+                                    "output_tokens": 0,
+                                    "cost": 0.0,
+                                    "intent": "system_notice",
+                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                    "tool_calls_made": 0,
+                                })
+                                resp = await conversation_manager.unstick()
+                                if resp:
+                                    await broadcast_to_dashboards({
+                                        "type": "cam_chat_response",
+                                        "text": resp.text,
+                                        "model": resp.model_used,
+                                        "input_tokens": resp.input_tokens,
+                                        "output_tokens": resp.output_tokens,
+                                        "cost": resp.cost,
+                                        "intent": "unstick",
+                                        "timestamp": resp.timestamp,
+                                        "tool_calls_made": resp.tool_calls_made,
+                                    })
+                                else:
+                                    await broadcast_to_dashboards({
+                                        "type": "cam_chat_response",
+                                        "text": "Nothing to unstick — Cam isn't stuck on a task right now.",
+                                        "model": "",
+                                        "input_tokens": 0,
+                                        "output_tokens": 0,
+                                        "cost": 0.0,
+                                        "intent": "system_notice",
+                                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                                        "tool_calls_made": 0,
+                                    })
+                            except Exception as e:
+                                logger.error("Unstick error: %s", e, exc_info=True)
+                                await broadcast_to_dashboards({
+                                    "type": "cam_chat_error",
+                                    "error": f"Unstick failed: {e}",
+                                })
+                        asyncio.create_task(_run_unstick())
+                    else:
+                        async def _run_cam_chat(message: str):
+                            try:
+                                chat_resp = await conversation_manager.chat(message)
+                                await broadcast_to_dashboards({
+                                    "type": "cam_chat_response",
+                                    "text": chat_resp.text,
+                                    "model": chat_resp.model_used,
+                                    "input_tokens": chat_resp.input_tokens,
+                                    "output_tokens": chat_resp.output_tokens,
+                                    "cost": chat_resp.cost,
+                                    "intent": chat_resp.intent,
+                                    "timestamp": chat_resp.timestamp,
+                                    "tool_calls_made": chat_resp.tool_calls_made,
+                                })
+                                # After a model switch, broadcast new assignments + agent status
+                                if chat_resp.intent == "model_switch":
+                                    await broadcast_model_assignments()
+                                    await broadcast_agent_status()
+                            except Exception as e:
+                                logger.error("Cam chat error: %s", e, exc_info=True)
+                                await broadcast_to_dashboards({
+                                    "type": "cam_chat_error",
+                                    "error": str(e),
+                                })
+                        asyncio.create_task(_run_cam_chat(cam_msg))
 
             elif msg.get("type") == "set_model":
                 # Runtime model switch via dashboard dropdown

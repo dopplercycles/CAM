@@ -28,6 +28,7 @@ import difflib
 import json
 import logging
 import re
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -47,6 +48,10 @@ _RECENT_CAM_CHECK = 3         # compare against last 3 Cam messages
 
 # Task state machine progression order
 _TASK_STATE_ORDER = ["idle", "started", "in_progress", "completing", "done"]
+
+# Step timeout — auto-nudge Cam when stuck on the same step
+_STEP_TIMEOUT_SECONDS = 60    # auto-nudge after 60s without progress
+_STEP_CHECK_INTERVAL = 10     # check every 10 seconds
 
 
 def _text_similarity(a: str, b: str) -> float:
@@ -267,6 +272,14 @@ class ConversationManager:
         self._task_state: str = "idle"
         self._task_summary: list[str] = []
 
+        # Step timeout — detects when Cam stalls on the same step
+        self._last_action_time: float = 0.0
+        self._last_step_count: int = 0
+        self._last_task_state: str = "idle"
+        self._step_timeout_task: asyncio.Task | None = None
+        self._nudging: bool = False
+        self._on_nudge_event = None  # async callback set by server.py
+
         logger.info("ConversationManager initialized (reference_doc=%s)",
                      reference_doc_path or "none")
 
@@ -324,6 +337,102 @@ class ConversationManager:
         elif intent == "command" and self._task_state == "done":
             self._task_state = "idle"
             self._task_summary.clear()
+
+    # -------------------------------------------------------------------
+    # Step timeout — auto-nudge when Cam stalls
+    # -------------------------------------------------------------------
+
+    def _update_action_timestamp(self) -> None:
+        """Reset the timeout clock — called when Cam makes real progress."""
+        self._last_action_time = time.monotonic()
+        self._last_step_count = len(self._task_summary)
+        self._last_task_state = self._task_state
+
+    async def _check_step_timeout(self) -> None:
+        """Background loop: check every 10s if Cam is stuck on the same step."""
+        logger.info("Step timeout checker started (timeout=%ds, interval=%ds)",
+                     _STEP_TIMEOUT_SECONDS, _STEP_CHECK_INTERVAL)
+        try:
+            while True:
+                await asyncio.sleep(_STEP_CHECK_INTERVAL)
+
+                # Skip if idle/done or no action recorded yet
+                if self._task_state in ("idle", "done") or self._last_action_time == 0.0:
+                    continue
+
+                elapsed = time.monotonic() - self._last_action_time
+                if elapsed < _STEP_TIMEOUT_SECONDS:
+                    continue
+
+                # Check if state AND summary are unchanged
+                state_same = self._task_state == self._last_task_state
+                summary_same = len(self._task_summary) == self._last_step_count
+                if state_same and summary_same:
+                    logger.warning(
+                        "Step timeout: %.0fs with no progress (state=%s, steps=%d)",
+                        elapsed, self._task_state, len(self._task_summary),
+                    )
+                    await self._execute_nudge()
+        except asyncio.CancelledError:
+            logger.info("Step timeout checker stopped")
+
+    async def _execute_nudge(self) -> "ChatResponse | None":
+        """Shared nudge logic for both auto-timeout and /unstick.
+
+        Sends a system-level prompt telling Cam to take concrete action NOW.
+        Guards against re-entrancy so overlapping nudges don't pile up.
+        """
+        if self._nudging:
+            logger.debug("Nudge already in progress, skipping")
+            return None
+
+        self._nudging = True
+        try:
+            summary = "; ".join(self._task_summary) if self._task_summary else "No steps recorded yet"
+            nudge_message = (
+                f"IMPORTANT SYSTEM NOTICE: You have been stuck on the same step for over 60 seconds. "
+                f"Task state: {self._task_state}. "
+                f"Progress so far: {summary}. "
+                f"You MUST take concrete action NOW. USE TOOLS to make progress on the current task. "
+                f"Do NOT just describe what you will do — actually DO it. "
+                f"If you are blocked, explain exactly what is blocking you."
+            )
+
+            response = await self.chat(nudge_message, participant="system")
+
+            # Fire callback so dashboard can broadcast the nudge
+            if self._on_nudge_event and response:
+                try:
+                    await self._on_nudge_event(response)
+                except Exception as e:
+                    logger.error("Nudge event callback error: %s", e)
+
+            # Reset the clock after nudging
+            self._update_action_timestamp()
+            return response
+        except Exception as e:
+            logger.error("Nudge execution failed: %s", e, exc_info=True)
+            return None
+        finally:
+            self._nudging = False
+
+    def start_step_timeout(self) -> None:
+        """Start the background step-timeout checker. Called by server lifespan."""
+        if self._step_timeout_task is None:
+            self._step_timeout_task = asyncio.create_task(self._check_step_timeout())
+            logger.info("Step timeout background task created")
+
+    def stop_step_timeout(self) -> None:
+        """Stop the background step-timeout checker. Called on shutdown."""
+        if self._step_timeout_task is not None:
+            self._step_timeout_task.cancel()
+            self._step_timeout_task = None
+            logger.info("Step timeout background task cancelled")
+
+    async def unstick(self) -> "ChatResponse | None":
+        """Public API for /unstick command — immediate nudge from George."""
+        logger.info("Manual unstick triggered by George")
+        return await self._execute_nudge()
 
     # -------------------------------------------------------------------
     # Main chat method
@@ -525,6 +634,11 @@ class ConversationManager:
         # Transition to done if no tools and we were completing
         if tool_rounds == 0 and self._task_state == "completing":
             self._task_state = "done"
+
+        # Step timeout — reset clock when Cam makes real progress
+        if (self._task_state != self._last_task_state or
+                len(self._task_summary) != self._last_step_count):
+            self._update_action_timestamp()
 
         # 6. Record Cam's response in episodic memory
         self._episodic.record(
