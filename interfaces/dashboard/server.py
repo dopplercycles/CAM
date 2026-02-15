@@ -2073,6 +2073,10 @@ async def auth_middleware(request: Request, call_next):
 @app.post("/auth/login")
 async def auth_login(request: Request):
     """Authenticate and set a session cookie."""
+    # When auth is disabled, auto-succeed — no password to check
+    if not session_manager.auth_enabled:
+        return JSONResponse(content={"ok": True, "auth_enabled": False})
+
     client_ip = request.client.host if request.client else "unknown"
 
     # Check lockout first
@@ -2145,6 +2149,10 @@ async def auth_login(request: Request):
 @app.post("/auth/lock")
 async def auth_lock(request: Request):
     """Destroy the current session (lock screen)."""
+    # When auth is disabled, locking makes no sense — ignore
+    if not session_manager.auth_enabled:
+        return JSONResponse(content={"ok": True, "ignored": True})
+
     token = request.cookies.get("cam_session")
     session_manager.destroy_session(token)
 
