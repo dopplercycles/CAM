@@ -264,6 +264,104 @@ orchestrator_task: asyncio.Task | None = None
 # File transfer manager — tracks active/completed file transfers
 ft_manager: FileTransferManager | None = None  # initialized after broadcast_transfer_progress is defined
 
+# Voice transcription via faster-whisper (lazy-loaded on first use)
+_whisper_model = None
+
+def _get_whisper_model():
+    """Lazy-load the faster-whisper model on first voice input."""
+    global _whisper_model
+    if _whisper_model is None:
+        try:
+            from faster_whisper import WhisperModel
+            _whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
+            logger.info("Whisper model loaded (small, cpu, int8)")
+        except Exception as e:
+            logger.error("Failed to load Whisper model: %s", e)
+    return _whisper_model
+
+async def _handle_voice_input(websocket, msg):
+    """Decode base64 audio from the dashboard, transcribe with faster-whisper."""
+    import tempfile
+
+    audio_b64 = msg.get("audio", "")
+    audio_format = msg.get("format", "webm")
+
+    if not audio_b64:
+        await websocket.send_json({
+            "type": "cam_voice_result",
+            "transcription": "",
+            "error": "No audio data received.",
+        })
+        return
+
+    try:
+        # Decode base64 audio
+        audio_bytes = base64.b64decode(audio_b64)
+
+        # Write to temp file and convert to WAV with ffmpeg
+        with tempfile.NamedTemporaryFile(suffix=f".{audio_format}", delete=False) as tmp_in:
+            tmp_in.write(audio_bytes)
+            tmp_in_path = tmp_in.name
+
+        tmp_wav_path = tmp_in_path.rsplit(".", 1)[0] + ".wav"
+
+        # Convert to 16kHz mono WAV (what Whisper expects)
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y", "-i", tmp_in_path,
+            "-ar", "16000", "-ac", "1", "-f", "wav", tmp_wav_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+
+        if proc.returncode != 0:
+            await websocket.send_json({
+                "type": "cam_voice_result",
+                "transcription": "",
+                "error": "Audio conversion failed.",
+            })
+            return
+
+        # Transcribe in a thread to avoid blocking asyncio
+        def _transcribe():
+            model = _get_whisper_model()
+            if model is None:
+                return None, "Whisper model not available"
+            segments, info = model.transcribe(tmp_wav_path, beam_size=5, language="en", condition_on_previous_text=False, vad_filter=True)
+            text = " ".join(seg.text.strip() for seg in segments)
+            return text, None
+
+        text, error = await asyncio.to_thread(_transcribe)
+
+        # Clean up temp files
+        for p in (tmp_in_path, tmp_wav_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+        if error:
+            await websocket.send_json({
+                "type": "cam_voice_result",
+                "transcription": "",
+                "error": error,
+            })
+        else:
+            logger.info("Voice transcription: %s", text[:100] if text else "(empty)")
+            event_logger.info("voice", f"Transcribed: {text[:80]}")
+            await websocket.send_json({
+                "type": "cam_voice_result",
+                "transcription": text or "",
+            })
+
+    except Exception as e:
+        logger.error("Voice input processing failed: %s", e, exc_info=True)
+        await websocket.send_json({
+            "type": "cam_voice_result",
+            "transcription": "",
+            "error": f"Transcription failed: {e}",
+        })
+
 
 # ---------------------------------------------------------------------------
 # Broadcast helper
@@ -7564,13 +7662,8 @@ async def dashboard_websocket(websocket: WebSocket):
                     })
 
             elif msg.get("type") == "cam_voice_input":
-                # Placeholder for voice transcription via Whisper
-                # When Whisper is set up, decode base64 audio and transcribe
-                await websocket.send_json({
-                    "type": "cam_voice_result",
-                    "transcription": "",
-                    "error": "Voice transcription not available yet — type your message instead.",
-                })
+                # Voice transcription via faster-whisper
+                await _handle_voice_input(websocket, msg)
 
             elif msg.get("type") == "cam_tts_request":
                 tts_text = msg.get("text", "").strip()
