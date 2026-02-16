@@ -10436,7 +10436,7 @@
                 <textarea id="camChatInput" placeholder="Talk to Cam..." rows="1"
                     onkeydown="camChatKeydown(event)"
                     oninput="camChatAutoResize(this)"></textarea>
-                <button onclick="sendCamMessage()">Send</button>
+                <button onclick="sendCamMessageTyped()">Send</button>
                 <button class="cam-voice-btn" id="camVoiceBtn" onclick="toggleCamVoiceRecording()" title="Voice input (mic)">&#127908;</button>
             </div>
         </section>
@@ -23152,6 +23152,7 @@
         var camVoiceRecording = false;
         var camMediaRecorder = null;
         var camAudioChunks = [];
+        var camLastInputWasVoice = false;  // auto-play TTS after voice input
 
         function sendCamMessage() {
             const input = document.getElementById('camChatInput');
@@ -23173,10 +23174,16 @@
             }
         }
 
+        // Typed input clears the voice flag (called from keydown handler)
+        function sendCamMessageTyped() {
+            camLastInputWasVoice = false;
+            sendCamMessage();
+        }
+
         function camChatKeydown(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                sendCamMessage();
+                sendCamMessageTyped();
             }
         }
 
@@ -23320,8 +23327,11 @@
                 tool_calls_made: data.tool_calls_made || 0,
             });
 
-            // Add a small TTS play button if response is short enough
-            // (optional: auto-play TTS for short responses)
+            // Auto-play TTS when the last input was voice
+            if (camLastInputWasVoice && data.text && ws && ws.readyState === WebSocket.OPEN) {
+                camLastInputWasVoice = false;
+                ws.send(JSON.stringify({ type: 'cam_tts_request', text: data.text }));
+            }
         }
 
         function handleCamChatError(data) {
@@ -23550,6 +23560,7 @@
             } else if (data.transcription) {
                 // Put transcription in input and auto-send
                 document.getElementById('camChatInput').value = data.transcription;
+                camLastInputWasVoice = true;  // trigger auto-play TTS on response
                 sendCamMessage();
             }
         }
