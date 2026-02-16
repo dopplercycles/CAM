@@ -25,12 +25,14 @@ import asyncio
 import json
 import logging
 import os
+import re
 import shutil
+import tempfile
 import wave
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncGenerator
 
 logger = logging.getLogger("cam.tts")
 
@@ -58,6 +60,76 @@ class SynthesisResult:
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return asdict(self)
+
+
+# ---------------------------------------------------------------------------
+# Sentence splitter for streaming TTS
+# ---------------------------------------------------------------------------
+
+# Abbreviations that contain dots but aren't sentence endings
+_ABBREVS = re.compile(
+    r'\b(Mr|Mrs|Ms|Dr|Prof|Jr|Sr|St|Ave|Blvd|etc|e\.g|i\.e|vs|approx|dept|govt|inc|ltd|co)\.',
+    re.IGNORECASE,
+)
+# Decimal numbers like 3.5, 12.75
+_DECIMALS = re.compile(r'(\d)\.(\d)')
+
+_PLACEHOLDER_ABBREV = '\x00DOT\x00'
+_PLACEHOLDER_DECIMAL = '\x01DOT\x01'
+
+
+def split_sentences(text: str) -> list[str]:
+    """Split text into sentences for streaming TTS.
+
+    Handles abbreviations (Mr., Dr., e.g., etc.) and decimal numbers
+    so they don't cause false splits. Merges very short fragments
+    (< 5 words) with the previous sentence.
+
+    Args:
+        text: Input text to split.
+
+    Returns:
+        List of sentence strings, each suitable for independent synthesis.
+    """
+    if not text or not text.strip():
+        return []
+
+    working = text.strip()
+
+    # Protect abbreviations and decimals from splitting
+    working = _ABBREVS.sub(lambda m: m.group(0).replace('.', _PLACEHOLDER_ABBREV), working)
+    working = _DECIMALS.sub(lambda m: m.group(1) + _PLACEHOLDER_DECIMAL + m.group(2), working)
+
+    # Split on sentence-ending punctuation followed by whitespace
+    parts = re.split(r'([.!?]+)\s+', working)
+
+    # Re-join punctuation with its sentence: parts = [sent, punct, sent, punct, ...]
+    sentences = []
+    i = 0
+    while i < len(parts):
+        chunk = parts[i]
+        # If next element is punctuation (from the split), attach it
+        if i + 1 < len(parts) and re.match(r'^[.!?]+$', parts[i + 1]):
+            chunk += parts[i + 1]
+            i += 2
+        else:
+            i += 1
+        chunk = chunk.strip()
+        if chunk:
+            # Restore placeholders
+            chunk = chunk.replace(_PLACEHOLDER_ABBREV, '.')
+            chunk = chunk.replace(_PLACEHOLDER_DECIMAL, '.')
+            sentences.append(chunk)
+
+    # Merge very short fragments (< 5 words) with the previous sentence
+    merged = []
+    for s in sentences:
+        if merged and len(s.split()) < 5:
+            merged[-1] = merged[-1] + ' ' + s
+        else:
+            merged.append(s)
+
+    return merged if merged else [text.strip()]
 
 
 # ---------------------------------------------------------------------------
@@ -267,6 +339,79 @@ class TTSPipeline:
             timestamp=timestamp,
             error=None,
         )
+
+    async def synthesize_streaming(
+        self, text: str, voice: str | None = None
+    ) -> AsyncGenerator[tuple[bytes, int, int, str | None], None]:
+        """Stream TTS synthesis sentence-by-sentence.
+
+        Async generator that yields (audio_bytes, chunk_index, total_chunks, error)
+        tuples. Each chunk is a complete WAV file that can be played independently.
+
+        Args:
+            text:  Text to synthesize.
+            voice: Voice model name (without .onnx). Defaults to current voice.
+
+        Yields:
+            Tuples of (audio_bytes, chunk_index, total_chunks, error).
+            On per-chunk error, audio_bytes is empty and error is set.
+        """
+        voice = voice or self._current_voice
+
+        if not text or not text.strip():
+            yield (b'', 0, 0, "Empty text — nothing to synthesize")
+            return
+
+        if not self._ensure_initialized():
+            yield (b'', 0, 0, self._error)
+            return
+
+        # Resolve voice model path
+        voice_model = self._voices_dir / f"{voice}.onnx"
+        if not voice_model.exists():
+            available = self.list_voices()
+            hint = f" Available: {', '.join(available)}" if available else ""
+            yield (b'', 0, 0, f"Voice model not found: {voice_model}.{hint}")
+            return
+
+        sentences = split_sentences(text)
+        total = len(sentences)
+        loop = asyncio.get_event_loop()
+
+        for idx, sentence in enumerate(sentences):
+            tmp_path = None
+            try:
+                # Create a temp file for this chunk
+                fd, tmp_path = tempfile.mkstemp(suffix=".wav", prefix="cam_tts_")
+                os.close(fd)
+
+                error = await loop.run_in_executor(
+                    None, self._run_piper, sentence, str(voice_model), tmp_path
+                )
+
+                if error:
+                    logger.warning("TTS streaming chunk %d/%d failed: %s", idx + 1, total, error)
+                    yield (b'', idx, total, error)
+                else:
+                    audio_bytes = Path(tmp_path).read_bytes()
+                    duration = self._get_wav_duration(tmp_path)
+                    logger.info(
+                        "TTS streaming chunk %d/%d: %.1fs (%d bytes)",
+                        idx + 1, total, duration, len(audio_bytes),
+                    )
+                    yield (audio_bytes, idx, total, None)
+
+            except Exception as e:
+                logger.error("TTS streaming chunk %d/%d exception: %s", idx + 1, total, e)
+                yield (b'', idx, total, f"Synthesis error: {e}")
+
+            finally:
+                # Clean up temp file
+                if tmp_path and os.path.exists(tmp_path):
+                    try:
+                        os.unlink(tmp_path)
+                    except OSError:
+                        pass
 
     def _run_piper(self, text: str, model_path: str, output_path: str) -> str | None:
         """Run piper subprocess synchronously (called via run_in_executor).

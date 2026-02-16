@@ -7697,6 +7697,50 @@ async def dashboard_websocket(websocket: WebSocket):
                             "error": f"TTS error: {e}",
                         })
 
+            elif msg.get("type") == "cam_tts_stream_request":
+                tts_text = msg.get("text", "").strip()
+                if tts_text:
+                    import uuid as _uuid
+                    stream_id = _uuid.uuid4().hex[:8]
+
+                    async def _stream_tts(ws, sid, text):
+                        try:
+                            async for audio_bytes, chunk_idx, total, err in tts_pipeline.synthesize_streaming(text):
+                                if err:
+                                    await ws.send_json({
+                                        "type": "cam_tts_stream_error",
+                                        "stream_id": sid,
+                                        "error": err,
+                                    })
+                                    return
+                                audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
+                                done = (chunk_idx == total - 1)
+                                await ws.send_json({
+                                    "type": "cam_tts_stream_chunk",
+                                    "stream_id": sid,
+                                    "audio": audio_b64,
+                                    "chunk_index": chunk_idx,
+                                    "total_chunks": total,
+                                    "done": done,
+                                })
+                        except Exception as e:
+                            logger.error("TTS stream error (stream_id=%s): %s", sid, e)
+                            try:
+                                await ws.send_json({
+                                    "type": "cam_tts_stream_error",
+                                    "stream_id": sid,
+                                    "error": str(e),
+                                })
+                            except Exception:
+                                pass
+
+                    asyncio.create_task(_stream_tts(websocket, stream_id, tts_text))
+                    # Send stream_id back immediately so client knows what to listen for
+                    await websocket.send_json({
+                        "type": "cam_tts_stream_start",
+                        "stream_id": stream_id,
+                    })
+
             elif msg.get("type") == "episodic_search":
                 # Search episodic memory with optional filters
                 keyword = msg.get("keyword", "")

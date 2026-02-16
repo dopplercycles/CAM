@@ -14316,6 +14316,12 @@
                     handleCamVoiceResult(data);
                 } else if (data.type === "cam_tts_result") {
                     handleCamTTS(data);
+                } else if (data.type === "cam_tts_stream_start") {
+                    handleCamTTSStreamStart(data);
+                } else if (data.type === "cam_tts_stream_chunk") {
+                    handleCamTTSChunk(data);
+                } else if (data.type === "cam_tts_stream_error") {
+                    handleCamTTSStreamError(data);
                 } else if (data.type === "permission_denied") {
                     showPermissionDenied(data.denied_action, data.required_role);
                 }
@@ -23285,6 +23291,13 @@
 
         let activeTTSButton = null;
 
+        // --- Streaming TTS state ---
+        var camTTSStreamId = null;       // current stream we're listening to
+        var camTTSQueue = [];            // queued AudioBuffers
+        var camTTSPlaying = false;       // is a chunk currently playing?
+        var camTTSNextTime = 0;          // scheduled AudioContext time for next chunk
+        var camTTSStreamDone = false;    // has the last chunk arrived?
+
         function playCamBubbleTTS(bubble, btn) {
             const text = bubble.dataset.ttsText;
             if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
@@ -23294,7 +23307,13 @@
             btn.classList.add('loading');
             activeTTSButton = btn;
 
-            ws.send(JSON.stringify({ type: 'cam_tts_request', text: text }));
+            // Reset streaming state and request streaming TTS
+            camTTSQueue = [];
+            camTTSPlaying = false;
+            camTTSNextTime = 0;
+            camTTSStreamDone = false;
+            camTTSStreamId = null;  // will be set by stream_start message
+            ws.send(JSON.stringify({ type: 'cam_tts_stream_request', text: text }));
         }
 
         function resetTTSButton(btn) {
@@ -23341,10 +23360,15 @@
                 tool_calls_made: data.tool_calls_made || 0,
             });
 
-            // Auto-play TTS when the last input was voice
+            // Auto-play TTS when the last input was voice (streaming)
             if (camLastInputWasVoice && data.text && ws && ws.readyState === WebSocket.OPEN) {
                 camLastInputWasVoice = false;
-                ws.send(JSON.stringify({ type: 'cam_tts_request', text: data.text }));
+                camTTSQueue = [];
+                camTTSPlaying = false;
+                camTTSNextTime = 0;
+                camTTSStreamDone = false;
+                camTTSStreamId = null;  // will be set by stream_start message
+                ws.send(JSON.stringify({ type: 'cam_tts_stream_request', text: data.text }));
             }
         }
 
@@ -23620,6 +23644,95 @@
             }
             resetTTSButton(activeTTSButton);
             activeTTSButton = null;
+        }
+
+        // --- Streaming TTS playback ---
+        function handleCamTTSStreamStart(data) {
+            camTTSStreamId = data.stream_id;
+        }
+
+        function handleCamTTSChunk(data) {
+            // Ignore chunks from a stale stream
+            if (data.stream_id !== camTTSStreamId) return;
+
+            if (data.done) {
+                camTTSStreamDone = true;
+            }
+
+            try {
+                var audioBytes = atob(data.audio);
+                var buffer = new Uint8Array(audioBytes.length);
+                for (var i = 0; i < audioBytes.length; i++) {
+                    buffer[i] = audioBytes.charCodeAt(i);
+                }
+
+                var ctx = ensureAudioContext();
+                ctx.decodeAudioData(buffer.buffer.slice(0), function(audioBuffer) {
+                    camTTSQueue.push(audioBuffer);
+                    // Start playback if not already playing
+                    if (!camTTSPlaying) {
+                        camTTSPlaying = true;
+                        camTTSNextTime = ctx.currentTime;
+                        playNextTTSChunk();
+                    }
+                }, function(err) {
+                    console.warn('Streaming TTS decode error for chunk ' + data.chunk_index + ':', err);
+                    // If this was the last chunk, clean up
+                    if (data.done) {
+                        finishTTSStream();
+                    }
+                });
+            } catch (e) {
+                console.warn('Streaming TTS chunk decode error:', e);
+                if (data.done) {
+                    finishTTSStream();
+                }
+            }
+        }
+
+        function playNextTTSChunk() {
+            if (camTTSQueue.length === 0) {
+                // Queue is empty — if stream is done, finish; otherwise wait for more chunks
+                if (camTTSStreamDone) {
+                    finishTTSStream();
+                } else {
+                    camTTSPlaying = false;
+                }
+                return;
+            }
+
+            var ctx = ensureAudioContext();
+            var audioBuffer = camTTSQueue.shift();
+            var source = ctx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(ctx.destination);
+
+            // Schedule this chunk to play right after the previous one
+            if (camTTSNextTime < ctx.currentTime) {
+                camTTSNextTime = ctx.currentTime;
+            }
+            source.start(camTTSNextTime);
+            camTTSNextTime += audioBuffer.duration;
+
+            source.onended = function() {
+                playNextTTSChunk();
+            };
+        }
+
+        function finishTTSStream() {
+            camTTSPlaying = false;
+            camTTSStreamId = null;
+            camTTSQueue = [];
+            camTTSStreamDone = false;
+            resetTTSButton(activeTTSButton);
+            activeTTSButton = null;
+        }
+
+        function handleCamTTSStreamError(data) {
+            console.warn('TTS stream error (stream ' + data.stream_id + '):', data.error);
+            if (data.stream_id === camTTSStreamId) {
+                finishTTSStream();
+            }
         }
 
         // Persona
