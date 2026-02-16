@@ -233,9 +233,24 @@ Each agent runs a lightweight API server (FastAPI) on a specific port. Agents co
   - SSH: `george@192.168.12.149`
   - Connector: manual launch (no systemd yet)
 
-### Future Integration
-- P1, P2, P3 robots via ROS 2 bridge — CAM as mission controller
-- "P2, patrol the lab" becomes a message to the ROS 2 stack
+### ROS 2 Robot Fleet (Phase 6 — Implemented)
+CAM is a ROS 2 node (`/cam/cam_bridge`) via rclpy, directly integrated with the robot fleet.
+
+- **P1, P2, P3** — mobile_base robots with navigation, lidar, camera capabilities
+- rclpy spins in a daemon thread; ROS 2 callbacks bridge to asyncio via `run_coroutine_threadsafe()`
+- Robot tools available to Claude: `robot_status` (T1), `robot_sensor_read` (T1), `robot_navigate` (T2), `robot_patrol` (T2), `robot_command` (T2), `robot_emergency_stop` (T0 — always allowed)
+- Dashboard: Robot Fleet panel with per-robot status cards, battery bars, e-stop buttons
+- Config: `[ros2]` section in `settings.toml` defines robots, waypoints, patrol routes
+- Graceful degradation: when rclpy absent or `ros2.enabled = false`, no robot code runs
+
+```
+tools/ros2/
+├── __init__.py          # Conditional import guard (ROS2_AVAILABLE)
+├── msg_bridge.py        # ROS 2 message ↔ JSON serialization
+├── node.py              # CamRos2Bridge — rclpy lifecycle, pub/sub, nav goals
+├── robot_registry.py    # RobotRegistry + RobotInfo (mirrors AgentRegistry)
+└── tools.py             # 6 Claude tool definitions + async executors
+```
 
 ---
 
@@ -362,7 +377,7 @@ Every action logged: timestamp, tool, parameters, classification, approval statu
 
 ### Phase 6: Advanced
 19. Cluster deployment (agents on dedicated Pi hardware)
-20. ROS 2 bridge for robots
+20. ~~ROS 2 bridge for robots~~ ✅ (2026-02-15)
 21. Proactive "heartbeat" behaviors
 
 ---
@@ -380,6 +395,8 @@ Every action logged: timestamp, tool, parameters, classification, approval statu
 | 2026-02-08 | Kimi K2.5 for agentic middle tier | Best cost/performance ratio observed |
 | 2026-02-09 | Custom mobile app over Telegram | Independence from third-party platforms |
 | 2026-02-09 | Build agent interface first | Visibility and control before full autonomy |
+| 2026-02-15 | ROS 2 direct integration via rclpy | CAM as a ROS 2 node, not a separate bridge process |
+| 2026-02-15 | faster-whisper for voice STT | Lightweight CPU inference, lazy-loaded on first use |
 
 ---
 
