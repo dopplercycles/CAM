@@ -264,17 +264,17 @@ orchestrator_task: asyncio.Task | None = None
 # File transfer manager — tracks active/completed file transfers
 ft_manager: FileTransferManager | None = None  # initialized after broadcast_transfer_progress is defined
 
-# Voice transcription via faster-whisper (lazy-loaded on first use)
+# Voice transcription via faster-whisper (pre-loaded at startup)
 _whisper_model = None
 
 def _get_whisper_model():
-    """Lazy-load the faster-whisper model on first voice input."""
+    """Return the faster-whisper model, loading it if needed."""
     global _whisper_model
     if _whisper_model is None:
         try:
             from faster_whisper import WhisperModel
-            _whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
-            logger.info("Whisper model loaded (small, cpu, int8)")
+            _whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+            logger.info("Whisper model loaded (base, cpu, int8)")
         except Exception as e:
             logger.error("Failed to load Whisper model: %s", e)
     return _whisper_model
@@ -1999,6 +1999,9 @@ async def lifespan(app: FastAPI):
         await ros2_bridge.start()
         ros2_bridge.set_broadcast_callback(broadcast_robot_status)
         logger.info("ROS 2 bridge started")
+
+    # Pre-load Whisper STT model in a thread so first voice input is fast
+    asyncio.create_task(asyncio.to_thread(_get_whisper_model))
 
     # Boot complete — log and notify
     event_logger.info("system", f"CAM Online (boot: {boot_duration}s)")
