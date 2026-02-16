@@ -26,7 +26,6 @@ import json
 import logging
 import os
 import re
-import shutil
 import tempfile
 import wave
 from dataclasses import dataclass, asdict
@@ -167,7 +166,8 @@ class TTSPipeline:
         # Lazy init state
         self._initialized: bool = False
         self._error: str | None = None
-        self._piper_binary: str | None = None
+        self._piper_voice = None           # PiperVoice instance (loaded model)
+        self._piper_voice_name: str = ""   # which voice is currently loaded
         self._current_voice: str = self._default_voice
 
         logger.info(
@@ -180,15 +180,11 @@ class TTSPipeline:
     # -------------------------------------------------------------------
 
     def _ensure_initialized(self) -> bool:
-        """Check for Piper TTS binary and voice models.
+        """Check that the Piper Python API is importable.
 
         Creates directories if needed. Sets _initialized=True only if
-        Piper TTS is found. Records clear error message otherwise.
-
-        Piper TTS is installed as a Python package (piper-tts) in the venv,
-        NOT the /usr/bin/piper (which is the Linux mouse config tool).
-        We look for the venv's piper binary first, then fall back to
-        checking if the piper Python module is importable.
+        piper-tts is installed. The actual voice model is loaded lazily
+        by _ensure_voice().
 
         Returns:
             True if ready for synthesis, False if not.
@@ -200,29 +196,46 @@ class TTSPipeline:
         self._audio_dir.mkdir(parents=True, exist_ok=True)
         self._voices_dir.mkdir(parents=True, exist_ok=True)
 
-        # Find the piper-tts binary from the venv (not /usr/bin/piper which
-        # is the Linux mouse/trackpad config GUI, not TTS).
-        import sys
-        venv_piper = Path(sys.executable).parent / "piper"
-        if venv_piper.exists():
-            piper_path = str(venv_piper)
-        else:
-            # Fall back: check if piper module is importable (use python -m piper)
-            try:
-                import piper  # noqa: F401
-                piper_path = f"{sys.executable} -m piper"
-            except ImportError:
-                self._error = (
-                    "piper-tts not installed — run: pip install piper-tts"
-                )
-                logger.warning("TTS init: %s", self._error)
-                return False
+        try:
+            from piper import PiperVoice  # noqa: F401
+        except ImportError:
+            self._error = (
+                "piper-tts not installed — run: pip install piper-tts"
+            )
+            logger.warning("TTS init: %s", self._error)
+            return False
 
-        self._piper_binary = piper_path
         self._error = None
         self._initialized = True
-        logger.info("TTS initialized: piper=%s", piper_path)
+        logger.info("TTS initialized: piper Python API available")
         return True
+
+    def _ensure_voice(self, voice: str) -> str | None:
+        """Load a PiperVoice model if not already loaded for the given voice.
+
+        Returns None on success, error string on failure.
+        """
+        if self._piper_voice is not None and self._piper_voice_name == voice:
+            return None
+
+        voice_model = self._voices_dir / f"{voice}.onnx"
+        if not voice_model.exists():
+            available = self.list_voices()
+            hint = f" Available: {', '.join(available)}" if available else ""
+            return f"Voice model not found: {voice_model}.{hint}"
+
+        try:
+            from piper import PiperVoice
+            self._piper_voice = PiperVoice.load(str(voice_model))
+            self._piper_voice_name = voice
+            logger.info("TTS voice model loaded: %s", voice)
+            return None
+        except Exception as e:
+            self._piper_voice = None
+            self._piper_voice_name = ""
+            error = f"Failed to load voice model {voice}: {e}"
+            logger.error("TTS model load error: %s", error)
+            return error
 
     # -------------------------------------------------------------------
     # Core synthesis
@@ -257,15 +270,11 @@ class TTSPipeline:
                 duration_secs=0, timestamp=timestamp, error=self._error,
             )
 
-        # Resolve voice model path
-        voice_model = self._voices_dir / f"{voice}.onnx"
-        if not voice_model.exists():
-            available = self.list_voices()
-            hint = f" Available: {', '.join(available)}" if available else ""
-            error = f"Voice model not found: {voice_model}.{hint}"
+        voice_error = self._ensure_voice(voice)
+        if voice_error:
             return SynthesisResult(
                 audio_path=None, text=text, voice=voice,
-                duration_secs=0, timestamp=timestamp, error=error,
+                duration_secs=0, timestamp=timestamp, error=voice_error,
             )
 
         # Generate output filename
@@ -282,10 +291,12 @@ class TTSPipeline:
 
         output_path = self._audio_dir / filename
 
-        # Run piper via subprocess: echo text | piper --model voice.onnx --output_file out.wav
+        # Synthesize via Piper Python API (run in thread to avoid blocking asyncio)
         try:
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, self._run_piper, text, str(voice_model), str(output_path))
+            result = await loop.run_in_executor(
+                None, self._synthesize_to_file, text, str(output_path)
+            )
 
             if result is not None:
                 # result is an error string
@@ -366,12 +377,9 @@ class TTSPipeline:
             yield (b'', 0, 0, self._error)
             return
 
-        # Resolve voice model path
-        voice_model = self._voices_dir / f"{voice}.onnx"
-        if not voice_model.exists():
-            available = self.list_voices()
-            hint = f" Available: {', '.join(available)}" if available else ""
-            yield (b'', 0, 0, f"Voice model not found: {voice_model}.{hint}")
+        voice_error = self._ensure_voice(voice)
+        if voice_error:
+            yield (b'', 0, 0, voice_error)
             return
 
         sentences = split_sentences(text)
@@ -386,7 +394,7 @@ class TTSPipeline:
                 os.close(fd)
 
                 error = await loop.run_in_executor(
-                    None, self._run_piper, sentence, str(voice_model), tmp_path
+                    None, self._synthesize_to_file, sentence, tmp_path
                 )
 
                 if error:
@@ -413,46 +421,24 @@ class TTSPipeline:
                     except OSError:
                         pass
 
-    def _run_piper(self, text: str, model_path: str, output_path: str) -> str | None:
-        """Run piper subprocess synchronously (called via run_in_executor).
+    def _synthesize_to_file(self, text: str, output_path: str) -> str | None:
+        """Synthesize text to a WAV file using the Piper Python API.
 
-        piper-tts CLI uses: echo text | piper -m model.onnx -f output.wav
+        Called via run_in_executor to avoid blocking asyncio.
 
         Args:
             text:        Text to synthesize.
-            model_path:  Path to the .onnx voice model.
             output_path: Path for the output WAV file.
 
         Returns:
             None on success, error string on failure.
         """
-        import subprocess
-
-        # Build command — handle both direct binary and "python -m piper" forms
-        if " " in self._piper_binary:
-            # "python -m piper" form — split into parts
-            cmd = self._piper_binary.split() + ["-m", model_path, "-f", output_path]
-        else:
-            cmd = [self._piper_binary, "-m", model_path, "-f", output_path]
-
         try:
-            proc = subprocess.run(
-                cmd,
-                input=text,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            if proc.returncode != 0:
-                stderr = proc.stderr.strip()[:200] if proc.stderr else "unknown error"
-                return f"Piper exited with code {proc.returncode}: {stderr}"
+            with wave.open(output_path, "wb") as wav_file:
+                self._piper_voice.synthesize_wav(text, wav_file)
             return None
-        except subprocess.TimeoutExpired:
-            return "Piper timed out after 60 seconds"
-        except FileNotFoundError:
-            self._initialized = False
-            self._error = "piper-tts binary not found"
-            return self._error
+        except Exception as e:
+            return f"Piper synthesis failed: {e}"
 
     @staticmethod
     def _get_wav_duration(wav_path: str) -> float:
@@ -497,6 +483,10 @@ class TTSPipeline:
             return f"Voice model not found: {model_path}.{hint}"
 
         self._current_voice = voice_name
+        # Clear loaded model so _ensure_voice() reloads on next synthesis
+        if self._piper_voice_name != voice_name:
+            self._piper_voice = None
+            self._piper_voice_name = ""
         logger.info("TTS voice set to: %s", voice_name)
         return None
 
@@ -652,7 +642,8 @@ class TTSPipeline:
         return {
             "initialized": self._initialized,
             "error": self._error,
-            "piper_binary": self._piper_binary,
+            "piper_api": True if self._initialized else False,
+            "loaded_voice": self._piper_voice_name or None,
             "default_voice": self._default_voice,
             "current_voice": self._current_voice,
             "voice_count": voice_count,
