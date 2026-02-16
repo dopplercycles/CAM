@@ -23154,6 +23154,20 @@
         var camAudioChunks = [];
         var camLastInputWasVoice = false;  // auto-play TTS after voice input
 
+        // AudioContext unlocked by user gesture (mic click) — persists for
+        // autoplay even after the gesture expires. Firefox blocks new Audio().play()
+        // without a recent gesture, but an already-unlocked AudioContext works.
+        var camAudioCtx = null;
+        function ensureAudioContext() {
+            if (!camAudioCtx) {
+                camAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (camAudioCtx.state === 'suspended') {
+                camAudioCtx.resume();
+            }
+            return camAudioCtx;
+        }
+
         function sendCamMessage() {
             const input = document.getElementById('camChatInput');
             const msg = (input.value || '').trim();
@@ -23503,6 +23517,8 @@
 
         // --- Voice Recording ---
         function toggleCamVoiceRecording() {
+            // Unlock AudioContext on user gesture so TTS auto-play works later
+            ensureAudioContext();
             if (camVoiceRecording) {
                 stopCamVoiceRecording();
             } else {
@@ -23580,11 +23596,24 @@
                     for (let i = 0; i < audioBytes.length; i++) {
                         buffer[i] = audioBytes.charCodeAt(i);
                     }
-                    const blob = new Blob([buffer], { type: 'audio/wav' });
-                    const url = URL.createObjectURL(blob);
-                    const audio = new Audio(url);
-                    audio.onended = function() { URL.revokeObjectURL(url); };
-                    audio.play().catch(e => console.warn('Audio playback failed:', e));
+
+                    // Use AudioContext for playback — it stays unlocked after
+                    // the mic button gesture, so Firefox won't block auto-play.
+                    const ctx = ensureAudioContext();
+                    ctx.decodeAudioData(buffer.buffer.slice(0), function(audioBuffer) {
+                        const source = ctx.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(ctx.destination);
+                        source.start(0);
+                    }, function(err) {
+                        // Fallback to Audio element if decodeAudioData fails
+                        console.warn('AudioContext decode failed, falling back:', err);
+                        const blob = new Blob([buffer], { type: 'audio/wav' });
+                        const url = URL.createObjectURL(blob);
+                        const audio = new Audio(url);
+                        audio.onended = function() { URL.revokeObjectURL(url); };
+                        audio.play().catch(e => console.warn('Audio playback failed:', e));
+                    });
                 } catch (e) {
                     console.warn('TTS decode error:', e);
                 }
