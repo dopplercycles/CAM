@@ -130,8 +130,8 @@ _DEFAULTS: dict[str, Any] = {
     },
     "tts": {
         "audio_dir": "data/audio",
-        "voices_dir": "data/audio/voices",
-        "default_voice": "en_US-lessac-medium",
+        "voices_dir": "models/voices",
+        "default_voice": "en_US-joe-medium",
         "sample_rate": 22050,
     },
     "content_calendar": {

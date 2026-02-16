@@ -108,10 +108,15 @@ class TTSPipeline:
     # -------------------------------------------------------------------
 
     def _ensure_initialized(self) -> bool:
-        """Check for Piper binary and voice models.
+        """Check for Piper TTS binary and voice models.
 
         Creates directories if needed. Sets _initialized=True only if
-        Piper is found. Records clear error message otherwise.
+        Piper TTS is found. Records clear error message otherwise.
+
+        Piper TTS is installed as a Python package (piper-tts) in the venv,
+        NOT the /usr/bin/piper (which is the Linux mouse config tool).
+        We look for the venv's piper binary first, then fall back to
+        checking if the piper Python module is importable.
 
         Returns:
             True if ready for synthesis, False if not.
@@ -123,15 +128,23 @@ class TTSPipeline:
         self._audio_dir.mkdir(parents=True, exist_ok=True)
         self._voices_dir.mkdir(parents=True, exist_ok=True)
 
-        # Look for piper binary
-        piper_path = shutil.which("piper")
-        if not piper_path:
-            self._error = (
-                "piper binary not found — install Piper TTS and ensure "
-                "'piper' is on PATH. See: https://github.com/rhasspy/piper"
-            )
-            logger.warning("TTS init: %s", self._error)
-            return False
+        # Find the piper-tts binary from the venv (not /usr/bin/piper which
+        # is the Linux mouse/trackpad config GUI, not TTS).
+        import sys
+        venv_piper = Path(sys.executable).parent / "piper"
+        if venv_piper.exists():
+            piper_path = str(venv_piper)
+        else:
+            # Fall back: check if piper module is importable (use python -m piper)
+            try:
+                import piper  # noqa: F401
+                piper_path = f"{sys.executable} -m piper"
+            except ImportError:
+                self._error = (
+                    "piper-tts not installed — run: pip install piper-tts"
+                )
+                logger.warning("TTS init: %s", self._error)
+                return False
 
         self._piper_binary = piper_path
         self._error = None
@@ -258,6 +271,8 @@ class TTSPipeline:
     def _run_piper(self, text: str, model_path: str, output_path: str) -> str | None:
         """Run piper subprocess synchronously (called via run_in_executor).
 
+        piper-tts CLI uses: echo text | piper -m model.onnx -f output.wav
+
         Args:
             text:        Text to synthesize.
             model_path:  Path to the .onnx voice model.
@@ -268,9 +283,16 @@ class TTSPipeline:
         """
         import subprocess
 
+        # Build command — handle both direct binary and "python -m piper" forms
+        if " " in self._piper_binary:
+            # "python -m piper" form — split into parts
+            cmd = self._piper_binary.split() + ["-m", model_path, "-f", output_path]
+        else:
+            cmd = [self._piper_binary, "-m", model_path, "-f", output_path]
+
         try:
             proc = subprocess.run(
-                [self._piper_binary, "--model", model_path, "--output_file", output_path],
+                cmd,
                 input=text,
                 capture_output=True,
                 text=True,
@@ -284,7 +306,7 @@ class TTSPipeline:
             return "Piper timed out after 60 seconds"
         except FileNotFoundError:
             self._initialized = False
-            self._error = "piper binary disappeared from PATH"
+            self._error = "piper-tts binary not found"
             return self._error
 
     @staticmethod
