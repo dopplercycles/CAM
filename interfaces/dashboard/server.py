@@ -327,7 +327,7 @@ async def _handle_voice_input(websocket, msg):
             model = _get_whisper_model()
             if model is None:
                 return None, "Whisper model not available"
-            segments, info = model.transcribe(tmp_wav_path, beam_size=5, language="en", condition_on_previous_text=False, vad_filter=True)
+            segments, info = model.transcribe(tmp_wav_path, beam_size=1, language="en", condition_on_previous_text=False, vad_filter=True)
             text = " ".join(seg.text.strip() for seg in segments)
             return text, None
 
