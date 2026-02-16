@@ -515,19 +515,17 @@ class ConversationManager:
             "..." if len(message) > 80 else "",
         )
 
-        # 1. Record user message in episodic memory
-        self._episodic.record(
-            participant=participant,
-            content=message,
-            context_tags=["chat", "george_cam"],
-            metadata={"intent": intent, "source": "dashboard"},
-        )
-
-        # 2. Model switch — handle directly, no API call
+        # 1. Model switch — handle directly, no API call
         if intent == "model_switch":
             switch_result = self._handle_model_switch(message, timestamp)
             if switch_result is not None:
                 # Record in episodic memory + STM
+                self._episodic.record(
+                    participant=participant,
+                    content=message,
+                    context_tags=["chat", "george_cam"],
+                    metadata={"intent": intent, "source": "dashboard"},
+                )
                 self._episodic.record(
                     participant="cam",
                     content=switch_result.text,
@@ -545,12 +543,23 @@ class ConversationManager:
                 })
                 return switch_result
 
-        # 3. Build system prompt (consumes stall context if set)
+        # 2. Build system prompt (consumes stall context if set)
         system_prompt = await self._build_system_prompt(intent)
         self._stall_context = ""  # consumed — clear so it doesn't repeat
 
-        # 4. Build message list with recent chat history
+        # 3. Build message list with recent chat history
+        #    NOTE: Record user message AFTER building messages so _build_messages()
+        #    doesn't pick up the current message from episodic memory (which would
+        #    duplicate it — the current message is appended explicitly in _build_messages).
         messages = await self._build_messages(message)
+
+        # 4. Now record user message in episodic memory (for future turns)
+        self._episodic.record(
+            participant=participant,
+            content=message,
+            context_tags=["chat", "george_cam"],
+            metadata={"intent": intent, "source": "dashboard"},
+        )
 
         # 5. Route to Claude Opus via "boss" complexity tier (with tools)
         response = await self._router.route(
