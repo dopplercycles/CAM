@@ -14656,8 +14656,8 @@
                                 title="Model override (select default to clear)"
                                 onchange="setAgentModel('${agentId}', this.value)">
                             <option value=""${!agent.model_override ? ' selected' : ''}>default</option>
-                            ${(window.availableModels || []).map(m =>
-                                `<option value="${escapeHtml(m)}"${agent.model_override === m ? ' selected' : ''}>${escapeHtml(m)}</option>`
+                            ${(window.agentOllamaModels || []).map(m =>
+                                `<option value="${escapeHtml(m.id)}"${agent.model_override === m.id ? ' selected' : ''}>${escapeHtml(m.label)}</option>`
                             ).join('')}
                         </select>
                         <div class="agent-status-badge ${statusClass}">
@@ -23107,6 +23107,15 @@
         var camChatWaiting = false;
         var currentModelAssignments = { routing: {}, agent_overrides: {} };
         window.availableModels = [];
+        window.agentOllamaModels = [
+            { id: 'phi4-mini:3.8b', label: 'Phi-4 Mini (3.8B)' },
+            { id: 'mistral:7b', label: 'Mistral (7B)' },
+            { id: 'qwen3:8b', label: 'Qwen3 (8B)' },
+            { id: 'llama3.1:8b', label: 'Llama 3.1 (8B)' },
+            { id: 'qwen3:14b', label: 'Qwen3 (14B)' },
+            { id: 'phi4:14b', label: 'Phi-4 (14B)' },
+            { id: 'gpt-oss:20b', label: 'GPT-OSS (20B)' },
+        ];
 
         function handleModelAssignments(data) {
             currentModelAssignments = {
