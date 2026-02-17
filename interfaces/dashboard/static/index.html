@@ -23117,15 +23117,20 @@
             if (data.available_models) {
                 window.availableModels = data.available_models;
             }
-            // Rebuild Cam model selector
+            // Rebuild Cam model selector — Anthropic models only
             var bossModel = currentModelAssignments.routing.boss || '';
+            var camModels = [
+                { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+                { id: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+                { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+            ];
             var selector = document.getElementById('camModelSelector');
             if (selector) {
-                var opts = window.availableModels.map(function(m) {
-                    return '<option value="' + escapeHtml(m) + '"' + (m === bossModel ? ' selected' : '') + '>' + escapeHtml(m) + '</option>';
+                var opts = camModels.map(function(m) {
+                    return '<option value="' + escapeHtml(m.id) + '"' + (m.id === bossModel ? ' selected' : '') + '>' + escapeHtml(m.label) + '</option>';
                 }).join('');
                 selector.innerHTML = opts;
-                selector.style.display = window.availableModels.length ? 'inline-block' : 'none';
+                selector.style.display = 'inline-block';
             }
             // Sync agent_overrides into the agents array so renderAgents()
             // picks up the new model_override values immediately (the
