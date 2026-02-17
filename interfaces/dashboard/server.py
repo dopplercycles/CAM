@@ -39,7 +39,7 @@ from core.memory import ShortTermMemory, WorkingMemory, LongTermMemory, Episodic
 from core.notifications import NotificationManager
 from core.persona import Persona, load_reference_doc
 from interfaces.telegram.bot import TelegramBot
-from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus
+from core.task import TaskQueue, TaskComplexity, TaskChain, Task, ChainStatus, TaskStatus
 from core.swarm import SwarmTask, SwarmStatus
 from core.orchestrator import Orchestrator
 from core.context_manager import ContextManager
@@ -3824,6 +3824,17 @@ async def dashboard_websocket(websocket: WebSocket):
                     "tasks": task_queue.to_broadcast_list(),
                     "counts": task_queue.get_status(),
                 })
+
+            elif msg.get("type") == "task_dismiss":
+                # Dismiss (mark failed) a pending/running task from the dashboard
+                tid = msg.get("task_id", "")
+                task = task_queue.get_task(tid) if tid else None
+                if task and task.status in (TaskStatus.PENDING, TaskStatus.RUNNING):
+                    task.status = TaskStatus.FAILED
+                    task.result = "Dismissed from dashboard"
+                    task.completed_at = datetime.now(timezone.utc)
+                    logger.info("Task %s dismissed from dashboard", task.short_id)
+                    await broadcast_task_status()
 
             elif msg.get("type") == "ping_agent":
                 target_id = msg.get("agent_id", "")
