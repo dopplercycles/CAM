@@ -29,7 +29,7 @@ db_path = "data/analytics.db"
 ollama_url = "http://localhost:11434"
 
 [models.routing]
-simple = "glm-4.7-flash"
+simple = "mistral:7b"
 routine = "gpt-oss:20b"
 agentic = "kimi-k2.5"
 complex = "claude"
