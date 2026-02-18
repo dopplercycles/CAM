@@ -71,6 +71,10 @@ output = 15.00
 input = 0.50
 output = 1.50
 
+[models.costs."deepseek-reasoner"]
+input = 0.55
+output = 2.19
+
 [commands]
 status_report = 30
 system_info = 30

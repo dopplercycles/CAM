@@ -125,6 +125,7 @@ _API_COSTS = {
     "claude-opus-4-6": {"input": 15.00, "output": 75.00},
     "claude-sonnet-4-5-20250929": {"input": 3.00, "output": 15.00},
     "kimi-k2.5": {"input": 0.50, "output": 1.50},
+    "deepseek-reasoner": {"input": 0.55, "output": 2.19},
 }
 
 _OLLAMA_URL = "http://localhost:11434"
@@ -221,6 +222,8 @@ class ModelRouter:
         # Route to the right backend — Claude API models go to _call_claude
         if model.startswith("claude"):
             response = await self._call_claude(prompt, model, system_prompt, messages, tools)
+        elif model.startswith("deepseek"):
+            response = await self._call_deepseek(prompt, model, system_prompt)
         elif model in ("kimi-k2.5",):
             response = await self._call_moonshot(prompt, model, system_prompt)
         else:
@@ -556,6 +559,95 @@ class ModelRouter:
             text=text.strip(),
             model=model,
             backend="moonshot",
+            prompt_tokens=prompt_tokens,
+            response_tokens=response_tokens,
+            total_tokens=total_tokens,
+            latency_ms=round(elapsed_ms, 1),
+            cost_usd=round(cost_usd, 6),
+        )
+
+    # -------------------------------------------------------------------
+    # DeepSeek API (OpenAI-compatible)
+    # -------------------------------------------------------------------
+
+    async def _call_deepseek(
+        self,
+        prompt: str,
+        model: str,
+        system_prompt: str | None = None,
+    ) -> ModelResponse:
+        """Call the DeepSeek API.
+
+        Uses the OpenAI-compatible API at api.deepseek.com. Requires
+        the DEEPSEEK_API_KEY environment variable to be set.
+
+        Args:
+            prompt:        The prompt text.
+            model:         Model name (e.g. "deepseek-reasoner").
+            system_prompt: Optional system message.
+
+        Returns:
+            ModelResponse with the result and token/cost tracking.
+        """
+        if not _HAS_OPENAI:
+            logger.warning("openai SDK not installed — returning error")
+            return ModelResponse(
+                text="[error] The openai Python package is not installed. "
+                     "Run: .venv/bin/pip install openai",
+                model=model,
+                backend="deepseek",
+            )
+
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+        if not api_key:
+            logger.warning("DEEPSEEK_API_KEY not set — returning error")
+            return ModelResponse(
+                text="[error] DEEPSEEK_API_KEY environment variable is not set.",
+                model=model,
+                backend="deepseek",
+            )
+
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        start = time.perf_counter()
+        try:
+            client = openai.AsyncOpenAI(
+                api_key=api_key,
+                base_url="https://api.deepseek.com",
+            )
+            response = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=8192,
+            )
+        except Exception as e:
+            logger.error("DeepSeek API call failed: %s", e)
+            return ModelResponse(
+                text=f"[error] DeepSeek API call failed: {e}",
+                model=model,
+                backend="deepseek",
+            )
+
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        text = response.choices[0].message.content or ""
+        prompt_tokens = getattr(response.usage, "prompt_tokens", 0) or 0
+        response_tokens = getattr(response.usage, "completion_tokens", 0) or 0
+        total_tokens = prompt_tokens + response_tokens
+
+        costs = self._api_costs.get(model, {"input": 0.55, "output": 2.19})
+        cost_usd = (
+            (prompt_tokens / 1_000_000) * costs["input"]
+            + (response_tokens / 1_000_000) * costs["output"]
+        )
+
+        return ModelResponse(
+            text=text.strip(),
+            model=model,
+            backend="deepseek",
             prompt_tokens=prompt_tokens,
             response_tokens=response_tokens,
             total_tokens=total_tokens,
