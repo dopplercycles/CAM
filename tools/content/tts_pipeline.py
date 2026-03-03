@@ -77,6 +77,29 @@ _PLACEHOLDER_ABBREV = '\x00DOT\x00'
 _PLACEHOLDER_DECIMAL = '\x01DOT\x01'
 
 
+def clean_for_speech(text: str) -> str:
+    """Strip markdown formatting characters that TTS would read aloud.
+
+    Removes asterisks (bold/italic), hashes (headings), and other
+    markdown syntax so Piper doesn't say "asterisk" or "hash".
+    """
+    # Remove markdown bold/italic markers: **, *, __, _
+    text = re.sub(r'\*{1,3}', '', text)
+    text = re.sub(r'_{1,3}', '', text)
+    # Remove heading markers: ### heading -> heading
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
+    # Remove inline code backticks
+    text = re.sub(r'`', '', text)
+    # Remove markdown link syntax: [text](url) -> text
+    text = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)
+    # Remove markdown image syntax: ![alt](url) -> alt
+    text = re.sub(r'!\[([^\]]*)\]\([^)]*\)', r'\1', text)
+    # Collapse multiple spaces/blank lines
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def split_sentences(text: str) -> list[str]:
     """Split text into sentences for streaming TTS.
 
@@ -264,6 +287,9 @@ class TTSPipeline:
                 error="Empty text — nothing to synthesize",
             )
 
+        # Strip markdown formatting so TTS doesn't read *, #, etc.
+        text = clean_for_speech(text)
+
         if not self._ensure_initialized():
             return SynthesisResult(
                 audio_path=None, text=text, voice=voice,
@@ -372,6 +398,9 @@ class TTSPipeline:
         if not text or not text.strip():
             yield (b'', 0, 0, "Empty text — nothing to synthesize")
             return
+
+        # Strip markdown formatting so TTS doesn't read *, #, etc.
+        text = clean_for_speech(text)
 
         if not self._ensure_initialized():
             yield (b'', 0, 0, self._error)
