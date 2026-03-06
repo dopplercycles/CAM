@@ -97,7 +97,7 @@ BOARD_MEMBERS = {
         "name": "DeepSeek",
         "role": "R&D Analyst",
         "provider": "deepseek",
-        "model": "deepseek-reasoner",
+        "model": "deepseek-chat",
         "color": "#2ecc71",
         "persona": (
             "You are DeepSeek, R&D Analyst on Doppler Cycles' AI Board. "
@@ -397,13 +397,10 @@ class BoardOfDirectors:
             base_url="https://api.deepseek.com",
         )
 
-        messages = []
-        # deepseek-reasoner doesn't support system messages — prepend to user
-        if model == "deepseek-reasoner":
-            messages.append({"role": "user", "content": f"{system_prompt}\n\n{prompt}"})
-        else:
-            messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ]
 
         response = await client.chat.completions.create(
             model=model,
