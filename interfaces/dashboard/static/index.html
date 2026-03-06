@@ -10366,6 +10366,165 @@
             font-weight: normal;
         }
 
+        /* --- AI Board of Directors --- */
+        .board-section { padding: 1rem; }
+        .board-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;
+        }
+        .board-header h2 { margin: 0; font-size: 1.15rem; }
+        .board-header-actions { display: flex; gap: 0.5rem; }
+        .board-btn {
+            padding: 0.35rem 0.75rem; border: 1px solid var(--border);
+            background: var(--bg-secondary); color: var(--text-primary);
+            border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+        }
+        .board-btn:hover { background: var(--bg-tertiary, var(--border)); }
+        .board-btn-primary { background: #e74c3c; color: #fff; border-color: #e74c3c; }
+        .board-btn-primary:hover { background: #c0392b; }
+
+        .board-layout {
+            display: grid; grid-template-columns: 240px 1fr; gap: 1rem;
+            min-height: 500px;
+        }
+        @media (max-width: 768px) {
+            .board-layout { grid-template-columns: 1fr; }
+            .board-sidebar { order: 2; }
+        }
+
+        .board-sidebar {
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 1rem; background: var(--bg-secondary);
+        }
+        .board-table-visual { margin-bottom: 1rem; }
+        .board-round-table {
+            width: 180px; height: 180px; margin: 0 auto;
+            border: 3px solid var(--border); border-radius: 50%;
+            position: relative; background: var(--bg-primary);
+        }
+        .board-seat {
+            position: absolute; width: 32px; height: 32px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 700; color: #fff; cursor: pointer;
+            transition: transform 0.2s, opacity 0.3s; border: 2px solid var(--bg-primary);
+        }
+        .board-seat.inactive { opacity: 0.3; transform: scale(0.8); }
+        .board-seat.thinking { animation: board-pulse 1s infinite; }
+        @keyframes board-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+            50% { box-shadow: 0 0 0 6px transparent; }
+        }
+
+        .board-member-toggles { display: flex; flex-direction: column; gap: 0.4rem; }
+        .board-toggle-row {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.25rem 0; font-size: 0.82rem;
+        }
+        .board-toggle-row label { flex: 1; cursor: pointer; }
+        .board-toggle-dot {
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+        }
+        .board-toggle-row input[type="checkbox"] { cursor: pointer; }
+        .board-toggle-role { color: var(--text-secondary); font-size: 0.72rem; }
+
+        .board-main {
+            display: flex; flex-direction: column;
+            border: 1px solid var(--border); border-radius: 8px;
+            background: var(--bg-secondary); overflow: hidden;
+        }
+        .board-feed {
+            flex: 1; overflow-y: auto; padding: 1rem;
+            max-height: 600px; min-height: 300px;
+        }
+        .board-empty-state {
+            text-align: center; padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+        .board-empty-state p:first-child { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
+
+        .board-msg {
+            margin-bottom: 1rem; padding: 0.75rem;
+            border-radius: 8px; border-left: 4px solid var(--border);
+            background: var(--bg-primary);
+        }
+        .board-msg-header {
+            display: flex; align-items: center; gap: 0.5rem;
+            margin-bottom: 0.4rem; font-size: 0.82rem;
+        }
+        .board-msg-name { font-weight: 700; }
+        .board-msg-role { color: var(--text-secondary); font-size: 0.75rem; }
+        .board-msg-latency { color: var(--text-secondary); font-size: 0.7rem; margin-left: auto; }
+        .board-msg-text {
+            font-size: 0.88rem; line-height: 1.5;
+            white-space: pre-wrap; word-wrap: break-word;
+        }
+        .board-msg-user {
+            border-left-color: #fff; background: var(--bg-tertiary, var(--bg-primary));
+        }
+
+        .board-thinking-indicator {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.4rem 0.75rem; border-radius: 6px;
+            margin: 0.25rem 0; font-size: 0.8rem;
+            background: var(--bg-primary); border: 1px solid var(--border);
+        }
+        .board-thinking-dots::after {
+            content: '...'; animation: board-dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes board-dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
+        .board-input-row {
+            display: flex; gap: 0.5rem; padding: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+        .board-input {
+            flex: 1; padding: 0.5rem 0.75rem; border: 1px solid var(--border);
+            background: var(--bg-primary); color: var(--text-primary);
+            border-radius: 6px; font-size: 0.88rem;
+        }
+        .board-input:focus { outline: none; border-color: #e74c3c; }
+        .board-ask-btn {
+            padding: 0.5rem 1.25rem; background: #e74c3c; color: #fff;
+            border: none; border-radius: 6px; font-weight: 700;
+            cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+        }
+        .board-ask-btn:hover { background: #c0392b; }
+        .board-ask-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Board modals */
+        .board-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .board-modal {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1.5rem; width: 90%; max-width: 500px;
+        }
+        .board-modal h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+        .board-textarea {
+            width: 100%; min-height: 120px; padding: 0.6rem;
+            border: 1px solid var(--border); background: var(--bg-primary);
+            color: var(--text-primary); border-radius: 6px; font-size: 0.88rem;
+            resize: vertical; font-family: inherit;
+        }
+        .board-modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+        .board-key-row { margin-bottom: 0.75rem; }
+        .board-key-row label {
+            display: block; font-size: 0.82rem; margin-bottom: 0.25rem;
+            color: var(--text-secondary);
+        }
+        .board-key-input {
+            width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--border);
+            background: var(--bg-primary); color: var(--text-primary);
+            border-radius: 4px; font-size: 0.85rem; font-family: monospace;
+        }
+
     </style>
 </head>
 <body>
@@ -13329,6 +13488,93 @@
                 <!-- Agent cards rendered here by JS -->
             </div>
         </section>
+
+        <!-- AI Board of Directors -->
+        <section class="board-section" data-panel-id="board-of-directors">
+            <div class="board-header">
+                <h2>AI Board of Directors</h2>
+                <div class="board-header-actions">
+                    <button class="board-btn" onclick="showBoardBriefingModal()" title="Set briefing context">BRIEF</button>
+                    <button class="board-btn" onclick="showBoardKeysModal()" title="Configure API keys">KEYS</button>
+                    <button class="board-btn" onclick="exportBoardSession()" title="Export as Markdown">EXPORT</button>
+                </div>
+            </div>
+
+            <div class="board-layout">
+                <!-- Sidebar: boardroom table + member toggles -->
+                <div class="board-sidebar">
+                    <div class="board-table-visual">
+                        <div class="board-round-table" id="board-round-table">
+                            <!-- Member seats rendered by JS -->
+                        </div>
+                    </div>
+                    <div class="board-member-toggles" id="board-member-toggles">
+                        <!-- Member toggle switches rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Main: discussion feed + input -->
+                <div class="board-main">
+                    <div class="board-feed" id="board-feed">
+                        <div class="board-empty-state" id="board-empty-state">
+                            <p>Welcome to the AI Board of Directors</p>
+                            <p style="font-size:0.85rem;color:var(--text-secondary);">
+                                Brief the board, then ask a question to get perspectives from 7 AI advisors.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="board-input-row">
+                        <input type="text" id="board-question-input" class="board-input"
+                               placeholder="Ask the board a question..."
+                               onkeydown="if(event.key==='Enter')submitBoardQuestion()">
+                        <button class="board-ask-btn" id="board-ask-btn" onclick="submitBoardQuestion()">ASK BOARD</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Briefing modal -->
+            <div class="board-modal-overlay" id="board-briefing-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+                <div class="board-modal">
+                    <h3>Board Briefing</h3>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem;">
+                        Provide business context so the board can give informed advice.
+                    </p>
+                    <textarea id="board-briefing-text" class="board-textarea"
+                              placeholder="e.g. Doppler Cycles is a mobile motorcycle diagnostics business in Portland, OR. We're considering expanding into..."></textarea>
+                    <div class="board-modal-actions">
+                        <button class="board-btn" onclick="document.getElementById('board-briefing-modal').style.display='none'">Cancel</button>
+                        <button class="board-btn board-btn-primary" onclick="saveBoardBriefing()">Save Briefing</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Keys modal -->
+            <div class="board-modal-overlay" id="board-keys-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+                <div class="board-modal">
+                    <h3>API Keys</h3>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem;">
+                        Anthropic and DeepSeek keys are loaded from .env. Configure the others here (memory only — not saved to disk).
+                    </p>
+                    <div class="board-key-row">
+                        <label>OpenAI (ChatGPT)</label>
+                        <input type="password" id="board-key-openai" class="board-key-input" placeholder="sk-...">
+                    </div>
+                    <div class="board-key-row">
+                        <label>xAI (Grok)</label>
+                        <input type="password" id="board-key-xai" class="board-key-input" placeholder="xai-...">
+                    </div>
+                    <div class="board-key-row">
+                        <label>Google (Gemini)</label>
+                        <input type="password" id="board-key-google" class="board-key-input" placeholder="AIza...">
+                    </div>
+                    <div class="board-modal-actions">
+                        <button class="board-btn" onclick="document.getElementById('board-keys-modal').style.display='none'">Cancel</button>
+                        <button class="board-btn board-btn-primary" onclick="saveBoardApiKeys()">Save Keys</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- Mobile bottom navigation -->
@@ -13385,6 +13631,14 @@
 
         // Per-agent health metrics: { agent_id: {...metrics} }
         let agentHealth = {};
+
+        // --- AI Board of Directors state ---
+        let boardSessionId = null;
+        let boardBriefing = '';
+        let boardApiKeys = { openai: '', xai: '', google: '' };
+        let boardActiveMembers = [];
+        let boardMembers = {};      // member_id -> {name, role, color, provider}
+        let boardThinking = new Set();  // member_ids currently thinking
 
         // Command library from server
         let commandLibrary = [];
@@ -13461,6 +13715,7 @@
             { id: 'agents', name: 'Agent Status Board' },
             { id: 'performance', name: 'Performance Monitor' },
             { id: 'user-management', name: 'User Management' },
+            { id: 'board-of-directors', name: 'AI Board of Directors' },
         ];
 
         function loadPrefs() {
@@ -14324,6 +14579,25 @@
                     handleCamTTSStreamError(data);
                 } else if (data.type === "permission_denied") {
                     showPermissionDenied(data.denied_action, data.required_role);
+                // --- AI Board of Directors WS handlers ---
+                } else if (data.type === "board_session_created") {
+                    handleBoardSessionCreated(data);
+                } else if (data.type === "board_member_response") {
+                    handleBoardMemberResponse(data);
+                } else if (data.type === "board_thinking") {
+                    handleBoardThinking(data);
+                } else if (data.type === "board_complete") {
+                    handleBoardComplete(data);
+                } else if (data.type === "board_error") {
+                    handleBoardError(data);
+                } else if (data.type === "board_briefing_set") {
+                    if (data.ok) showToast('Briefing saved', 'success');
+                } else if (data.type === "board_api_keys_status") {
+                    handleBoardApiKeysStatus(data.status);
+                } else if (data.type === "board_export_result") {
+                    handleBoardExportResult(data);
+                } else if (data.type === "board_history") {
+                    handleBoardHistory(data);
                 }
             };
 
@@ -24725,6 +24999,293 @@
 
         // Initialize compact mode toggle state on load
         updateCompactModeToggle();
+
+        // ---------------------------------------------------------------
+        // AI Board of Directors
+        // ---------------------------------------------------------------
+
+        function initBoardSession() {
+            if (boardSessionId) return;  // already initialized
+            ws.send(JSON.stringify({ type: 'board_session_create', title: 'Board Meeting' }));
+        }
+
+        function handleBoardSessionCreated(data) {
+            boardSessionId = data.session_id;
+            boardMembers = data.members || {};
+            boardActiveMembers = data.active_members || Object.keys(boardMembers);
+            renderBoardTable();
+            renderBoardToggles();
+            handleBoardApiKeysStatus(data.api_keys_status || {});
+        }
+
+        function renderBoardTable() {
+            const table = document.getElementById('board-round-table');
+            if (!table) return;
+            table.innerHTML = '';
+            const ids = Object.keys(boardMembers);
+            const n = ids.length;
+            const cx = 90, cy = 90, r = 72;  // center and radius of circle
+            ids.forEach((id, i) => {
+                const m = boardMembers[id];
+                const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+                const x = cx + r * Math.cos(angle) - 16;
+                const y = cy + r * Math.sin(angle) - 16;
+                const active = boardActiveMembers.includes(id);
+                const thinking = boardThinking.has(id);
+                const seat = document.createElement('div');
+                seat.className = 'board-seat' + (active ? '' : ' inactive') + (thinking ? ' thinking' : '');
+                seat.style.cssText = `left:${x}px;top:${y}px;background:${m.color};color:currentColor;`;
+                seat.style.color = '#fff';
+                seat.style.backgroundColor = m.color;
+                seat.title = `${m.name} — ${m.role}`;
+                seat.textContent = m.name.substring(0, 2).toUpperCase();
+                seat.onclick = () => toggleBoardMember(id);
+                table.appendChild(seat);
+            });
+        }
+
+        function renderBoardToggles() {
+            const container = document.getElementById('board-member-toggles');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.entries(boardMembers).forEach(([id, m]) => {
+                const active = boardActiveMembers.includes(id);
+                const row = document.createElement('div');
+                row.className = 'board-toggle-row';
+                row.innerHTML = `
+                    <span class="board-toggle-dot" style="background:${m.color}"></span>
+                    <label>${m.name}</label>
+                    <span class="board-toggle-role">${m.role}</span>
+                    <input type="checkbox" ${active ? 'checked' : ''} onchange="toggleBoardMember('${id}')">
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function toggleBoardMember(memberId) {
+            const idx = boardActiveMembers.indexOf(memberId);
+            if (idx >= 0) {
+                boardActiveMembers.splice(idx, 1);
+            } else {
+                boardActiveMembers.push(memberId);
+            }
+            // Sync to server
+            if (boardSessionId) {
+                ws.send(JSON.stringify({
+                    type: 'board_set_active_members',
+                    session_id: boardSessionId,
+                    member_ids: boardActiveMembers,
+                }));
+            }
+            renderBoardTable();
+            renderBoardToggles();
+        }
+
+        function submitBoardQuestion() {
+            const input = document.getElementById('board-question-input');
+            const btn = document.getElementById('board-ask-btn');
+            const question = (input.value || '').trim();
+            if (!question || !boardSessionId) {
+                if (!boardSessionId) initBoardSession();
+                return;
+            }
+
+            // Add user message to feed
+            addBoardMessage({
+                member_id: 'user', member_name: 'George', role: 'Owner',
+                text: question, color: '#ffffff', latency_ms: 0,
+            });
+
+            // Send to server
+            ws.send(JSON.stringify({
+                type: 'board_ask',
+                session_id: boardSessionId,
+                question: question,
+            }));
+
+            input.value = '';
+            btn.disabled = true;
+        }
+
+        function handleBoardThinking(data) {
+            boardThinking = new Set(data.members || []);
+            const feed = document.getElementById('board-feed');
+            // Remove existing thinking indicators
+            feed.querySelectorAll('.board-thinking-indicator').forEach(el => el.remove());
+            // Add thinking indicators for each member
+            boardThinking.forEach(mid => {
+                const m = boardMembers[mid];
+                if (!m) return;
+                const el = document.createElement('div');
+                el.className = 'board-thinking-indicator';
+                el.id = `board-thinking-${mid}`;
+                el.innerHTML = `<span style="color:${m.color};font-weight:700;">${m.name}</span> thinking<span class="board-thinking-dots"></span>`;
+                feed.appendChild(el);
+            });
+            feed.scrollTop = feed.scrollHeight;
+            renderBoardTable();
+            // Hide empty state
+            const empty = document.getElementById('board-empty-state');
+            if (empty) empty.style.display = 'none';
+        }
+
+        function handleBoardMemberResponse(data) {
+            // Remove thinking indicator for this member
+            boardThinking.delete(data.member_id);
+            const thinkEl = document.getElementById(`board-thinking-${data.member_id}`);
+            if (thinkEl) thinkEl.remove();
+            renderBoardTable();
+
+            addBoardMessage(data);
+        }
+
+        function handleBoardComplete(data) {
+            boardThinking.clear();
+            document.querySelectorAll('.board-thinking-indicator').forEach(el => el.remove());
+            renderBoardTable();
+            const btn = document.getElementById('board-ask-btn');
+            if (btn) btn.disabled = false;
+        }
+
+        function handleBoardError(data) {
+            boardThinking.clear();
+            document.querySelectorAll('.board-thinking-indicator').forEach(el => el.remove());
+            renderBoardTable();
+            const btn = document.getElementById('board-ask-btn');
+            if (btn) btn.disabled = false;
+            showToast('Board error: ' + (data.error || 'Unknown'), 'error');
+        }
+
+        function addBoardMessage(data) {
+            const feed = document.getElementById('board-feed');
+            const empty = document.getElementById('board-empty-state');
+            if (empty) empty.style.display = 'none';
+
+            const div = document.createElement('div');
+            const isUser = data.member_id === 'user';
+            div.className = 'board-msg' + (isUser ? ' board-msg-user' : '');
+            div.style.borderLeftColor = data.color;
+
+            let latencyHtml = '';
+            if (data.latency_ms > 0) {
+                latencyHtml = `<span class="board-msg-latency">${(data.latency_ms / 1000).toFixed(1)}s</span>`;
+            }
+
+            div.innerHTML = `
+                <div class="board-msg-header">
+                    <span class="board-msg-name" style="color:${data.color}">${data.member_name}</span>
+                    <span class="board-msg-role">${data.role}</span>
+                    ${latencyHtml}
+                </div>
+                <div class="board-msg-text">${escapeHtml(data.text)}</div>
+            `;
+            feed.appendChild(div);
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showBoardBriefingModal() {
+            if (!boardSessionId) initBoardSession();
+            const ta = document.getElementById('board-briefing-text');
+            if (ta) ta.value = boardBriefing;
+            document.getElementById('board-briefing-modal').style.display = 'flex';
+        }
+
+        function saveBoardBriefing() {
+            const ta = document.getElementById('board-briefing-text');
+            boardBriefing = (ta.value || '').trim();
+            if (boardSessionId) {
+                ws.send(JSON.stringify({
+                    type: 'board_set_briefing',
+                    session_id: boardSessionId,
+                    briefing: boardBriefing,
+                }));
+            }
+            document.getElementById('board-briefing-modal').style.display = 'none';
+        }
+
+        function showBoardKeysModal() {
+            document.getElementById('board-key-openai').value = boardApiKeys.openai || '';
+            document.getElementById('board-key-xai').value = boardApiKeys.xai || '';
+            document.getElementById('board-key-google').value = boardApiKeys.google || '';
+            document.getElementById('board-keys-modal').style.display = 'flex';
+        }
+
+        function saveBoardApiKeys() {
+            boardApiKeys.openai = document.getElementById('board-key-openai').value.trim();
+            boardApiKeys.xai = document.getElementById('board-key-xai').value.trim();
+            boardApiKeys.google = document.getElementById('board-key-google').value.trim();
+            ws.send(JSON.stringify({
+                type: 'board_set_api_keys',
+                keys: boardApiKeys,
+            }));
+            document.getElementById('board-keys-modal').style.display = 'none';
+        }
+
+        function handleBoardApiKeysStatus(status) {
+            // Could update UI indicators showing which providers are configured
+            // For now just log it
+            if (status) {
+                logger && logger('Board API keys status:', status);
+            }
+        }
+
+        function exportBoardSession() {
+            if (!boardSessionId) {
+                showToast('No active board session', 'error');
+                return;
+            }
+            ws.send(JSON.stringify({
+                type: 'board_export',
+                session_id: boardSessionId,
+            }));
+        }
+
+        function handleBoardExportResult(data) {
+            if (!data.ok || !data.markdown) {
+                showToast('Export failed', 'error');
+                return;
+            }
+            // Download as .md file
+            const blob = new Blob([data.markdown], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `board-session-${data.session_id || 'export'}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Session exported', 'success');
+        }
+
+        function handleBoardHistory(data) {
+            const feed = document.getElementById('board-feed');
+            if (!feed) return;
+            // Clear and re-render
+            feed.innerHTML = '';
+            const empty = document.getElementById('board-empty-state');
+            if (data.messages && data.messages.length > 0) {
+                if (empty) empty.style.display = 'none';
+                data.messages.forEach(m => addBoardMessage(m));
+            }
+        }
+
+        // Auto-init board session when the panel becomes visible
+        const boardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !boardSessionId && ws && ws.readyState === 1) {
+                    initBoardSession();
+                }
+            });
+        }, { threshold: 0.1 });
+        const boardSection = document.querySelector('[data-panel-id="board-of-directors"]');
+        if (boardSection) boardObserver.observe(boardSection);
 
         // ---------------------------------------------------------------
         // Start

@@ -128,6 +128,7 @@ ADMIN_ONLY_PANELS: set[str] = {
     "plugin-manager", "agent-deploy", "deploy", "backup",
     "performance", "context", "memory", "msgbus", "webhooks",
     "offline-mode", "persona", "training", "user-management",
+    "board-of-directors",
 }
 
 OPERATOR_PANELS: set[str] = {

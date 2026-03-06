@@ -89,6 +89,7 @@ from core.memory.knowledge_ingest import KnowledgeIngest
 from tests.self_test import SelfTest
 from tests.integration_test import LaunchReadiness
 from tests.v1_validation import V1Validation
+from core.board_of_directors import BoardOfDirectors, BOARD_MEMBERS
 
 # ROS 2 bridge — conditional import (graceful degradation)
 try:
@@ -257,6 +258,9 @@ last_launch_readiness_results: dict | None = None
 
 # Last v1 validation results cache — populated when dashboard runs v1 validation
 last_v1_validation_results: dict | None = None
+
+# AI Board of Directors — multi-model boardroom
+board_of_directors = BoardOfDirectors()
 
 # Background task handle for the orchestrator loop
 orchestrator_task: asyncio.Task | None = None
@@ -7802,6 +7806,145 @@ async def dashboard_websocket(websocket: WebSocket):
                     "messages": message_bus.get_recent(channel=channel, count=count),
                     "stats": message_bus.get_stats(),
                     "matrix": message_bus.get_sender_channel_matrix(),
+                })
+
+            # --- AI Board of Directors ---
+            elif msg.get("type") == "board_session_create":
+                title = msg.get("title", "Board Meeting")
+                sid = board_of_directors.create_session(title)
+                session = board_of_directors.get_session(sid)
+                await websocket.send_json({
+                    "type": "board_session_created",
+                    "session_id": sid,
+                    "title": title,
+                    "members": {
+                        mid: {"name": m["name"], "role": m["role"], "color": m["color"], "provider": m["provider"]}
+                        for mid, m in BOARD_MEMBERS.items()
+                    },
+                    "active_members": session.active_members if session else [],
+                    "api_keys_status": board_of_directors.get_api_keys_status(),
+                })
+
+            elif msg.get("type") == "board_set_briefing":
+                sid = msg.get("session_id", "")
+                briefing = msg.get("briefing", "")
+                ok = board_of_directors.set_briefing(sid, briefing)
+                await websocket.send_json({
+                    "type": "board_briefing_set",
+                    "session_id": sid,
+                    "ok": ok,
+                })
+
+            elif msg.get("type") == "board_set_api_keys":
+                keys = msg.get("keys", {})
+                for provider, key in keys.items():
+                    if key and provider in ("openai", "xai", "google"):
+                        board_of_directors.set_api_key(provider, key)
+                await websocket.send_json({
+                    "type": "board_api_keys_status",
+                    "status": board_of_directors.get_api_keys_status(),
+                })
+
+            elif msg.get("type") == "board_set_active_members":
+                sid = msg.get("session_id", "")
+                member_ids = msg.get("member_ids", [])
+                ok = board_of_directors.set_active_members(sid, member_ids)
+                await websocket.send_json({
+                    "type": "board_active_members_set",
+                    "session_id": sid,
+                    "ok": ok,
+                    "member_ids": member_ids,
+                })
+
+            elif msg.get("type") == "board_ask":
+                sid = msg.get("session_id", "")
+                question = msg.get("question", "").strip()
+                if not sid or not question:
+                    await websocket.send_json({
+                        "type": "board_error",
+                        "error": "session_id and question are required",
+                    })
+                    continue
+
+                # Broadcast thinking state
+                session = board_of_directors.get_session(sid)
+                if not session:
+                    await websocket.send_json({
+                        "type": "board_error",
+                        "error": "Unknown session",
+                    })
+                    continue
+
+                await broadcast_to_dashboards({
+                    "type": "board_thinking",
+                    "session_id": sid,
+                    "members": session.active_members,
+                })
+
+                async def _run_board(ws, session_id, q):
+                    async def on_response(s_id, board_msg):
+                        await broadcast_to_dashboards({
+                            "type": "board_member_response",
+                            "session_id": s_id,
+                            "member_id": board_msg.member_id,
+                            "member_name": board_msg.member_name,
+                            "role": board_msg.role,
+                            "text": board_msg.text,
+                            "color": board_msg.color,
+                            "latency_ms": board_msg.latency_ms,
+                            "timestamp": board_msg.timestamp,
+                        })
+
+                    try:
+                        await board_of_directors.ask_board(session_id, q, on_member_response=on_response)
+                        await broadcast_to_dashboards({
+                            "type": "board_complete",
+                            "session_id": session_id,
+                        })
+                    except Exception as e:
+                        logger.error("Board ask failed: %s", e)
+                        await broadcast_to_dashboards({
+                            "type": "board_error",
+                            "session_id": session_id,
+                            "error": str(e),
+                        })
+
+                asyncio.create_task(_run_board(websocket, sid, question))
+
+            elif msg.get("type") == "board_get_history":
+                sid = msg.get("session_id", "")
+                session = board_of_directors.get_session(sid)
+                if session:
+                    await websocket.send_json({
+                        "type": "board_history",
+                        "session_id": sid,
+                        "messages": [
+                            {
+                                "member_id": m.member_id,
+                                "member_name": m.member_name,
+                                "role": m.role,
+                                "text": m.text,
+                                "color": m.color,
+                                "latency_ms": m.latency_ms,
+                                "timestamp": m.timestamp,
+                            }
+                            for m in session.messages
+                        ],
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "board_error",
+                        "error": "Unknown session",
+                    })
+
+            elif msg.get("type") == "board_export":
+                sid = msg.get("session_id", "")
+                md = board_of_directors.export_session_markdown(sid)
+                await websocket.send_json({
+                    "type": "board_export_result",
+                    "session_id": sid,
+                    "markdown": md or "",
+                    "ok": md is not None,
                 })
 
     except WebSocketDisconnect:
