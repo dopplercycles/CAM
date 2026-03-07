@@ -397,6 +397,45 @@ class BoardMemory:
             ).fetchall()
             return [dict(r) for r in rows]
 
+    # ─── Cross-Session Recall (Phase 2) ──────────────────────────────────────
+
+    def get_recent_session_summaries(self, n: int = 3) -> list:
+        """Return summaries from the last N closed sessions.
+
+        Returns list of {session_id, date, summary, decisions_made}.
+        A session is "closed" if it has a non-empty summary field.
+        """
+        with self._conn() as conn:
+            rows = conn.execute(
+                """SELECT id, created_at, summary FROM sessions
+                   WHERE summary != '' AND summary IS NOT NULL AND archived = 0
+                   ORDER BY updated_at DESC LIMIT ?""",
+                (n,),
+            ).fetchall()
+            result = []
+            for row in rows:
+                s = dict(row)
+                # Also fetch decisions made in this session
+                decisions = conn.execute(
+                    "SELECT content FROM decisions WHERE session_id = ?",
+                    (s["id"],),
+                ).fetchall()
+                result.append({
+                    "session_id": s["id"],
+                    "date": s["created_at"],
+                    "summary": s["summary"],
+                    "decisions_made": [d["content"] for d in decisions],
+                })
+            return result
+
+    def get_session_summary(self, session_id: str) -> str:
+        """Return the closing summary for a specific session."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT summary FROM sessions WHERE id = ?", (session_id,)
+            ).fetchone()
+            return row["summary"] if row and row["summary"] else ""
+
     # ─── AI-Powered Memory Extraction ─────────────────────────────────────────
 
     async def extract_memories_from_session(self, session_id: str) -> dict:

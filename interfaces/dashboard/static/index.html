@@ -10366,202 +10366,409 @@
             font-weight: normal;
         }
 
-        /* --- AI Board of Directors --- */
-        .board-section { padding: 1rem; }
-        .board-header {
+        /* --- AI Board of Directors — Phase 2 Visual Overhaul --- */
+        .board-section { padding: 0; background: #0a0a0f; position: relative; overflow: hidden; }
+
+        /* Scanline overlay */
+        .board-section::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 4px);
+            pointer-events: none; z-index: 1;
+        }
+
+        .board-header-bar {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;
+            padding: 0.75rem 1.25rem; background: #1a1a2e; border-bottom: 1px solid #2a2a3e;
+            position: relative; z-index: 2;
         }
-        .board-header h2 { margin: 0; font-size: 1.15rem; }
-        .board-header-actions { display: flex; gap: 0.5rem; }
+        .board-header-left { display: flex; align-items: center; gap: 1rem; }
+        .board-header-left h2 {
+            margin: 0; font-size: 1.1rem; font-family: 'IBM Plex Mono', monospace;
+            color: #f59e0b; letter-spacing: 0.05em;
+        }
+        .board-cost-ticker {
+            font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem;
+            color: #6b7280; background: #0f0f1a; padding: 0.2rem 0.6rem;
+            border-radius: 4px; border: 1px solid #2a2a3e;
+        }
+        .board-header-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; }
         .board-btn {
-            padding: 0.35rem 0.75rem; border: 1px solid var(--border);
-            background: var(--bg-secondary); color: var(--text-primary);
-            border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+            padding: 0.3rem 0.65rem; border: 1px solid #2a2a3e;
+            background: #1a1a2e; color: #9ca3af;
+            border-radius: 4px; cursor: pointer; font-size: 0.72rem;
+            font-weight: 600; font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 0.04em; text-transform: uppercase; transition: all 0.15s;
         }
-        .board-btn:hover { background: var(--bg-tertiary, var(--border)); }
-        .board-btn-primary { background: #e74c3c; color: #fff; border-color: #e74c3c; }
-        .board-btn-primary:hover { background: #c0392b; }
+        .board-btn:hover { background: #2a2a3e; color: #f59e0b; border-color: #f59e0b; }
+        .board-btn-primary { background: #f59e0b; color: #0a0a0f; border-color: #f59e0b; }
+        .board-btn-primary:hover { background: #d97706; }
+        .board-btn-end { background: #7f1d1d; color: #fca5a5; border-color: #991b1b; }
+        .board-btn-end:hover { background: #991b1b; color: #fff; }
+        .board-btn-new { background: #065f46; color: #6ee7b7; border-color: #047857; }
+        .board-btn-new:hover { background: #047857; color: #fff; }
 
-        .board-layout {
-            display: grid; grid-template-columns: 240px 1fr; gap: 1rem;
-            min-height: 500px;
+        /* 3D Perspective Boardroom */
+        .board-room {
+            perspective: 600px; padding: 2rem 1rem 1rem;
+            display: flex; justify-content: center; position: relative; z-index: 2;
         }
-        @media (max-width: 768px) {
-            .board-layout { grid-template-columns: 1fr; }
-            .board-sidebar { order: 2; }
+        .board-table-3d {
+            width: 420px; height: 240px; position: relative;
+            transform: rotateX(18deg); transform-style: preserve-3d;
+        }
+        .board-oval-table {
+            width: 260px; height: 140px; margin: 50px auto 0;
+            border-radius: 50%; position: relative;
+            background: radial-gradient(ellipse, #2a1f0e 0%, #1a150a 60%, #0f0d08 100%);
+            border: 2px solid #3d2e14; box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 0 40px rgba(245,158,11,0.05);
         }
 
-        .board-sidebar {
-            border: 1px solid var(--border); border-radius: 8px;
-            padding: 1rem; background: var(--bg-secondary);
-        }
-        .board-table-visual { margin-bottom: 1rem; }
-        .board-round-table {
-            width: 180px; height: 180px; margin: 0 auto;
-            border: 3px solid var(--border); border-radius: 50%;
-            position: relative; background: var(--bg-primary);
-        }
-        .board-seat {
-            position: absolute; width: 32px; height: 32px;
+        /* Avatar seats */
+        .board-avatar {
+            position: absolute; width: 44px; height: 44px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 0.7rem; font-weight: 700; color: #fff; cursor: pointer;
-            transition: transform 0.2s, opacity 0.3s; border: 2px solid var(--bg-primary);
+            font-size: 0.75rem; font-weight: 700; color: #fff; cursor: pointer;
+            transition: transform 0.3s, opacity 0.3s;
+            font-family: 'IBM Plex Mono', monospace;
         }
-        .board-seat.inactive { opacity: 0.3; transform: scale(0.8); }
-        .board-seat.thinking { animation: board-pulse 1s infinite; }
-        @keyframes board-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 currentColor; }
-            50% { box-shadow: 0 0 0 6px transparent; }
+        .board-avatar-ring {
+            position: absolute; inset: -3px; border-radius: 50%;
+            border: 2px solid transparent; transition: all 0.3s;
+        }
+        .board-avatar-label {
+            position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+            font-size: 0.65rem; color: #9ca3af; white-space: nowrap;
+            font-family: 'IBM Plex Mono', monospace; text-align: center;
+        }
+        .board-avatar-role {
+            font-size: 0.55rem; color: #6b7280; display: block;
         }
 
-        .board-member-toggles { display: flex; flex-direction: column; gap: 0.4rem; }
-        .board-toggle-row {
-            display: flex; align-items: center; gap: 0.5rem;
-            padding: 0.25rem 0; font-size: 0.82rem;
+        /* Avatar states */
+        .board-avatar-idle .board-avatar-ring { border-color: var(--avatar-color); opacity: 0.5; }
+        .board-avatar-thinking .board-avatar-ring {
+            border-color: var(--avatar-color); animation: avatarPulse 1.2s ease-in-out infinite;
         }
-        .board-toggle-row label { flex: 1; cursor: pointer; }
-        .board-toggle-dot {
-            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+        .board-avatar-thinking .board-thinking-dots {
+            display: flex; gap: 2px; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
         }
-        .board-toggle-row input[type="checkbox"] { cursor: pointer; }
-        .board-toggle-role { color: var(--text-secondary); font-size: 0.72rem; }
+        .board-avatar-thinking .board-thinking-dot {
+            width: 4px; height: 4px; border-radius: 50%; background: var(--avatar-color);
+            animation: dotBounce 1s ease-in-out infinite;
+        }
+        .board-avatar-thinking .board-thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+        .board-avatar-thinking .board-thinking-dot:nth-child(3) { animation-delay: 0.3s; }
 
-        .board-main {
-            display: flex; flex-direction: column;
-            border: 1px solid var(--border); border-radius: 8px;
-            background: var(--bg-secondary); overflow: hidden;
+        .board-avatar-speaking .board-avatar-ring {
+            border-color: var(--avatar-color); box-shadow: 0 0 12px var(--avatar-glow);
+        }
+        .board-avatar-speaking .board-speak-bars {
+            display: flex; gap: 1px; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
+        }
+        .board-avatar-speaking .board-speak-bar {
+            width: 3px; background: var(--avatar-color); border-radius: 1px;
+            animation: speakBar 0.6s ease-in-out infinite alternate;
+        }
+        .board-avatar-speaking .board-speak-bar:nth-child(1) { height: 6px; animation-delay: 0s; }
+        .board-avatar-speaking .board-speak-bar:nth-child(2) { height: 10px; animation-delay: 0.1s; }
+        .board-avatar-speaking .board-speak-bar:nth-child(3) { height: 14px; animation-delay: 0.2s; }
+        .board-avatar-speaking .board-speak-bar:nth-child(4) { height: 10px; animation-delay: 0.3s; }
+        .board-avatar-speaking .board-speak-bar:nth-child(5) { height: 6px; animation-delay: 0.4s; }
+
+        .board-avatar-muted { opacity: 0.35; filter: grayscale(0.8); }
+        .board-avatar-muted .board-avatar-ring { border-color: #4b5563; }
+
+        @keyframes avatarPulse {
+            0%, 100% { box-shadow: 0 0 0 0 var(--avatar-glow); }
+            50% { box-shadow: 0 0 16px 4px var(--avatar-glow); }
+        }
+        @keyframes dotBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        @keyframes speakBar {
+            0% { transform: scaleY(0.4); }
+            100% { transform: scaleY(1); }
+        }
+
+        /* Round status bar */
+        .board-round-status {
+            display: flex; justify-content: center; gap: 0.75rem; padding: 0.5rem 1rem;
+            background: #0f0f1a; border-top: 1px solid #2a2a3e; border-bottom: 1px solid #2a2a3e;
+            position: relative; z-index: 2;
+        }
+        .board-round-icon {
+            width: 24px; height: 24px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 0.6rem;
+            font-weight: 700; color: #fff; transition: all 0.3s;
+        }
+        .board-round-icon.pending { opacity: 0.3; }
+        .board-round-icon.thinking { animation: avatarPulse 1.2s ease-in-out infinite; }
+        .board-round-icon.complete { box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
+        .board-round-icon.complete::after {
+            content: '\2713'; position: absolute; font-size: 0.55rem; color: #22c55e;
+            bottom: -2px; right: -2px; background: #0a0a0f; border-radius: 50%;
+            width: 10px; height: 10px; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Chat feed */
+        .board-chat-area {
+            display: flex; flex-direction: column; position: relative; z-index: 2;
+            background: #0f0f1a;
         }
         .board-feed {
-            flex: 1; overflow-y: auto; padding: 1rem;
-            max-height: 600px; min-height: 300px;
+            flex: 1; overflow-y: auto; padding: 1rem 1.25rem;
+            max-height: 500px; min-height: 250px;
         }
         .board-empty-state {
-            text-align: center; padding: 3rem 1rem;
-            color: var(--text-secondary);
+            text-align: center; padding: 3rem 1rem; color: #6b7280;
         }
-        .board-empty-state p:first-child { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
+        .board-empty-state p:first-child {
+            font-size: 1.1rem; font-weight: 600; color: #f59e0b;
+            font-family: 'IBM Plex Mono', monospace;
+        }
 
-        .board-msg {
-            margin-bottom: 1rem; padding: 0.75rem;
-            border-radius: 8px; border-left: 4px solid var(--border);
-            background: var(--bg-primary);
+        /* Chat bubbles */
+        .board-bubble {
+            margin-bottom: 0.75rem; padding: 0.75rem 1rem;
+            border-radius: 12px; border-left: 3px solid var(--bubble-color, #4b5563);
+            background: #1a1a2e; animation: bubbleFadeUp 0.3s ease-out;
+            max-width: 90%;
         }
-        .board-msg-header {
+        .board-bubble-header {
             display: flex; align-items: center; gap: 0.5rem;
-            margin-bottom: 0.4rem; font-size: 0.82rem;
+            margin-bottom: 0.35rem; font-size: 0.78rem;
         }
-        .board-msg-name { font-weight: 700; }
-        .board-msg-role { color: var(--text-secondary); font-size: 0.75rem; }
-        .board-msg-latency { color: var(--text-secondary); font-size: 0.7rem; margin-left: auto; }
-        .board-msg-text {
-            font-size: 0.88rem; line-height: 1.5;
+        .board-bubble-avatar {
+            width: 22px; height: 22px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 0.6rem;
+            font-weight: 700; color: #fff; flex-shrink: 0;
+        }
+        .board-bubble-name { font-weight: 700; }
+        .board-bubble-role { color: #6b7280; font-size: 0.7rem; }
+        .board-bubble-time { color: #4b5563; font-size: 0.65rem; margin-left: auto; font-family: 'IBM Plex Mono', monospace; }
+        .board-bubble-text {
+            font-size: 0.86rem; line-height: 1.55; color: #d1d5db;
             white-space: pre-wrap; word-wrap: break-word;
         }
-        .board-msg-user {
-            border-left-color: #fff; background: var(--bg-tertiary, var(--bg-primary));
+        .board-bubble-user {
+            border-left-color: #fff; background: #1e293b; margin-left: auto;
+        }
+        .board-bubble-user .board-bubble-name { color: #fff; }
+
+        /* Facilitator summary card */
+        .board-summary-card {
+            margin: 1rem 0; padding: 0.85rem 1rem;
+            border-radius: 10px; border: 1px solid #f59e0b;
+            background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02));
+            animation: bubbleFadeUp 0.3s ease-out;
+        }
+        .board-summary-header {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.78rem; font-weight: 700; color: #f59e0b;
+            margin-bottom: 0.4rem; font-family: 'IBM Plex Mono', monospace;
+        }
+        .board-summary-text {
+            font-size: 0.84rem; line-height: 1.5; color: #d1d5db;
+            white-space: pre-wrap;
         }
 
+        @keyframes bubbleFadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Thinking indicator in feed */
         .board-thinking-indicator {
             display: inline-flex; align-items: center; gap: 0.4rem;
-            padding: 0.4rem 0.75rem; border-radius: 6px;
-            margin: 0.25rem 0; font-size: 0.8rem;
-            background: var(--bg-primary); border: 1px solid var(--border);
+            padding: 0.4rem 0.75rem; border-radius: 8px;
+            margin: 0.25rem 0; font-size: 0.78rem;
+            background: #1a1a2e; border: 1px solid #2a2a3e;
         }
-        .board-thinking-dots::after {
+        .board-thinking-dots-text::after {
             content: '...'; animation: board-dots 1.5s steps(4, end) infinite;
         }
         @keyframes board-dots {
-            0% { content: ''; }
-            25% { content: '.'; }
-            50% { content: '..'; }
-            75% { content: '...'; }
+            0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; }
         }
 
+        /* Input area */
+        .board-input-area {
+            padding: 0.75rem 1.25rem; border-top: 1px solid #2a2a3e;
+            background: #1a1a2e; position: relative; z-index: 2;
+        }
         .board-input-row {
-            display: flex; gap: 0.5rem; padding: 0.75rem;
-            border-top: 1px solid var(--border);
+            display: flex; gap: 0.5rem;
         }
         .board-input {
-            flex: 1; padding: 0.5rem 0.75rem; border: 1px solid var(--border);
-            background: var(--bg-primary); color: var(--text-primary);
-            border-radius: 6px; font-size: 0.88rem;
+            flex: 1; padding: 0.55rem 0.85rem; border: 1px solid #2a2a3e;
+            background: #0f0f1a; color: #e5e7eb;
+            border-radius: 8px; font-size: 0.88rem;
+            font-family: inherit; transition: border-color 0.15s;
         }
-        .board-input:focus { outline: none; border-color: #e74c3c; }
+        .board-input:focus { outline: none; border-color: #f59e0b; }
         .board-ask-btn {
-            padding: 0.5rem 1.25rem; background: #e74c3c; color: #fff;
-            border: none; border-radius: 6px; font-weight: 700;
-            cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+            padding: 0.55rem 1.25rem; background: #f59e0b; color: #0a0a0f;
+            border: none; border-radius: 8px; font-weight: 700;
+            cursor: pointer; font-size: 0.82rem; white-space: nowrap;
+            font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.04em;
+            transition: background 0.15s;
         }
-        .board-ask-btn:hover { background: #c0392b; }
-        .board-ask-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .board-ask-btn:hover { background: #d97706; }
+        .board-ask-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        /* END SESSION button — distinct red/dark style */
-        .board-btn-end {
-            background: #8b0000; color: #fff; border-color: #8b0000;
+        /* Quick prompt chips */
+        .board-quick-prompts {
+            display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap;
         }
-        .board-btn-end:hover { background: #a00000; }
+        .board-chip {
+            padding: 0.2rem 0.55rem; border: 1px solid #2a2a3e; background: #0f0f1a;
+            color: #6b7280; border-radius: 12px; font-size: 0.7rem; cursor: pointer;
+            transition: all 0.15s; font-family: 'IBM Plex Mono', monospace;
+        }
+        .board-chip:hover { color: #f59e0b; border-color: #f59e0b; background: rgba(245,158,11,0.05); }
 
-        /* Session history drawer */
-        .board-history-drawer {
-            margin-top: 0.75rem;
-            border-top: 1px solid var(--border);
-            padding-top: 0.5rem;
+        /* Member toggles sidebar (below table on mobile, collapsible) */
+        .board-member-toggles { display: flex; flex-direction: column; gap: 0.4rem; padding: 0 1.25rem 0.5rem; position: relative; z-index: 2; }
+        .board-toggle-row {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.25rem 0; font-size: 0.8rem;
         }
-        .board-history-header {
-            display: flex; justify-content: space-between; align-items: center;
-            cursor: pointer; font-size: 0.82rem; font-weight: 600;
-            color: var(--text-secondary); padding: 0.25rem 0;
-        }
-        .board-history-header:hover { color: var(--text-primary); }
-        .board-history-toggle { font-size: 0.7rem; transition: transform 0.2s; }
-        .board-history-toggle.open { transform: rotate(90deg); }
-        .board-history-list { max-height: 200px; overflow-y: auto; }
-        .board-history-item {
-            padding: 0.35rem 0.4rem; border-radius: 4px; cursor: pointer;
-            font-size: 0.78rem; border-bottom: 1px solid var(--border);
-        }
-        .board-history-item:hover { background: var(--bg-tertiary, var(--border)); }
-        .board-history-item-title { font-weight: 600; color: var(--text-primary); }
-        .board-history-item-meta {
-            color: var(--text-secondary); font-size: 0.7rem; margin-top: 0.1rem;
-        }
-
-        /* Memory count badge on member toggles */
+        .board-toggle-row label { flex: 1; cursor: pointer; color: #d1d5db; }
+        .board-toggle-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .board-toggle-row input[type="checkbox"] { cursor: pointer; accent-color: #f59e0b; }
+        .board-toggle-role { color: #6b7280; font-size: 0.68rem; font-family: 'IBM Plex Mono', monospace; }
         .board-toggle-mem-badge {
-            font-size: 0.65rem; background: #e74c3c; color: #fff;
+            font-size: 0.6rem; background: #f59e0b; color: #0a0a0f;
             border-radius: 8px; padding: 0 5px; margin-left: 4px;
             display: inline-block; min-width: 16px; text-align: center;
+            font-weight: 700;
         }
 
-        /* Board modals */
+        /* Overlays */
+        .board-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75); z-index: 1000;
+            display: none; animation: overlayFadeIn 0.2s ease-out;
+        }
+        .board-overlay.active { display: flex; }
+        .board-overlay-panel {
+            position: absolute; right: 0; top: 0; bottom: 0; width: 450px; max-width: 90vw;
+            background: #1a1a2e; border-left: 1px solid #2a2a3e; overflow-y: auto;
+            animation: slideInRight 0.25s ease-out; padding: 1.5rem;
+        }
+        .board-overlay-full {
+            position: absolute; inset: 2rem; background: #1a1a2e;
+            border: 1px solid #2a2a3e; border-radius: 12px; overflow-y: auto;
+            animation: overlayFadeIn 0.25s ease-out; padding: 1.5rem;
+        }
+        @keyframes overlayFadeIn {
+            from { opacity: 0; } to { opacity: 1; }
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); } to { transform: translateX(0); }
+        }
+        .board-overlay-close {
+            position: absolute; top: 1rem; right: 1rem; background: none; border: none;
+            color: #9ca3af; font-size: 1.5rem; cursor: pointer; line-height: 1; z-index: 10;
+        }
+        .board-overlay-close:hover { color: #f59e0b; }
+        .board-overlay h3 {
+            margin: 0 0 1rem; font-size: 1.1rem; color: #f59e0b;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        /* Session history items in overlay */
+        .board-session-item {
+            padding: 0.75rem; border-radius: 8px; cursor: pointer;
+            border: 1px solid #2a2a3e; margin-bottom: 0.5rem; transition: all 0.15s;
+        }
+        .board-session-item:hover { border-color: #f59e0b; background: rgba(245,158,11,0.05); }
+        .board-session-item-title { font-weight: 600; color: #e5e7eb; font-size: 0.9rem; }
+        .board-session-item-meta { color: #6b7280; font-size: 0.75rem; margin-top: 0.25rem; }
+        .board-session-item-resume {
+            display: inline-block; margin-top: 0.4rem; font-size: 0.72rem;
+            color: #f59e0b; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* Action items in overlay */
+        .board-action-item {
+            display: flex; align-items: flex-start; gap: 0.75rem;
+            padding: 0.6rem 0; border-bottom: 1px solid #2a2a3e;
+        }
+        .board-action-status {
+            width: 20px; height: 20px; border-radius: 4px; border: 2px solid #4b5563;
+            cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; transition: all 0.15s; margin-top: 2px;
+        }
+        .board-action-status.done { background: #065f46; border-color: #22c55e; color: #22c55e; }
+        .board-action-status.dropped { background: #7f1d1d; border-color: #ef4444; color: #ef4444; text-decoration: line-through; }
+        .board-action-content { flex: 1; font-size: 0.85rem; color: #d1d5db; }
+        .board-action-session { font-size: 0.7rem; color: #6b7280; margin-top: 0.2rem; }
+        .board-action-btns { display: flex; gap: 0.25rem; }
+        .board-action-btn {
+            padding: 0.15rem 0.4rem; border: 1px solid #2a2a3e; background: none;
+            color: #6b7280; border-radius: 3px; font-size: 0.65rem; cursor: pointer;
+        }
+        .board-action-btn:hover { color: #f59e0b; border-color: #f59e0b; }
+
+        /* Memory inspector in overlay */
+        .board-mem-member {
+            margin-bottom: 1rem; border: 1px solid #2a2a3e; border-radius: 8px; overflow: hidden;
+        }
+        .board-mem-header {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem;
+            background: #0f0f1a; cursor: pointer; font-size: 0.85rem;
+        }
+        .board-mem-header:hover { background: #151520; }
+        .board-mem-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .board-mem-name { font-weight: 600; color: #e5e7eb; flex: 1; }
+        .board-mem-count {
+            font-size: 0.7rem; background: #f59e0b; color: #0a0a0f;
+            border-radius: 8px; padding: 0 6px; font-weight: 700;
+        }
+        .board-mem-entries { padding: 0 0.75rem 0.5rem; display: none; }
+        .board-mem-entries.open { display: block; }
+        .board-mem-entry {
+            padding: 0.3rem 0; font-size: 0.78rem; color: #9ca3af;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        .board-mem-type {
+            font-size: 0.65rem; color: #6b7280; font-weight: 600;
+            text-transform: uppercase; margin-right: 0.3rem;
+        }
+
+        /* Board modals (briefing, keys) */
         .board-modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6); z-index: 1000;
+            background: rgba(0,0,0,0.7); z-index: 1001;
             display: flex; align-items: center; justify-content: center;
         }
         .board-modal {
-            background: var(--bg-secondary); border: 1px solid var(--border);
-            border-radius: 10px; padding: 1.5rem; width: 90%; max-width: 500px;
+            background: #1a1a2e; border: 1px solid #2a2a3e;
+            border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 500px;
         }
-        .board-modal h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+        .board-modal h3 { margin: 0 0 0.5rem; font-size: 1.05rem; color: #f59e0b; font-family: 'IBM Plex Mono', monospace; }
         .board-textarea {
             width: 100%; min-height: 120px; padding: 0.6rem;
-            border: 1px solid var(--border); background: var(--bg-primary);
-            color: var(--text-primary); border-radius: 6px; font-size: 0.88rem;
+            border: 1px solid #2a2a3e; background: #0f0f1a;
+            color: #e5e7eb; border-radius: 8px; font-size: 0.88rem;
             resize: vertical; font-family: inherit;
         }
+        .board-textarea:focus { outline: none; border-color: #f59e0b; }
         .board-modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
         .board-key-row { margin-bottom: 0.75rem; }
         .board-key-row label {
             display: block; font-size: 0.82rem; margin-bottom: 0.25rem;
-            color: var(--text-secondary);
+            color: #6b7280; font-family: 'IBM Plex Mono', monospace;
         }
         .board-key-input {
-            width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--border);
-            background: var(--bg-primary); color: var(--text-primary);
-            border-radius: 4px; font-size: 0.85rem; font-family: monospace;
+            width: 100%; padding: 0.45rem 0.6rem; border: 1px solid #2a2a3e;
+            background: #0f0f1a; color: #e5e7eb;
+            border-radius: 6px; font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace;
         }
+        .board-key-input:focus { outline: none; border-color: #f59e0b; }
 
     </style>
 </head>
@@ -13529,55 +13736,99 @@
 
         <!-- AI Board of Directors -->
         <section class="board-section" data-panel-id="board-of-directors">
-            <div class="board-header">
-                <h2>AI Board of Directors</h2>
+            <!-- Header bar -->
+            <div class="board-header-bar">
+                <div class="board-header-left">
+                    <h2>DOPPLER BOARD</h2>
+                    <span class="board-cost-ticker" id="board-cost-ticker">$0.00</span>
+                </div>
                 <div class="board-header-actions">
                     <button class="board-btn" onclick="showBoardBriefingModal()" title="Set briefing context">BRIEF</button>
                     <button class="board-btn" onclick="showBoardKeysModal()" title="Configure API keys">KEYS</button>
-                    <button class="board-btn" onclick="exportBoardSession()" title="Export as Markdown">EXPORT</button>
+                    <button class="board-btn" onclick="toggleBoardHistory()" title="Session history">HISTORY</button>
+                    <button class="board-btn" onclick="toggleBoardActions()" title="Action items">ACTIONS</button>
+                    <button class="board-btn" onclick="toggleBoardMemoryInspector()" title="Memory inspector">MEMORY</button>
+                    <button class="board-btn" onclick="exportBoardSession()" title="Export session">EXPORT</button>
                     <button class="board-btn board-btn-end" onclick="endBoardSession()" title="End session and extract memories">END SESSION</button>
+                    <button class="board-btn board-btn-new" onclick="newBoardSession()" title="Start a fresh session">NEW SESSION</button>
                 </div>
             </div>
 
-            <div class="board-layout">
-                <!-- Sidebar: boardroom table + member toggles -->
-                <div class="board-sidebar">
-                    <div class="board-table-visual">
-                        <div class="board-round-table" id="board-round-table">
-                            <!-- Member seats rendered by JS -->
-                        </div>
-                    </div>
-                    <div class="board-member-toggles" id="board-member-toggles">
-                        <!-- Member toggle switches rendered by JS -->
-                    </div>
+            <!-- 3D Boardroom area -->
+            <div class="board-room">
+                <div class="board-table-3d" id="board-table-3d">
+                    <div class="board-oval-table"></div>
+                    <!-- Avatar seats rendered by JS -->
+                </div>
+            </div>
 
-                    <!-- Session history drawer (Phase 1.5) -->
-                    <div class="board-history-drawer">
-                        <div class="board-history-header" onclick="toggleBoardHistoryDrawer()">
-                            <span>Past Sessions</span>
-                            <span class="board-history-toggle" id="board-history-toggle-icon">&#9654;</span>
-                        </div>
-                        <div class="board-history-list" id="board-history-list" style="display:none;">
-                            <div style="color:var(--text-secondary);font-size:0.8rem;padding:0.3rem 0;">Loading...</div>
-                        </div>
+            <!-- Round status bar -->
+            <div class="board-round-status" id="board-round-status">
+                <!-- Per-member status icons rendered by JS -->
+            </div>
+
+            <!-- Member toggles (collapsible) -->
+            <div class="board-member-toggles" id="board-member-toggles">
+                <!-- Member toggle switches rendered by JS -->
+            </div>
+
+            <!-- Chat feed area -->
+            <div class="board-chat-area">
+                <div class="board-feed" id="board-feed">
+                    <div class="board-empty-state" id="board-empty-state">
+                        <p>DOPPLER BOARD OF DIRECTORS</p>
+                        <p style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem;">
+                            Brief the board, then ask a question to get perspectives from 7 AI advisors.
+                        </p>
                     </div>
                 </div>
+            </div>
 
-                <!-- Main: discussion feed + input -->
-                <div class="board-main">
-                    <div class="board-feed" id="board-feed">
-                        <div class="board-empty-state" id="board-empty-state">
-                            <p>Welcome to the AI Board of Directors</p>
-                            <p style="font-size:0.85rem;color:var(--text-secondary);">
-                                Brief the board, then ask a question to get perspectives from 7 AI advisors.
-                            </p>
-                        </div>
+            <!-- Input area with quick prompts -->
+            <div class="board-input-area">
+                <div class="board-input-row">
+                    <input type="text" id="board-question-input" class="board-input"
+                           placeholder="Ask the board a question..."
+                           onkeydown="if(event.key==='Enter')submitBoardQuestion()">
+                    <button class="board-ask-btn" id="board-ask-btn" onclick="submitBoardQuestion()">ASK BOARD</button>
+                </div>
+                <div class="board-quick-prompts">
+                    <button class="board-chip" onclick="boardQuickPrompt('What should we prioritize?')">What should we prioritize?</button>
+                    <button class="board-chip" onclick="boardQuickPrompt('Cost analysis')">Cost analysis</button>
+                    <button class="board-chip" onclick="boardQuickPrompt('Risk assessment')">Risk assessment</button>
+                    <button class="board-chip" onclick="boardQuickPrompt('Dissenting views?')">Dissenting views?</button>
+                </div>
+            </div>
+
+            <!-- Session History overlay -->
+            <div class="board-overlay" id="board-history-overlay" onclick="if(event.target===this)closeBoardOverlay('board-history-overlay')">
+                <div class="board-overlay-full">
+                    <button class="board-overlay-close" onclick="closeBoardOverlay('board-history-overlay')">&times;</button>
+                    <h3>Session History</h3>
+                    <div id="board-history-list">
+                        <div style="color:#6b7280;font-size:0.85rem;">Loading...</div>
                     </div>
-                    <div class="board-input-row">
-                        <input type="text" id="board-question-input" class="board-input"
-                               placeholder="Ask the board a question..."
-                               onkeydown="if(event.key==='Enter')submitBoardQuestion()">
-                        <button class="board-ask-btn" id="board-ask-btn" onclick="submitBoardQuestion()">ASK BOARD</button>
+                </div>
+            </div>
+
+            <!-- Action Items overlay -->
+            <div class="board-overlay" id="board-actions-overlay" onclick="if(event.target===this)closeBoardOverlay('board-actions-overlay')">
+                <div class="board-overlay-panel">
+                    <button class="board-overlay-close" onclick="closeBoardOverlay('board-actions-overlay')">&times;</button>
+                    <h3>Action Items</h3>
+                    <div id="board-actions-list">
+                        <div style="color:#6b7280;font-size:0.85rem;">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory Inspector overlay -->
+            <div class="board-overlay" id="board-memory-overlay" onclick="if(event.target===this)closeBoardOverlay('board-memory-overlay')">
+                <div class="board-overlay-panel">
+                    <button class="board-overlay-close" onclick="closeBoardOverlay('board-memory-overlay')">&times;</button>
+                    <h3>Memory Inspector</h3>
+                    <div id="board-memory-list">
+                        <div style="color:#6b7280;font-size:0.85rem;">Loading...</div>
                     </div>
                 </div>
             </div>
@@ -13586,7 +13837,7 @@
             <div class="board-modal-overlay" id="board-briefing-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
                 <div class="board-modal">
                     <h3>Board Briefing</h3>
-                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem;">
+                    <p style="color:#6b7280;font-size:0.85rem;margin-bottom:0.75rem;">
                         Provide business context so the board can give informed advice.
                     </p>
                     <textarea id="board-briefing-text" class="board-textarea"
@@ -13602,7 +13853,7 @@
             <div class="board-modal-overlay" id="board-keys-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
                 <div class="board-modal">
                     <h3>API Keys</h3>
-                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem;">
+                    <p style="color:#6b7280;font-size:0.85rem;margin-bottom:0.75rem;">
                         Anthropic and DeepSeek keys are loaded from .env. Configure the others here (memory only — not saved to disk).
                     </p>
                     <div class="board-key-row">
@@ -14637,12 +14888,14 @@
                     handleBoardMemberResponse(data);
                 } else if (data.type === "board_thinking") {
                     handleBoardThinking(data);
+                } else if (data.type === "board_facilitator_summary") {
+                    handleBoardFacilitatorSummary(data);
                 } else if (data.type === "board_complete") {
                     handleBoardComplete(data);
                 } else if (data.type === "board_error") {
                     handleBoardError(data);
                 } else if (data.type === "board_briefing_set") {
-                    if (data.ok) showToast('Briefing saved', 'success');
+                    if (data.ok) boardShowToast('Briefing saved', 'success');
                 } else if (data.type === "board_api_keys_status") {
                     handleBoardApiKeysStatus(data.status);
                 } else if (data.type === "board_export_result") {
@@ -14662,7 +14915,7 @@
                 } else if (data.type === "board_decisions") {
                     handleBoardDecisionsResult(data);
                 } else if (data.type === "board_decision_updated") {
-                    showToast('Decision updated', 'success');
+                    boardShowToast('Decision updated', 'success');
                 }
             };
 
@@ -25066,12 +25319,46 @@
         updateCompactModeToggle();
 
         // ---------------------------------------------------------------
-        // AI Board of Directors
+        // AI Board of Directors — Phase 2
         // ---------------------------------------------------------------
 
+        // Avatar state tracking: { memberId: 'idle'|'thinking'|'speaking'|'muted' }
+        let boardMemberStates = {};
+        // Round tracking for status bar
+        let boardRoundMembers = [];  // member_ids in current round
+        let boardRoundComplete = new Set();  // member_ids that completed in current round
+        // Session cost tracking
+        let boardSessionCost = 0;
+        // Pending member memory data for inspector
+        let boardMemberMemoryData = {};
+
+        // Helper: board-specific toast that uses correct showToast signature
+        function boardShowToast(message, severity) {
+            showToast({ severity: severity || 'info', title: 'Board', message: message });
+        }
+
         function initBoardSession() {
-            if (boardSessionId) return;  // already initialized
+            if (boardSessionId) return;
             ws.send(JSON.stringify({ type: 'board_session_create', title: 'Board Meeting' }));
+        }
+
+        function newBoardSession() {
+            // Reset state and create fresh session
+            boardSessionId = null;
+            boardBriefing = '';
+            boardSessionCost = 0;
+            boardMemberStates = {};
+            boardRoundMembers = [];
+            boardRoundComplete = new Set();
+            updateBoardCostTicker();
+            const feed = document.getElementById('board-feed');
+            if (feed) feed.innerHTML = '';
+            const empty = document.getElementById('board-empty-state');
+            if (empty) {
+                empty.innerHTML = '<p>DOPPLER BOARD OF DIRECTORS</p><p style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem;">Brief the board, then ask a question to get perspectives from 7 AI advisors.</p>';
+                empty.style.display = '';
+            }
+            initBoardSession();
         }
 
         function handleBoardSessionCreated(data) {
@@ -25079,40 +25366,100 @@
             boardMembers = data.members || {};
             boardActiveMembers = data.active_members || Object.keys(boardMembers);
             boardMemoryCounts = data.memory_counts || {};
-            // Auto-load briefing from DB if available
-            if (data.briefing) {
-                boardBriefing = data.briefing;
-            }
+            boardSessionCost = 0;
+            // Initialize member states
+            Object.keys(boardMembers).forEach(id => {
+                boardMemberStates[id] = boardActiveMembers.includes(id) ? 'idle' : 'muted';
+            });
+            if (data.briefing) boardBriefing = data.briefing;
             renderBoardTable();
             renderBoardToggles();
+            renderRoundStatus();
+            updateBoardCostTicker();
             handleBoardApiKeysStatus(data.api_keys_status || {});
         }
 
+        // --- 3D Boardroom Table ---
+
+        // Seat positions: angles for 7 members around an oval
+        // Cam at top (270°), then clockwise: Claude(330°), Claude Code(30°), DeepSeek(90°),
+        // Grok(150°), ChatGPT(210°), Gemini(250°) — but we compute dynamically
         function renderBoardTable() {
-            const table = document.getElementById('board-round-table');
-            if (!table) return;
-            table.innerHTML = '';
+            const container = document.getElementById('board-table-3d');
+            if (!container) return;
+            // Remove existing avatars (keep the oval table div)
+            container.querySelectorAll('.board-avatar').forEach(el => el.remove());
+
             const ids = Object.keys(boardMembers);
             const n = ids.length;
-            const cx = 90, cy = 90, r = 72;  // center and radius of circle
+            if (n === 0) return;
+
+            // Center of the 3D area and radius for seat positions
+            const cx = 210, cy = 115;
+            const rx = 175, ry = 95;  // elliptical radius
+
+            // Pre-defined angles: Cam at top, rest clockwise
+            const startAngle = -90;  // top = -90 degrees
             ids.forEach((id, i) => {
                 const m = boardMembers[id];
-                const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-                const x = cx + r * Math.cos(angle) - 16;
-                const y = cy + r * Math.sin(angle) - 16;
-                const active = boardActiveMembers.includes(id);
-                const thinking = boardThinking.has(id);
-                const seat = document.createElement('div');
-                seat.className = 'board-seat' + (active ? '' : ' inactive') + (thinking ? ' thinking' : '');
-                seat.style.cssText = `left:${x}px;top:${y}px;background:${m.color};color:currentColor;`;
-                seat.style.color = '#fff';
-                seat.style.backgroundColor = m.color;
-                seat.title = `${m.name} — ${m.role}`;
-                seat.textContent = m.name.substring(0, 2).toUpperCase();
-                seat.onclick = () => toggleBoardMember(id);
-                table.appendChild(seat);
+                const angleDeg = startAngle + (360 / n) * i;
+                const angleRad = angleDeg * Math.PI / 180;
+                const x = cx + rx * Math.cos(angleRad) - 22;
+                const y = cy + ry * Math.sin(angleRad) - 22;
+
+                const state = boardMemberStates[id] || 'idle';
+                const initials = m.initials || m.name.substring(0, 2).toUpperCase();
+
+                const avatar = document.createElement('div');
+                avatar.className = `board-avatar board-avatar-${state}`;
+                avatar.style.cssText = `left:${x}px;top:${y}px;--avatar-color:${m.color};--avatar-glow:${m.glow_color || m.color};`;
+                avatar.style.backgroundColor = m.color;
+                avatar.title = `${m.name} — ${m.role}`;
+                avatar.onclick = () => toggleBoardMember(id);
+                avatar.id = `board-avatar-${id}`;
+
+                // Ring
+                avatar.innerHTML = `<div class="board-avatar-ring"></div>${initials}`;
+
+                // State-specific overlays
+                if (state === 'thinking') {
+                    avatar.innerHTML += `<div class="board-thinking-dots"><div class="board-thinking-dot"></div><div class="board-thinking-dot"></div><div class="board-thinking-dot"></div></div>`;
+                } else if (state === 'speaking') {
+                    avatar.innerHTML += `<div class="board-speak-bars"><div class="board-speak-bar"></div><div class="board-speak-bar"></div><div class="board-speak-bar"></div><div class="board-speak-bar"></div><div class="board-speak-bar"></div></div>`;
+                }
+
+                // Label below avatar
+                avatar.innerHTML += `<div class="board-avatar-label">${m.name}<span class="board-avatar-role">${m.role}</span></div>`;
+
+                container.appendChild(avatar);
             });
         }
+
+        // --- Round Status Bar ---
+
+        function renderRoundStatus() {
+            const bar = document.getElementById('board-round-status');
+            if (!bar) return;
+            bar.innerHTML = '';
+            const ids = boardRoundMembers.length > 0 ? boardRoundMembers : boardActiveMembers;
+            ids.forEach(id => {
+                const m = boardMembers[id];
+                if (!m) return;
+                const state = boardMemberStates[id] || 'idle';
+                let statusClass = 'pending';
+                if (state === 'thinking') statusClass = 'thinking';
+                if (boardRoundComplete.has(id)) statusClass = 'complete';
+
+                const icon = document.createElement('div');
+                icon.className = `board-round-icon ${statusClass}`;
+                icon.style.cssText = `background:${m.color};--avatar-glow:${m.glow_color || m.color};position:relative;`;
+                icon.textContent = m.initials || m.name.substring(0, 2).toUpperCase();
+                icon.title = `${m.name}: ${statusClass}`;
+                bar.appendChild(icon);
+            });
+        }
+
+        // --- Member Toggles ---
 
         function renderBoardToggles() {
             const container = document.getElementById('board-member-toggles');
@@ -25138,10 +25485,11 @@
             const idx = boardActiveMembers.indexOf(memberId);
             if (idx >= 0) {
                 boardActiveMembers.splice(idx, 1);
+                boardMemberStates[memberId] = 'muted';
             } else {
                 boardActiveMembers.push(memberId);
+                boardMemberStates[memberId] = 'idle';
             }
-            // Sync to server
             if (boardSessionId) {
                 ws.send(JSON.stringify({
                     type: 'board_set_active_members',
@@ -25151,7 +25499,10 @@
             }
             renderBoardTable();
             renderBoardToggles();
+            renderRoundStatus();
         }
+
+        // --- Question Submission ---
 
         function submitBoardQuestion() {
             const input = document.getElementById('board-question-input');
@@ -25162,13 +25513,11 @@
                 return;
             }
 
-            // Add user message to feed
             addBoardMessage({
                 member_id: 'user', member_name: 'George', role: 'Owner',
                 text: question, color: '#ffffff', latency_ms: 0,
             });
 
-            // Send to server
             ws.send(JSON.stringify({
                 type: 'board_ask',
                 session_id: boardSessionId,
@@ -25179,42 +25528,103 @@
             btn.disabled = true;
         }
 
+        function boardQuickPrompt(text) {
+            const input = document.getElementById('board-question-input');
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
+        }
+
+        // --- WS Handlers ---
+
         function handleBoardThinking(data) {
             boardThinking = new Set(data.members || []);
+            boardRoundMembers = data.members || [];
+            boardRoundComplete = new Set();
+
+            // Update member states
+            boardThinking.forEach(mid => {
+                boardMemberStates[mid] = 'thinking';
+            });
+
             const feed = document.getElementById('board-feed');
-            // Remove existing thinking indicators
             feed.querySelectorAll('.board-thinking-indicator').forEach(el => el.remove());
-            // Add thinking indicators for each member
             boardThinking.forEach(mid => {
                 const m = boardMembers[mid];
                 if (!m) return;
                 const el = document.createElement('div');
                 el.className = 'board-thinking-indicator';
                 el.id = `board-thinking-${mid}`;
-                el.innerHTML = `<span style="color:${m.color};font-weight:700;">${m.name}</span> thinking<span class="board-thinking-dots"></span>`;
+                el.innerHTML = `<span style="color:${m.color};font-weight:700;">${m.name}</span> thinking<span class="board-thinking-dots-text"></span>`;
                 feed.appendChild(el);
             });
             feed.scrollTop = feed.scrollHeight;
+
             renderBoardTable();
-            // Hide empty state
+            renderRoundStatus();
             const empty = document.getElementById('board-empty-state');
             if (empty) empty.style.display = 'none';
         }
 
         function handleBoardMemberResponse(data) {
-            // Remove thinking indicator for this member
             boardThinking.delete(data.member_id);
+            boardRoundComplete.add(data.member_id);
+
+            // Brief speaking state then idle
+            boardMemberStates[data.member_id] = 'speaking';
+            renderBoardTable();
+            renderRoundStatus();
+
             const thinkEl = document.getElementById(`board-thinking-${data.member_id}`);
             if (thinkEl) thinkEl.remove();
-            renderBoardTable();
 
             addBoardMessage(data);
+
+            // Update cost estimate
+            if (data.latency_ms > 0) {
+                // Rough estimate: ~$0.003 per 1K tokens, assume ~300 tokens per response
+                const memberCost = 0.001;
+                boardSessionCost += memberCost;
+                updateBoardCostTicker();
+            }
+
+            // After 1.5s, transition from speaking to idle
+            setTimeout(() => {
+                if (boardMemberStates[data.member_id] === 'speaking') {
+                    boardMemberStates[data.member_id] = 'idle';
+                    renderBoardTable();
+                }
+            }, 1500);
+        }
+
+        function handleBoardFacilitatorSummary(data) {
+            const feed = document.getElementById('board-feed');
+            if (!feed) return;
+
+            const card = document.createElement('div');
+            card.className = 'board-summary-card';
+            card.innerHTML = `
+                <div class="board-summary-header">
+                    <span>ROUND ${data.round_number || ''} SUMMARY</span>
+                </div>
+                <div class="board-summary-text">${escapeHtml(data.summary || '')}</div>
+            `;
+            feed.appendChild(card);
+            feed.scrollTop = feed.scrollHeight;
         }
 
         function handleBoardComplete(data) {
             boardThinking.clear();
             document.querySelectorAll('.board-thinking-indicator').forEach(el => el.remove());
+            // Reset all active members to idle
+            boardActiveMembers.forEach(id => {
+                if (boardMemberStates[id] !== 'muted') {
+                    boardMemberStates[id] = 'idle';
+                }
+            });
             renderBoardTable();
+            renderRoundStatus();
             const btn = document.getElementById('board-ask-btn');
             if (btn) btn.disabled = false;
         }
@@ -25222,34 +25632,55 @@
         function handleBoardError(data) {
             boardThinking.clear();
             document.querySelectorAll('.board-thinking-indicator').forEach(el => el.remove());
+            boardActiveMembers.forEach(id => {
+                if (boardMemberStates[id] !== 'muted') boardMemberStates[id] = 'idle';
+            });
             renderBoardTable();
+            renderRoundStatus();
             const btn = document.getElementById('board-ask-btn');
             if (btn) btn.disabled = false;
-            showToast('Board error: ' + (data.error || 'Unknown'), 'error');
+            boardShowToast('Board error: ' + (data.error || 'Unknown'), 'error');
         }
+
+        // --- Chat Bubble Rendering ---
 
         function addBoardMessage(data) {
             const feed = document.getElementById('board-feed');
             const empty = document.getElementById('board-empty-state');
             if (empty) empty.style.display = 'none';
 
-            const div = document.createElement('div');
             const isUser = data.member_id === 'user';
-            div.className = 'board-msg' + (isUser ? ' board-msg-user' : '');
-            div.style.borderLeftColor = data.color;
+            const isFacilitator = data.member_id === 'facilitator';
+            const m = boardMembers[data.member_id] || {};
+            const color = data.color || m.color || '#4b5563';
+            const initials = m.initials || (data.member_name || '??').substring(0, 2).toUpperCase();
+
+            const div = document.createElement('div');
+            div.className = 'board-bubble' + (isUser ? ' board-bubble-user' : '');
+            div.style.setProperty('--bubble-color', color);
+
+            let timeStr = '';
+            if (data.timestamp) {
+                try {
+                    const d = new Date(data.timestamp);
+                    timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } catch(e) {}
+            }
 
             let latencyHtml = '';
             if (data.latency_ms > 0) {
-                latencyHtml = `<span class="board-msg-latency">${(data.latency_ms / 1000).toFixed(1)}s</span>`;
+                latencyHtml = `<span class="board-bubble-time">${(data.latency_ms / 1000).toFixed(1)}s</span>`;
             }
 
             div.innerHTML = `
-                <div class="board-msg-header">
-                    <span class="board-msg-name" style="color:${data.color}">${data.member_name}</span>
-                    <span class="board-msg-role">${data.role}</span>
+                <div class="board-bubble-header">
+                    <div class="board-bubble-avatar" style="background:${color}">${isUser ? 'GW' : initials}</div>
+                    <span class="board-bubble-name" style="color:${color}">${escapeHtml(data.member_name || 'Unknown')}</span>
+                    <span class="board-bubble-role">${escapeHtml(data.role || '')}</span>
                     ${latencyHtml}
+                    ${timeStr ? `<span class="board-bubble-time">${timeStr}</span>` : ''}
                 </div>
-                <div class="board-msg-text">${escapeHtml(data.text)}</div>
+                <div class="board-bubble-text">${escapeHtml(data.text || '')}</div>
             `;
             feed.appendChild(div);
             feed.scrollTop = feed.scrollHeight;
@@ -25260,6 +25691,15 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // --- Cost Ticker ---
+
+        function updateBoardCostTicker() {
+            const el = document.getElementById('board-cost-ticker');
+            if (el) el.textContent = `$${boardSessionCost.toFixed(3)}`;
+        }
+
+        // --- Briefing & Keys Modals ---
 
         function showBoardBriefingModal() {
             if (!boardSessionId) initBoardSession();
@@ -25300,46 +25740,59 @@
         }
 
         function handleBoardApiKeysStatus(status) {
-            // Could update UI indicators showing which providers are configured
-            // For now just log it
             if (status) {
                 logger && logger('Board API keys status:', status);
             }
         }
 
+        // --- Export (Markdown + JSON) ---
+
         function exportBoardSession() {
             if (!boardSessionId) {
-                showToast('No active board session', 'error');
+                boardShowToast('No active board session', 'error');
                 return;
             }
+            // Show format choice — export both
             ws.send(JSON.stringify({
                 type: 'board_export',
                 session_id: boardSessionId,
+                format: 'markdown',
+            }));
+            ws.send(JSON.stringify({
+                type: 'board_export',
+                session_id: boardSessionId,
+                format: 'json',
             }));
         }
 
         function handleBoardExportResult(data) {
-            if (!data.ok || !data.markdown) {
-                showToast('Export failed', 'error');
+            if (!data.ok) {
+                boardShowToast('Export failed', 'error');
                 return;
             }
-            // Download as .md file
-            const blob = new Blob([data.markdown], { type: 'text/markdown' });
+            const fmt = data.format || 'markdown';
+            let blob, filename;
+            if (fmt === 'json') {
+                blob = new Blob([JSON.stringify(data.json_data, null, 2)], { type: 'application/json' });
+                filename = `board-session-${data.session_id || 'export'}.json`;
+            } else {
+                blob = new Blob([data.markdown || ''], { type: 'text/markdown' });
+                filename = `board-session-${data.session_id || 'export'}.md`;
+            }
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `board-session-${data.session_id || 'export'}.md`;
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast('Session exported', 'success');
+            boardShowToast(`Session exported (${fmt})`, 'success');
         }
 
         function handleBoardHistory(data) {
             const feed = document.getElementById('board-feed');
             if (!feed) return;
-            // Clear and re-render
             feed.innerHTML = '';
             const empty = document.getElementById('board-empty-state');
             if (data.messages && data.messages.length > 0) {
@@ -25348,56 +25801,63 @@
             }
         }
 
-        // ─── Phase 1.5: Persistent Memory Functions ─────────────────
+        // --- Session Lifecycle ---
 
         function endBoardSession() {
             if (!boardSessionId) {
-                showToast('No active board session', 'error');
+                boardShowToast('No active board session', 'error');
                 return;
             }
             ws.send(JSON.stringify({
                 type: 'board_close_session',
                 session_id: boardSessionId,
             }));
-            showToast('Ending session — extracting memories...', 'info');
+            boardShowToast('Ending session — extracting memories...', 'info');
         }
 
         function handleBoardSessionClosed(data) {
             const total = data.total_extracted || 0;
             const counts = data.memories_extracted || {};
             let detail = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ');
-            showToast(`Session ended — ${total} memories extracted${detail ? ' (' + detail + ')' : ''}`, 'success');
-            // Update memory counts
+            boardShowToast(`Session ended — ${total} memories extracted${detail ? ' (' + detail + ')' : ''}`, 'success');
             boardMemoryCounts = data.memory_counts || {};
-            // Reset session state
             boardSessionId = null;
             boardBriefing = '';
-            // Show empty state and re-render
+            boardSessionCost = 0;
+            boardMemberStates = {};
+            updateBoardCostTicker();
+
             const feed = document.getElementById('board-feed');
             if (feed) feed.innerHTML = '';
             const empty = document.getElementById('board-empty-state');
             if (empty) {
-                empty.innerHTML = '<p>Session ended</p><p style="font-size:0.85rem;color:var(--text-secondary);">Memories extracted and saved. Start a new session or resume a past one.</p>';
+                empty.innerHTML = '<p>SESSION ENDED</p><p style="font-size:0.85rem;color:#6b7280;margin-top:0.5rem;">Memories extracted and saved. Start a new session or resume a past one.</p>';
                 empty.style.display = '';
             }
             renderBoardToggles();
-            // Refresh session history
-            loadBoardSessionHistory();
+            renderBoardTable();
+            renderRoundStatus();
         }
 
-        function toggleBoardHistoryDrawer() {
-            const list = document.getElementById('board-history-list');
-            const icon = document.getElementById('board-history-toggle-icon');
-            if (!list) return;
-            const visible = list.style.display !== 'none';
-            list.style.display = visible ? 'none' : 'block';
-            if (icon) icon.classList.toggle('open', !visible);
-            if (!visible) loadBoardSessionHistory();
+        // --- Session History Overlay ---
+
+        function toggleBoardHistory() {
+            const overlay = document.getElementById('board-history-overlay');
+            if (!overlay) return;
+            overlay.classList.toggle('active');
+            if (overlay.classList.contains('active')) {
+                loadBoardSessionHistory();
+            }
+        }
+
+        function closeBoardOverlay(id) {
+            const overlay = document.getElementById(id);
+            if (overlay) overlay.classList.remove('active');
         }
 
         function loadBoardSessionHistory() {
             if (!ws || ws.readyState !== 1) return;
-            ws.send(JSON.stringify({ type: 'board_list_sessions', limit: 15 }));
+            ws.send(JSON.stringify({ type: 'board_list_sessions', limit: 20 }));
         }
 
         function handleBoardSessionsList(data) {
@@ -25405,22 +25865,26 @@
             if (!list) return;
             const sessions = data.sessions || [];
             if (sessions.length === 0) {
-                list.innerHTML = '<div style="color:var(--text-secondary);font-size:0.8rem;padding:0.3rem 0;">No past sessions</div>';
+                list.innerHTML = '<div style="color:#6b7280;font-size:0.85rem;padding:1rem;">No past sessions yet.</div>';
                 return;
             }
             list.innerHTML = '';
             sessions.forEach(s => {
                 const item = document.createElement('div');
-                item.className = 'board-history-item';
+                item.className = 'board-session-item';
                 const date = (s.created_at || '').substring(0, 10);
                 const msgs = s.message_count || 0;
                 const isActive = s.id === boardSessionId;
                 item.innerHTML = `
-                    <div class="board-history-item-title">${escapeHtml(s.title || 'Untitled')}${isActive ? ' (active)' : ''}</div>
-                    <div class="board-history-item-meta">${date} &middot; ${msgs} messages</div>
+                    <div class="board-session-item-title">${escapeHtml(s.title || 'Untitled')}${isActive ? ' <span style="color:#f59e0b;">(active)</span>' : ''}</div>
+                    <div class="board-session-item-meta">${date} &middot; ${msgs} messages</div>
+                    ${!isActive ? '<div class="board-session-item-resume">Resume &rarr;</div>' : ''}
                 `;
                 if (!isActive) {
-                    item.onclick = () => resumeBoardSession(s.id);
+                    item.onclick = () => {
+                        resumeBoardSession(s.id);
+                        closeBoardOverlay('board-history-overlay');
+                    };
                 }
                 list.appendChild(item);
             });
@@ -25431,7 +25895,7 @@
                 type: 'board_resume_session',
                 session_id: sessionId,
             }));
-            showToast('Resuming session...', 'info');
+            boardShowToast('Resuming session...', 'info');
         }
 
         function handleBoardSessionResumed(data) {
@@ -25439,13 +25903,19 @@
             boardMembers = data.members || {};
             boardActiveMembers = data.active_members || Object.keys(boardMembers);
             boardMemoryCounts = data.memory_counts || {};
+            boardSessionCost = 0;
             if (data.briefing) boardBriefing = data.briefing;
+
+            Object.keys(boardMembers).forEach(id => {
+                boardMemberStates[id] = boardActiveMembers.includes(id) ? 'idle' : 'muted';
+            });
 
             renderBoardTable();
             renderBoardToggles();
+            renderRoundStatus();
+            updateBoardCostTicker();
             handleBoardApiKeysStatus(data.api_keys_status || {});
 
-            // Render messages
             const feed = document.getElementById('board-feed');
             if (feed) feed.innerHTML = '';
             const empty = document.getElementById('board-empty-state');
@@ -25453,8 +25923,114 @@
             if (data.messages && data.messages.length > 0) {
                 data.messages.forEach(m => addBoardMessage(m));
             }
-            showToast(`Resumed: ${data.title || 'Board Meeting'}`, 'success');
+            boardShowToast(`Resumed: ${data.title || 'Board Meeting'}`, 'success');
         }
+
+        // --- Action Items Overlay ---
+
+        function toggleBoardActions() {
+            const overlay = document.getElementById('board-actions-overlay');
+            if (!overlay) return;
+            overlay.classList.toggle('active');
+            if (overlay.classList.contains('active')) {
+                ws.send(JSON.stringify({ type: 'board_get_decisions' }));
+            }
+        }
+
+        function handleBoardDecisionsResult(data) {
+            const list = document.getElementById('board-actions-list');
+            if (!list) return;
+            const decisions = data.decisions || [];
+            if (decisions.length === 0) {
+                list.innerHTML = '<div style="color:#6b7280;font-size:0.85rem;padding:0.5rem;">No open action items.</div>';
+                return;
+            }
+            list.innerHTML = '';
+            decisions.forEach(d => {
+                const item = document.createElement('div');
+                item.className = 'board-action-item';
+                item.innerHTML = `
+                    <div class="board-action-status" title="Mark as done" onclick="boardUpdateDecision(${d.id}, 'done')">${d.status === 'done' ? '\u2713' : ''}</div>
+                    <div>
+                        <div class="board-action-content">${escapeHtml(d.content)}</div>
+                        <div class="board-action-session">${escapeHtml(d.session_title || 'Unknown session')}</div>
+                    </div>
+                    <div class="board-action-btns">
+                        <button class="board-action-btn" onclick="boardUpdateDecision(${d.id}, 'done')" title="Done">\u2713</button>
+                        <button class="board-action-btn" onclick="boardUpdateDecision(${d.id}, 'dropped')" title="Drop">\u2717</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function boardUpdateDecision(decisionId, status) {
+            ws.send(JSON.stringify({
+                type: 'board_update_decision',
+                decision_id: decisionId,
+                status: status,
+            }));
+            // Refresh after a beat
+            setTimeout(() => {
+                ws.send(JSON.stringify({ type: 'board_get_decisions' }));
+            }, 300);
+        }
+
+        // --- Memory Inspector Overlay ---
+
+        function toggleBoardMemoryInspector() {
+            const overlay = document.getElementById('board-memory-overlay');
+            if (!overlay) return;
+            overlay.classList.toggle('active');
+            if (overlay.classList.contains('active')) {
+                renderMemoryInspector();
+                // Request memory data for all members
+                Object.keys(boardMembers).forEach(id => {
+                    ws.send(JSON.stringify({ type: 'board_get_member_memory', member_id: id }));
+                });
+            }
+        }
+
+        function renderMemoryInspector() {
+            const list = document.getElementById('board-memory-list');
+            if (!list) return;
+            list.innerHTML = '';
+            Object.entries(boardMembers).forEach(([id, m]) => {
+                const count = boardMemoryCounts[id] || 0;
+                const section = document.createElement('div');
+                section.className = 'board-mem-member';
+                section.innerHTML = `
+                    <div class="board-mem-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <div class="board-mem-dot" style="background:${m.color}"></div>
+                        <div class="board-mem-name">${m.name}</div>
+                        <div class="board-mem-count">${count}</div>
+                    </div>
+                    <div class="board-mem-entries" id="board-mem-entries-${id}">
+                        <div style="color:#6b7280;font-size:0.78rem;padding:0.3rem 0;">Loading...</div>
+                    </div>
+                `;
+                list.appendChild(section);
+            });
+        }
+
+        function handleBoardMemberMemoryResult(data) {
+            const entries = document.getElementById(`board-mem-entries-${data.member_id}`);
+            if (!entries) return;
+            const memories = data.memories || [];
+            if (memories.length === 0) {
+                entries.innerHTML = '<div style="color:#6b7280;font-size:0.78rem;padding:0.3rem 0;">No memories yet.</div>';
+                return;
+            }
+            entries.innerHTML = '';
+            memories.forEach(mem => {
+                const entry = document.createElement('div');
+                entry.className = 'board-mem-entry';
+                entry.innerHTML = `<span class="board-mem-type">${mem.memory_type}</span>${escapeHtml(mem.content)}`;
+                entries.appendChild(entry);
+            });
+        }
+
+        // --- Memory Report Download ---
 
         function handleBoardMemoryReport(data) {
             if (!data.markdown) return;
@@ -25467,26 +26043,10 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast('Memory report downloaded', 'success');
+            boardShowToast('Memory report downloaded', 'success');
         }
 
-        function handleBoardMemberMemoryResult(data) {
-            // Simple alert/toast with memory info — could be a modal later
-            const count = (data.memories || []).length;
-            showToast(`${data.member_name}: ${count} memories`, 'info');
-        }
-
-        function handleBoardDecisionsResult(data) {
-            const decisions = data.decisions || [];
-            if (decisions.length === 0) {
-                showToast('No open decisions', 'info');
-                return;
-            }
-            let text = decisions.map(d => `- ${d.content} (${d.session_title || 'unknown session'})`).join('\n');
-            showToast(`${decisions.length} open decisions`, 'info');
-        }
-
-        // Auto-init board session when the panel becomes visible
+        // --- Auto-init board session when panel becomes visible ---
         const boardObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting && !boardSessionId && ws && ws.readyState === 1) {

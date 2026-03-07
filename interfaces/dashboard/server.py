@@ -7826,7 +7826,11 @@ async def dashboard_websocket(websocket: WebSocket):
                     "title": title,
                     "briefing": latest_briefing,
                     "members": {
-                        mid: {"name": m["name"], "role": m["role"], "color": m["color"], "provider": m["provider"]}
+                        mid: {
+                            "name": m["name"], "role": m["role"], "color": m["color"],
+                            "provider": m["provider"], "glow_color": m.get("glow_color", ""),
+                            "initials": m.get("initials", m["name"][:2].upper()),
+                        }
                         for mid, m in BOARD_MEMBERS.items()
                     },
                     "active_members": session.active_members if session else [],
@@ -7905,7 +7909,24 @@ async def dashboard_websocket(websocket: WebSocket):
                         })
 
                     try:
-                        await board_of_directors.ask_board(session_id, q, on_member_response=on_response)
+                        responses = await board_of_directors.ask_board(session_id, q, on_member_response=on_response)
+
+                        # Phase 2: Round summarization — synthesize after all responses
+                        try:
+                            session_obj = board_of_directors.get_session(session_id)
+                            # Count rounds by counting user messages
+                            round_number = sum(1 for m in (session_obj.messages if session_obj else []) if m.member_id == "user")
+                            summary = await board_of_directors.summarize_round(session_id, round_number, responses)
+                            if summary:
+                                await broadcast_to_dashboards({
+                                    "type": "board_facilitator_summary",
+                                    "session_id": session_id,
+                                    "summary": summary,
+                                    "round_number": round_number,
+                                })
+                        except Exception as se:
+                            logger.error("Round summarization failed: %s", se)
+
                         await broadcast_to_dashboards({
                             "type": "board_complete",
                             "session_id": session_id,
@@ -7948,13 +7969,25 @@ async def dashboard_websocket(websocket: WebSocket):
 
             elif msg.get("type") == "board_export":
                 sid = msg.get("session_id", "")
-                md = board_of_directors.export_session_markdown(sid)
-                await websocket.send_json({
-                    "type": "board_export_result",
-                    "session_id": sid,
-                    "markdown": md or "",
-                    "ok": md is not None,
-                })
+                fmt = msg.get("format", "markdown")
+                if fmt == "json":
+                    data_export = board_of_directors.export_session_json(sid)
+                    await websocket.send_json({
+                        "type": "board_export_result",
+                        "session_id": sid,
+                        "format": "json",
+                        "json_data": data_export or {},
+                        "ok": data_export is not None,
+                    })
+                else:
+                    md = board_of_directors.export_session_markdown(sid)
+                    await websocket.send_json({
+                        "type": "board_export_result",
+                        "session_id": sid,
+                        "format": "markdown",
+                        "markdown": md or "",
+                        "ok": md is not None,
+                    })
 
             # --- Phase 1.5: Persistent Memory handlers ---
 
@@ -8047,7 +8080,11 @@ async def dashboard_websocket(websocket: WebSocket):
                         "title": session.title,
                         "briefing": session.briefing,
                         "members": {
-                            mid: {"name": m["name"], "role": m["role"], "color": m["color"], "provider": m["provider"]}
+                            mid: {
+                                "name": m["name"], "role": m["role"], "color": m["color"],
+                                "provider": m["provider"], "glow_color": m.get("glow_color", ""),
+                                "initials": m.get("initials", m["name"][:2].upper()),
+                            }
                             for mid, m in BOARD_MEMBERS.items()
                         },
                         "active_members": session.active_members,

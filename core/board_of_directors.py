@@ -8,6 +8,9 @@ and backing model.
 Phase 1.5: Integrated with BoardMemory for SQLite persistence,
 per-member long-term memory, and AI-powered memory extraction.
 
+Phase 2: Config-driven board definition, round summarization,
+cross-session recall, facilitator summaries.
+
 Usage:
     from core.board_memory import BoardMemory
     from core.board_of_directors import BoardOfDirectors
@@ -58,8 +61,16 @@ logger = logging.getLogger("cam.board_of_directors")
 
 
 # ---------------------------------------------------------------------------
-# Board member definitions
+# Board configuration — config-driven (Phase 2)
 # ---------------------------------------------------------------------------
+
+BOARD_CONFIG = {
+    "name": "Doppler Board of Directors",
+    "description": "AI advisory board for Doppler Cycles",
+    "owner": "George",
+    "max_rounds": 10,
+    "round_timeout": 120,
+}
 
 BOARD_MEMBERS = {
     "cam": {
@@ -68,6 +79,8 @@ BOARD_MEMBERS = {
         "provider": "anthropic",
         "model": "claude-sonnet-4-5-20250929",
         "color": "#e74c3c",
+        "glow_color": "rgba(231, 76, 60, 0.6)",
+        "initials": "CM",
         "persona": (
             "You are Cam, the Chief Facilitator of Doppler Cycles' AI Board of Directors. "
             "You synthesize perspectives, keep discussion focused, and ensure actionable outcomes. "
@@ -81,6 +94,8 @@ BOARD_MEMBERS = {
         "provider": "anthropic",
         "model": "claude-sonnet-4-5-20250929",
         "color": "#d4a574",
+        "glow_color": "rgba(212, 165, 116, 0.6)",
+        "initials": "CL",
         "persona": (
             "You are Claude, Strategic Advisor on Doppler Cycles' AI Board. "
             "You focus on long-term strategy, risk assessment, and competitive positioning. "
@@ -93,6 +108,8 @@ BOARD_MEMBERS = {
         "provider": "anthropic",
         "model": "claude-sonnet-4-5-20250929",
         "color": "#9b59b6",
+        "glow_color": "rgba(155, 89, 182, 0.6)",
+        "initials": "CC",
         "persona": (
             "You are Claude Code, Technical Lead on Doppler Cycles' AI Board. "
             "You evaluate technical feasibility, implementation costs, and architecture decisions. "
@@ -106,6 +123,8 @@ BOARD_MEMBERS = {
         "provider": "deepseek",
         "model": "deepseek-chat",
         "color": "#2ecc71",
+        "glow_color": "rgba(46, 204, 113, 0.6)",
+        "initials": "DS",
         "persona": (
             "You are DeepSeek, R&D Analyst on Doppler Cycles' AI Board. "
             "You research emerging technologies, industry trends, and innovation opportunities. "
@@ -119,6 +138,8 @@ BOARD_MEMBERS = {
         "provider": "xai",
         "model": "grok-3",
         "color": "#3498db",
+        "glow_color": "rgba(52, 152, 219, 0.6)",
+        "initials": "GK",
         "persona": (
             "You are Grok, Market Intelligence officer on Doppler Cycles' AI Board. "
             "You track market trends, competitor moves, and consumer sentiment. "
@@ -132,6 +153,8 @@ BOARD_MEMBERS = {
         "provider": "openai",
         "model": "gpt-4o",
         "color": "#1abc9c",
+        "glow_color": "rgba(26, 188, 156, 0.6)",
+        "initials": "GP",
         "persona": (
             "You are ChatGPT, Customer Strategy lead on Doppler Cycles' AI Board. "
             "You focus on customer experience, marketing, content strategy, and brand building. "
@@ -145,6 +168,8 @@ BOARD_MEMBERS = {
         "provider": "google",
         "model": "gemini-2.0-flash",
         "color": "#f39c12",
+        "glow_color": "rgba(243, 156, 18, 0.6)",
+        "initials": "GM",
         "persona": (
             "You are Gemini, Data & Analytics lead on Doppler Cycles' AI Board. "
             "You focus on metrics, data-driven decisions, KPIs, and operational efficiency. "
@@ -367,6 +392,14 @@ class BoardOfDirectors:
         context_parts = []
         if session.briefing:
             context_parts.append(f"BRIEFING:\n{session.briefing}\n")
+
+        # Cross-session recall (Phase 2): inject past session summaries
+        # Cam gets her own facilitation context, other members get the recall block
+        if self.memory and member_id != "cam":
+            recall_block = self._build_cross_session_recall()
+            if recall_block:
+                context_parts.append(recall_block)
+
         # Include last 10 messages for context
         recent = session.messages[-10:]
         if recent:
@@ -557,6 +590,106 @@ class BoardOfDirectors:
         except (KeyError, IndexError):
             return f"[Gemini: Unexpected response format: {data}]"
 
+    # -- Cross-session recall (Phase 2) ------------------------------------
+
+    def _build_cross_session_recall(self, n: int = 3) -> str:
+        """Build a 'Previously on the Doppler Board...' context block
+        from the last N closed sessions' summaries."""
+        if not self.memory:
+            return ""
+        summaries = self.memory.get_recent_session_summaries(n=n)
+        if not summaries:
+            return ""
+        lines = ["PREVIOUSLY ON THE DOPPLER BOARD:"]
+        for s in summaries:
+            date_str = (s.get("date") or "")[:10]
+            summary = s.get("summary") or "No summary available"
+            lines.append(f"- [{date_str}] {summary}")
+            decisions = s.get("decisions_made")
+            if decisions:
+                for d in decisions:
+                    lines.append(f"  * Decision: {d}")
+        return "\n".join(lines) + "\n"
+
+    # -- Round summarization (Phase 2) -------------------------------------
+
+    async def summarize_round(
+        self,
+        session_id: str,
+        round_number: int,
+        responses: list["BoardMessage"],
+    ) -> str:
+        """After all members respond, synthesize a facilitator summary.
+
+        Uses Claude Haiku for cost efficiency. Returns summary text and
+        persists it as a facilitator_summary message.
+        """
+        if not responses:
+            return ""
+
+        if not _HAS_ANTHROPIC:
+            return "[Round summary unavailable: anthropic SDK not installed]"
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return "[Round summary unavailable: no API key]"
+
+        # Build transcript of this round's responses
+        round_text = "\n\n".join(
+            f"{r.member_name} ({r.role}):\n{r.text}" for r in responses
+        )
+
+        prompt = f"""You are Cam, facilitating a board meeting for Doppler Cycles.
+Summarize this round of board member responses concisely.
+
+ROUND {round_number} RESPONSES:
+{round_text}
+
+Provide:
+1. One sentence per member distilling their position
+2. Key agreements between members
+3. Key disagreements or tensions
+4. Open questions for the next round (if any)
+
+Keep it under 200 words. Be direct and practical."""
+
+        try:
+            client = anthropic.AsyncAnthropic(api_key=api_key)
+            response = await client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = ""
+            for block in response.content:
+                if block.type == "text":
+                    text += block.text
+            summary = text.strip()
+        except Exception as e:
+            logger.error("Round summarization failed: %s", e)
+            summary = f"[Summary unavailable: {e}]"
+
+        # Persist as facilitator_summary message
+        if self.memory:
+            self.memory.add_message(
+                session_id, "facilitator_summary", "cam", summary
+            )
+
+        # Also add to in-memory session
+        session = self._sessions.get(session_id)
+        if session:
+            summary_msg = BoardMessage(
+                member_id="facilitator",
+                member_name="Cam",
+                role="Facilitator Summary",
+                text=summary,
+                color="#f59e0b",  # amber for summaries
+            )
+            session.messages.append(summary_msg)
+
+        logger.info("Round %d summary generated for session %s", round_number, session_id)
+        return summary
+
     # -- Session close (Phase 1.5) ------------------------------------------
 
     async def close_session(self, session_id: str) -> dict:
@@ -635,3 +768,33 @@ class BoardOfDirectors:
         ])
 
         return "\n".join(lines)
+
+    def export_session_json(self, session_id: str) -> dict | None:
+        """Export a board session as a JSON-serializable dict."""
+        session = self._sessions.get(session_id)
+        if not session and self.memory:
+            db_session = self.memory.get_session(session_id)
+            if db_session:
+                session = self._restore_session_from_db(db_session)
+        if not session:
+            return None
+
+        return {
+            "session_id": session.session_id,
+            "title": session.title,
+            "created_at": session.created_at,
+            "briefing": session.briefing,
+            "active_members": session.active_members,
+            "messages": [
+                {
+                    "member_id": m.member_id,
+                    "member_name": m.member_name,
+                    "role": m.role,
+                    "text": m.text,
+                    "color": m.color,
+                    "timestamp": m.timestamp,
+                    "latency_ms": m.latency_ms,
+                }
+                for m in session.messages
+            ],
+        }
