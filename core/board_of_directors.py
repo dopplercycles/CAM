@@ -5,10 +5,15 @@ Multi-model "boardroom" where 7 AI board members from different providers
 discuss questions simultaneously. Each member has a distinct role, persona,
 and backing model.
 
+Phase 1.5: Integrated with BoardMemory for SQLite persistence,
+per-member long-term memory, and AI-powered memory extraction.
+
 Usage:
+    from core.board_memory import BoardMemory
     from core.board_of_directors import BoardOfDirectors
 
-    board = BoardOfDirectors()
+    memory = BoardMemory(db_path="data/board.db")
+    board = BoardOfDirectors(memory=memory)
     session_id = board.create_session("Doppler Cycles strategy meeting")
     await board.ask_board(session_id, "Should we expand into electric bikes?",
                           on_member_response=my_callback)
@@ -21,7 +26,9 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Awaitable
+from typing import Any, Callable, Awaitable, Optional
+
+from core.board_memory import BoardMemory
 
 # Anthropic SDK — optional
 try:
@@ -185,27 +192,75 @@ class BoardOfDirectors:
     API keys for Anthropic and DeepSeek come from environment variables.
     Keys for OpenAI, xAI, and Google are set at runtime via the dashboard
     (stored in memory only, never persisted to disk).
+
+    Phase 1.5: Accepts a BoardMemory instance for SQLite persistence.
+    In-memory BoardSession objects serve as the active session cache (fast),
+    while SQLite is the persistence layer (survives restarts).
     """
 
-    def __init__(self):
+    def __init__(self, memory: Optional[BoardMemory] = None):
         self._sessions: dict[str, BoardSession] = {}
         # Runtime API keys for providers not in .env
         self._runtime_keys: dict[str, str] = {}  # provider -> api_key
+        # Phase 1.5: persistent memory layer
+        self.memory: Optional[BoardMemory] = memory
 
     # -- Session management -------------------------------------------------
 
     def create_session(self, title: str = "Board Meeting") -> str:
         """Create a new board session and return its ID."""
         session_id = uuid.uuid4().hex[:12]
-        self._sessions[session_id] = BoardSession(
+        session = BoardSession(
             session_id=session_id,
             title=title,
         )
+        self._sessions[session_id] = session
+        # Persist to SQLite
+        if self.memory:
+            self.memory.create_session(
+                session_id=session_id,
+                title=title,
+                active_members=session.active_members,
+            )
         logger.info("Board session created: %s (%s)", session_id, title)
         return session_id
 
     def get_session(self, session_id: str) -> BoardSession | None:
-        return self._sessions.get(session_id)
+        """Get a session from in-memory cache, falling back to DB for past sessions."""
+        session = self._sessions.get(session_id)
+        if session:
+            return session
+        # Fall back to DB for persisted sessions (e.g. after restart)
+        if self.memory:
+            db_session = self.memory.get_session(session_id)
+            if db_session:
+                return self._restore_session_from_db(db_session)
+        return None
+
+    def _restore_session_from_db(self, db_session: dict) -> BoardSession:
+        """Rebuild a BoardSession from a DB record and cache it in-memory."""
+        session = BoardSession(
+            session_id=db_session["id"],
+            title=db_session.get("title", "Board Meeting"),
+            briefing=db_session.get("briefing", ""),
+            created_at=db_session.get("created_at", ""),
+            active_members=db_session.get("active_members", list(BOARD_MEMBERS.keys())),
+        )
+        # Rebuild messages from DB
+        for m in db_session.get("messages", []):
+            is_user = m["role"] == "user"
+            member_id = m["speaker"] if not is_user else "user"
+            member = BOARD_MEMBERS.get(member_id, {})
+            session.messages.append(BoardMessage(
+                member_id=member_id,
+                member_name=member.get("name", "George") if not is_user else "George",
+                role=member.get("role", "Owner") if not is_user else "Owner",
+                text=m["content"],
+                color=member.get("color", "#ffffff") if not is_user else "#ffffff",
+                timestamp=m.get("timestamp", ""),
+            ))
+        self._sessions[session.session_id] = session
+        return session
 
     def set_briefing(self, session_id: str, briefing: str) -> bool:
         """Set the briefing context for a session."""
@@ -213,6 +268,10 @@ class BoardOfDirectors:
         if not session:
             return False
         session.briefing = briefing
+        # Persist to SQLite
+        if self.memory:
+            self.memory.update_session(session_id, briefing=briefing)
+            self.memory.save_briefing(briefing)
         logger.info("Board briefing set for session %s (%d chars)", session_id, len(briefing))
         return True
 
@@ -271,6 +330,9 @@ class BoardOfDirectors:
             color="#ffffff",
         )
         session.messages.append(user_msg)
+        # Persist user message to SQLite
+        if self.memory:
+            self.memory.add_message(session_id, "user", "user", question)
 
         # Build tasks for active members
         tasks = []
@@ -315,12 +377,21 @@ class BoardOfDirectors:
         context_parts.append(f"CURRENT QUESTION: {question}")
         full_prompt = "\n\n".join(context_parts)
 
-        system_prompt = (
-            f"{member['persona']}\n\n"
-            f"You are in a board meeting with 6 other AI advisors. "
-            f"Keep your response focused and under 300 words. "
-            f"Address the question directly from your role's perspective."
+        # Build system prompt: persona + long-term memory + board instructions
+        system_parts = [member['persona']]
+
+        # Inject persistent memory if available
+        if self.memory:
+            mem_block = self.memory.build_memory_prompt(member_id)
+            if mem_block:
+                system_parts.append(mem_block)
+
+        system_parts.append(
+            "You are in a board meeting with 6 other AI advisors. "
+            "Keep your response focused and under 300 words. "
+            "Address the question directly from your role's perspective."
         )
+        system_prompt = "\n\n".join(system_parts)
 
         start = time.perf_counter()
         try:
@@ -351,6 +422,10 @@ class BoardOfDirectors:
             latency_ms=round(elapsed_ms, 1),
         )
         session.messages.append(msg)
+
+        # Persist member response to SQLite
+        if self.memory:
+            self.memory.add_message(session.session_id, "assistant", member_id, text)
 
         # Fire callback so server can broadcast as each member finishes
         if on_member_response:
@@ -482,11 +557,47 @@ class BoardOfDirectors:
         except (KeyError, IndexError):
             return f"[Gemini: Unexpected response format: {data}]"
 
+    # -- Session close (Phase 1.5) ------------------------------------------
+
+    async def close_session(self, session_id: str) -> dict:
+        """Close a session: extract memories, summarize if needed.
+
+        Returns dict with extraction results (counts per category).
+        """
+        if not self.memory:
+            return {}
+
+        # Run memory extraction via Claude Haiku
+        extracted = await self.memory.extract_memories_from_session(session_id)
+
+        # Summarize any members that have accumulated >30 memories
+        for mid in BOARD_MEMBERS:
+            await self.memory.summarize_old_memories(mid)
+
+        # Remove from in-memory cache (session lives on in DB)
+        self._sessions.pop(session_id, None)
+
+        logger.info("Board session closed: %s (extracted: %s)",
+                     session_id,
+                     {k: len(v) for k, v in extracted.items()} if extracted else "none")
+        return extracted
+
+    def get_memory_counts(self) -> dict[str, int]:
+        """Return memory count per member (for UI badges)."""
+        if not self.memory:
+            return {}
+        return {mid: self.memory.get_memory_count(mid) for mid in BOARD_MEMBERS}
+
     # -- Export -------------------------------------------------------------
 
     def export_session_markdown(self, session_id: str) -> str | None:
         """Export a board session as a Markdown document."""
         session = self._sessions.get(session_id)
+        # Fall back to DB for past sessions
+        if not session and self.memory:
+            db_session = self.memory.get_session(session_id)
+            if db_session:
+                session = self._restore_session_from_db(db_session)
         if not session:
             return None
 

@@ -10496,6 +10496,44 @@
         .board-ask-btn:hover { background: #c0392b; }
         .board-ask-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* END SESSION button — distinct red/dark style */
+        .board-btn-end {
+            background: #8b0000; color: #fff; border-color: #8b0000;
+        }
+        .board-btn-end:hover { background: #a00000; }
+
+        /* Session history drawer */
+        .board-history-drawer {
+            margin-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            padding-top: 0.5rem;
+        }
+        .board-history-header {
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; font-size: 0.82rem; font-weight: 600;
+            color: var(--text-secondary); padding: 0.25rem 0;
+        }
+        .board-history-header:hover { color: var(--text-primary); }
+        .board-history-toggle { font-size: 0.7rem; transition: transform 0.2s; }
+        .board-history-toggle.open { transform: rotate(90deg); }
+        .board-history-list { max-height: 200px; overflow-y: auto; }
+        .board-history-item {
+            padding: 0.35rem 0.4rem; border-radius: 4px; cursor: pointer;
+            font-size: 0.78rem; border-bottom: 1px solid var(--border);
+        }
+        .board-history-item:hover { background: var(--bg-tertiary, var(--border)); }
+        .board-history-item-title { font-weight: 600; color: var(--text-primary); }
+        .board-history-item-meta {
+            color: var(--text-secondary); font-size: 0.7rem; margin-top: 0.1rem;
+        }
+
+        /* Memory count badge on member toggles */
+        .board-toggle-mem-badge {
+            font-size: 0.65rem; background: #e74c3c; color: #fff;
+            border-radius: 8px; padding: 0 5px; margin-left: 4px;
+            display: inline-block; min-width: 16px; text-align: center;
+        }
+
         /* Board modals */
         .board-modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -13497,6 +13535,7 @@
                     <button class="board-btn" onclick="showBoardBriefingModal()" title="Set briefing context">BRIEF</button>
                     <button class="board-btn" onclick="showBoardKeysModal()" title="Configure API keys">KEYS</button>
                     <button class="board-btn" onclick="exportBoardSession()" title="Export as Markdown">EXPORT</button>
+                    <button class="board-btn board-btn-end" onclick="endBoardSession()" title="End session and extract memories">END SESSION</button>
                 </div>
             </div>
 
@@ -13510,6 +13549,17 @@
                     </div>
                     <div class="board-member-toggles" id="board-member-toggles">
                         <!-- Member toggle switches rendered by JS -->
+                    </div>
+
+                    <!-- Session history drawer (Phase 1.5) -->
+                    <div class="board-history-drawer">
+                        <div class="board-history-header" onclick="toggleBoardHistoryDrawer()">
+                            <span>Past Sessions</span>
+                            <span class="board-history-toggle" id="board-history-toggle-icon">&#9654;</span>
+                        </div>
+                        <div class="board-history-list" id="board-history-list" style="display:none;">
+                            <div style="color:var(--text-secondary);font-size:0.8rem;padding:0.3rem 0;">Loading...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -13639,6 +13689,7 @@
         let boardActiveMembers = [];
         let boardMembers = {};      // member_id -> {name, role, color, provider}
         let boardThinking = new Set();  // member_ids currently thinking
+        let boardMemoryCounts = {};  // member_id -> count (Phase 1.5)
 
         // Command library from server
         let commandLibrary = [];
@@ -14598,6 +14649,20 @@
                     handleBoardExportResult(data);
                 } else if (data.type === "board_history") {
                     handleBoardHistory(data);
+                } else if (data.type === "board_session_closed") {
+                    handleBoardSessionClosed(data);
+                } else if (data.type === "board_sessions_list") {
+                    handleBoardSessionsList(data);
+                } else if (data.type === "board_session_resumed") {
+                    handleBoardSessionResumed(data);
+                } else if (data.type === "board_memory_report") {
+                    handleBoardMemoryReport(data);
+                } else if (data.type === "board_member_memory") {
+                    handleBoardMemberMemoryResult(data);
+                } else if (data.type === "board_decisions") {
+                    handleBoardDecisionsResult(data);
+                } else if (data.type === "board_decision_updated") {
+                    showToast('Decision updated', 'success');
                 }
             };
 
@@ -25013,6 +25078,11 @@
             boardSessionId = data.session_id;
             boardMembers = data.members || {};
             boardActiveMembers = data.active_members || Object.keys(boardMembers);
+            boardMemoryCounts = data.memory_counts || {};
+            // Auto-load briefing from DB if available
+            if (data.briefing) {
+                boardBriefing = data.briefing;
+            }
             renderBoardTable();
             renderBoardToggles();
             handleBoardApiKeysStatus(data.api_keys_status || {});
@@ -25050,11 +25120,13 @@
             container.innerHTML = '';
             Object.entries(boardMembers).forEach(([id, m]) => {
                 const active = boardActiveMembers.includes(id);
+                const memCount = boardMemoryCounts[id] || 0;
+                const badge = memCount > 0 ? `<span class="board-toggle-mem-badge" title="${memCount} memories">${memCount}</span>` : '';
                 const row = document.createElement('div');
                 row.className = 'board-toggle-row';
                 row.innerHTML = `
                     <span class="board-toggle-dot" style="background:${m.color}"></span>
-                    <label>${m.name}</label>
+                    <label>${m.name}${badge}</label>
                     <span class="board-toggle-role">${m.role}</span>
                     <input type="checkbox" ${active ? 'checked' : ''} onchange="toggleBoardMember('${id}')">
                 `;
@@ -25274,6 +25346,144 @@
                 if (empty) empty.style.display = 'none';
                 data.messages.forEach(m => addBoardMessage(m));
             }
+        }
+
+        // ─── Phase 1.5: Persistent Memory Functions ─────────────────
+
+        function endBoardSession() {
+            if (!boardSessionId) {
+                showToast('No active board session', 'error');
+                return;
+            }
+            ws.send(JSON.stringify({
+                type: 'board_close_session',
+                session_id: boardSessionId,
+            }));
+            showToast('Ending session — extracting memories...', 'info');
+        }
+
+        function handleBoardSessionClosed(data) {
+            const total = data.total_extracted || 0;
+            const counts = data.memories_extracted || {};
+            let detail = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ');
+            showToast(`Session ended — ${total} memories extracted${detail ? ' (' + detail + ')' : ''}`, 'success');
+            // Update memory counts
+            boardMemoryCounts = data.memory_counts || {};
+            // Reset session state
+            boardSessionId = null;
+            boardBriefing = '';
+            // Show empty state and re-render
+            const feed = document.getElementById('board-feed');
+            if (feed) feed.innerHTML = '';
+            const empty = document.getElementById('board-empty-state');
+            if (empty) {
+                empty.innerHTML = '<p>Session ended</p><p style="font-size:0.85rem;color:var(--text-secondary);">Memories extracted and saved. Start a new session or resume a past one.</p>';
+                empty.style.display = '';
+            }
+            renderBoardToggles();
+            // Refresh session history
+            loadBoardSessionHistory();
+        }
+
+        function toggleBoardHistoryDrawer() {
+            const list = document.getElementById('board-history-list');
+            const icon = document.getElementById('board-history-toggle-icon');
+            if (!list) return;
+            const visible = list.style.display !== 'none';
+            list.style.display = visible ? 'none' : 'block';
+            if (icon) icon.classList.toggle('open', !visible);
+            if (!visible) loadBoardSessionHistory();
+        }
+
+        function loadBoardSessionHistory() {
+            if (!ws || ws.readyState !== 1) return;
+            ws.send(JSON.stringify({ type: 'board_list_sessions', limit: 15 }));
+        }
+
+        function handleBoardSessionsList(data) {
+            const list = document.getElementById('board-history-list');
+            if (!list) return;
+            const sessions = data.sessions || [];
+            if (sessions.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-secondary);font-size:0.8rem;padding:0.3rem 0;">No past sessions</div>';
+                return;
+            }
+            list.innerHTML = '';
+            sessions.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'board-history-item';
+                const date = (s.created_at || '').substring(0, 10);
+                const msgs = s.message_count || 0;
+                const isActive = s.id === boardSessionId;
+                item.innerHTML = `
+                    <div class="board-history-item-title">${escapeHtml(s.title || 'Untitled')}${isActive ? ' (active)' : ''}</div>
+                    <div class="board-history-item-meta">${date} &middot; ${msgs} messages</div>
+                `;
+                if (!isActive) {
+                    item.onclick = () => resumeBoardSession(s.id);
+                }
+                list.appendChild(item);
+            });
+        }
+
+        function resumeBoardSession(sessionId) {
+            ws.send(JSON.stringify({
+                type: 'board_resume_session',
+                session_id: sessionId,
+            }));
+            showToast('Resuming session...', 'info');
+        }
+
+        function handleBoardSessionResumed(data) {
+            boardSessionId = data.session_id;
+            boardMembers = data.members || {};
+            boardActiveMembers = data.active_members || Object.keys(boardMembers);
+            boardMemoryCounts = data.memory_counts || {};
+            if (data.briefing) boardBriefing = data.briefing;
+
+            renderBoardTable();
+            renderBoardToggles();
+            handleBoardApiKeysStatus(data.api_keys_status || {});
+
+            // Render messages
+            const feed = document.getElementById('board-feed');
+            if (feed) feed.innerHTML = '';
+            const empty = document.getElementById('board-empty-state');
+            if (empty) empty.style.display = 'none';
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(m => addBoardMessage(m));
+            }
+            showToast(`Resumed: ${data.title || 'Board Meeting'}`, 'success');
+        }
+
+        function handleBoardMemoryReport(data) {
+            if (!data.markdown) return;
+            const blob = new Blob([data.markdown], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'board-memory-report.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Memory report downloaded', 'success');
+        }
+
+        function handleBoardMemberMemoryResult(data) {
+            // Simple alert/toast with memory info — could be a modal later
+            const count = (data.memories || []).length;
+            showToast(`${data.member_name}: ${count} memories`, 'info');
+        }
+
+        function handleBoardDecisionsResult(data) {
+            const decisions = data.decisions || [];
+            if (decisions.length === 0) {
+                showToast('No open decisions', 'info');
+                return;
+            }
+            let text = decisions.map(d => `- ${d.content} (${d.session_title || 'unknown session'})`).join('\n');
+            showToast(`${decisions.length} open decisions`, 'info');
         }
 
         // Auto-init board session when the panel becomes visible
