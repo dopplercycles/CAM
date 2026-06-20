@@ -32,9 +32,9 @@ ollama_url = "http://localhost:11434"
 simple = "mistral:7b"
 routine = "gpt-oss:20b"
 agentic = "kimi-k2.5"
-complex = "claude"
-nuanced = "claude"
-boss = "claude-opus-4-6"            # George-to-Cam — always the best model
+complex = "claude-sonnet-4-6"
+nuanced = "claude-sonnet-4-6"
+boss = "deepseek-v4-pro"    # George-to-Cam
 # Tier-based routing (auto-classifier → task_classifier.py)
 # Tier 1 = small/fast, Tier 2 = medium, Tier 3 = large/reasoning
 tier1 = "phi4-mini:3.8b"          # small/fast local model for simple tasks
@@ -43,8 +43,8 @@ tier3 = "glm-4.7-flash"
 
 [models.claude]
 api_key_env = "ANTHROPIC_API_KEY"   # env var name (never store the key in config)
-default_model = "claude-opus-4-6"   # default for boss/complex tasks
-sonnet_model = "claude-sonnet-4-5-20250929"  # cheaper alternative for delegated tasks
+default_model = "claude-sonnet-4-6"
+sonnet_model = "claude-sonnet-4-6"  # cheaper alternative for delegated tasks
 
 [models.delegation]
 # Maps intent categories to model tiers for automatic delegation
@@ -63,9 +63,9 @@ output = 15.00                      # USD per million output tokens
 input = 15.00                       # USD per million input tokens
 output = 75.00                      # USD per million output tokens
 
-[models.costs."claude-sonnet-4-5-20250929"]
-input = 3.00
-output = 15.00
+[models.costs."claude-sonnet-4-6"]
+input = 3.00                        # USD per million input tokens
+output = 15.00                      # USD per million output tokens
 
 [models.costs."kimi-k2.5"]
 input = 0.50
@@ -74,6 +74,14 @@ output = 1.50
 [models.costs."deepseek-reasoner"]
 input = 0.55
 output = 2.19
+
+[models.costs."deepseek-v4-pro"]
+input = 0.27
+output = 1.10
+
+[models.costs."deepseek-v4-flash"]
+input = 0.07
+output = 0.28
 
 [commands]
 status_report = 30

@@ -113,7 +113,7 @@ _DEFAULT_MODELS = {
     "complex": "claude",
     "nuanced": "claude",
     # George talking to Cam — ALWAYS uses the best model, no cost optimization
-    "boss": "claude-opus-4-6",
+    "boss": "deepseek-v4-pro",
     # Tier-based routing (from task classifier)
     "tier1": "glm-4.7-flash",    # Small/fast — placeholder until tiny models installed
     "tier2": "gpt-oss:20b",      # Medium — language understanding, multi-sentence
@@ -124,8 +124,11 @@ _API_COSTS = {
     "claude": {"input": 3.00, "output": 15.00},
     "claude-opus-4-6": {"input": 15.00, "output": 75.00},
     "claude-sonnet-4-5-20250929": {"input": 3.00, "output": 15.00},
+    "claude-sonnet-4-6": {"input": 3.00, "output": 15.00},
     "kimi-k2.5": {"input": 0.50, "output": 1.50},
     "deepseek-reasoner": {"input": 0.55, "output": 2.19},
+    "deepseek-v4-pro": {"input": 0.27, "output": 1.10},
+    "deepseek-v4-flash": {"input": 0.07, "output": 0.28},
 }
 
 _OLLAMA_URL = "http://localhost:11434"
@@ -375,7 +378,7 @@ class ModelRouter:
                 from core.config import get_config
                 model = get_config().models.claude.default_model
             except Exception:
-                model = "claude-sonnet-4-5-20250929"
+                model = "claude-sonnet-4-6"
             logger.info("Resolved bare 'claude' alias → %s", model)
 
         # Check SDK availability

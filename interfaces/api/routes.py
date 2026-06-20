@@ -128,6 +128,75 @@ async def list_tasks(request: Request):
     }
 
 
+@router.post("/tasks/clear")
+async def clear_tasks(request: Request):
+    """Clear tasks, optionally filtered by description and status.
+
+    Query params:
+        description: Only clear tasks matching this description (e.g., "status_report")
+        status: Task status to clear (default: "pending")
+    """
+    from core.task import TaskStatus
+
+    task_queue = request.app.state.task_queue
+    event_logger = request.app.state.event_logger
+    desc_filter = request.query_params.get("description", "")
+    status_filter = request.query_params.get("status", "pending")
+
+    try:
+        target_status = TaskStatus(status_filter)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {status_filter}")
+
+    to_remove = []
+    for task in task_queue._tasks:
+        if task.status != target_status:
+            continue
+        if desc_filter and task.description != desc_filter:
+            continue
+        to_remove.append(task)
+
+    for task in to_remove:
+        task_queue._tasks.remove(task)
+
+    if to_remove:
+        event_logger.info(
+            "task",
+            f"Cleared {len(to_remove)} {status_filter} tasks"
+            + (f" matching '{desc_filter}'" if desc_filter else ""),
+        )
+        logger.info("Cleared %d %s tasks via API", len(to_remove), status_filter)
+
+    return {"ok": True, "cleared": len(to_remove)}
+
+
+@router.delete("/tasks/{task_id}")
+async def cancel_task(task_id: str, request: Request):
+    """Cancel a task by removing it from the queue.
+
+    Works on pending or stuck running tasks.
+    """
+    from core.task import TaskStatus
+
+    task_queue = request.app.state.task_queue
+    event_logger = request.app.state.event_logger
+    task = task_queue.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
+    if task.status == TaskStatus.COMPLETED:
+        raise HTTPException(status_code=409, detail="Task already completed")
+
+    task.status = TaskStatus.FAILED
+    task.result = "Cancelled via API"
+    task_queue._tasks.remove(task)
+    event_logger.info(
+        "task", f"Task {task.short_id} cancelled via API",
+        task_id=task.short_id,
+    )
+    logger.info("Task %s cancelled via API", task.short_id)
+    return {"ok": True, "task_id": task.task_id, "short_id": task.short_id}
+
+
 @router.get("/tasks/{task_id}")
 async def get_task(task_id: str, request: Request):
     """Return a single task by full or short ID. 404 if not found."""
