@@ -107,7 +107,7 @@ class ModelResponse:
 
 # Module-level fallbacks — used if config is unavailable
 _DEFAULT_MODELS = {
-    "simple": "glm-4.7-flash",
+    "simple": "phi4-mini:3.8b",
     "routine": "gpt-oss:20b",
     "agentic": "kimi-k2.5",
     "complex": "claude",
