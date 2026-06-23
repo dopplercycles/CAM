@@ -2999,6 +2999,9 @@ async def agent_websocket(websocket: WebSocket, agent_id: str):
     client_host = websocket.client.host if websocket.client else "unknown"
     logger.info("Agent '%s' WebSocket opened from %s", agent_id, client_host)
 
+    # Cancel any pending disconnect alert — agent came back within the grace period
+    notification_manager.cancel_disconnect_notification(agent_id)
+
     # Store the WebSocket so we can send commands back (e.g., kill switch)
     agent_websockets[agent_id] = websocket
 

@@ -93,6 +93,9 @@ class NotificationManager:
         self._notifications: deque[Notification] = deque(maxlen=max_history)
         self._on_notification: Callable[..., Coroutine] | None = None
 
+        # Grace-period tracking: pending disconnect alerts, keyed by agent_id
+        self._pending_disconnect: dict[str, asyncio.Task] = {}
+
         # High error rate tracking: rolling window of task outcomes (True=ok, False=fail)
         self._task_outcomes: deque[bool] = deque(maxlen=100)
         self._last_error_rate_alert: float = 0.0  # monotonic timestamp
@@ -152,7 +155,11 @@ class NotificationManager:
     # -------------------------------------------------------------------
 
     def _check_agent_disconnect(self, event: dict, cfg):
-        """Alert when an agent disconnects or goes offline."""
+        """Alert when an agent disconnects or goes offline.
+
+        Waits for the configured grace period before firing — short blips
+        (WiFi drops, brief network hiccups) that self-resolve are suppressed.
+        """
         if not cfg.agent_disconnect:
             return
         if event.get("category") != "agent":
@@ -160,12 +167,42 @@ class NotificationManager:
         msg = (event.get("message") or "").lower()
         if "disconnected" in msg or "went offline" in msg:
             agent_id = event.get("details", {}).get("agent_id", "unknown")
-            self._emit(
-                SEVERITY_ERROR,
-                "Agent Disconnected",
-                f"Agent '{agent_id}' has gone offline.",
-                "agent",
-            )
+            grace = int(getattr(cfg, "agent_disconnect_grace_period", 60))
+
+            # Cancel any existing pending alert for this agent (re-disconnect resets timer)
+            existing = self._pending_disconnect.pop(agent_id, None)
+            if existing and not existing.done():
+                existing.cancel()
+
+            try:
+                loop = asyncio.get_running_loop()
+                task = loop.create_task(
+                    self._deferred_disconnect_notify(agent_id, grace),
+                    name=f"disconnect-notify-{agent_id}",
+                )
+                self._pending_disconnect[agent_id] = task
+            except RuntimeError:
+                # No running event loop — emit immediately
+                self._emit(SEVERITY_ERROR, "Agent Disconnected",
+                           f"Agent '{agent_id}' has gone offline.", "agent")
+
+    async def _deferred_disconnect_notify(self, agent_id: str, grace: int):
+        """Wait for the grace period, then fire the disconnect notification."""
+        await asyncio.sleep(grace)
+        self._pending_disconnect.pop(agent_id, None)
+        self._emit(
+            SEVERITY_ERROR,
+            "Agent Disconnected",
+            f"Agent '{agent_id}' has been offline for {grace}s.",
+            "agent",
+        )
+
+    def cancel_disconnect_notification(self, agent_id: str):
+        """Cancel a pending disconnect alert — call when an agent reconnects."""
+        task = self._pending_disconnect.pop(agent_id, None)
+        if task and not task.done():
+            task.cancel()
+            logger.info("Suppressed disconnect alert for '%s' (reconnected within grace period)", agent_id)
 
     def _check_task_failure(self, event: dict, cfg):
         """Alert when a task fails."""
