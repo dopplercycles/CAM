@@ -227,10 +227,10 @@ Each agent runs a lightweight API server (FastAPI) on a specific port. Agents co
 
 ### Current Agent Swarm (OpenClaw-based, learning platform)
 - **FireHorseClawd** — Raspberry Pi 5, Claude via Anthropic
-  - SSH: `firehorse@192.168.12.243`
+  - SSH: `firehorse@192.168.12.129`
   - Connector: systemd service `cam-agent`
 - **Nova** — N150, Kimi K2.5 via Moonshot API
-  - SSH: `george@192.168.12.149`
+  - SSH: `george@192.168.12.224`
   - Connector: manual launch (no systemd yet)
 
 ### ROS 2 Robot Fleet (Phase 6 — Implemented)
