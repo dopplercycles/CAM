@@ -101,6 +101,21 @@ class ModelResponse:
     raw_content: list | None = None            # Raw response.content for tool loop
 
 
+@dataclass
+class _SyntheticBlock:
+    """Mimics an Anthropic SDK content block for the tool loop in conversation.py.
+
+    Used by _call_deepseek() so the OpenAI-format response can be consumed
+    by the same tool loop that handles Claude responses without any changes
+    to conversation.py.
+    """
+    type: str
+    text: str = ""
+    id: str = ""
+    name: str = ""
+    input: dict = field(default_factory=dict)
+
+
 # ---------------------------------------------------------------------------
 # Model Router
 # ---------------------------------------------------------------------------
@@ -226,7 +241,7 @@ class ModelRouter:
         if model.startswith("claude"):
             response = await self._call_claude(prompt, model, system_prompt, messages, tools)
         elif model.startswith("deepseek"):
-            response = await self._call_deepseek(prompt, model, system_prompt)
+            response = await self._call_deepseek(prompt, model, system_prompt, messages, tools)
         elif model in ("kimi-k2.5",):
             response = await self._call_moonshot(prompt, model, system_prompt)
         else:
@@ -573,24 +588,113 @@ class ModelRouter:
     # DeepSeek API (OpenAI-compatible)
     # -------------------------------------------------------------------
 
+    @staticmethod
+    def _anthropic_tools_to_openai(tools: list[dict]) -> list[dict]:
+        """Convert Anthropic tool definitions to OpenAI function-calling format."""
+        result = []
+        for t in tools:
+            result.append({
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t.get("description", ""),
+                    "parameters": t.get("input_schema", {"type": "object", "properties": {}}),
+                },
+            })
+        return result
+
+    @staticmethod
+    def _anthropic_messages_to_openai(
+        messages: list[dict],
+        prompt: str,
+        system_prompt: str | None,
+    ) -> list[dict]:
+        """Convert an Anthropic-format message list to OpenAI format.
+
+        Handles plain text, tool_use assistant turns, and tool_result user turns.
+        If messages is empty, falls back to a simple system+user pair.
+        """
+        out = []
+        if system_prompt:
+            out.append({"role": "system", "content": system_prompt})
+
+        if not messages:
+            out.append({"role": "user", "content": prompt})
+            return out
+
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+
+            # Simple string content
+            if isinstance(content, str):
+                out.append({"role": role, "content": content})
+                continue
+
+            # List of content blocks
+            if isinstance(content, list):
+                tool_results = [b for b in content if isinstance(b, dict) and b.get("type") == "tool_result"]
+                tool_uses = [b for b in content if isinstance(b, dict) and b.get("type") == "tool_use"]
+                text_blocks = [b for b in content if isinstance(b, dict) and b.get("type") == "text"]
+
+                if tool_results:
+                    # Anthropic tool_result → OpenAI "tool" role messages
+                    for tr in tool_results:
+                        out.append({
+                            "role": "tool",
+                            "tool_call_id": tr.get("tool_use_id", ""),
+                            "content": tr.get("content", ""),
+                        })
+                elif tool_uses:
+                    # Anthropic tool_use assistant turn → OpenAI tool_calls
+                    text_parts = " ".join(b.get("text", "") for b in text_blocks).strip()
+                    openai_tool_calls = []
+                    for tu in tool_uses:
+                        openai_tool_calls.append({
+                            "id": tu.get("id", ""),
+                            "type": "function",
+                            "function": {
+                                "name": tu.get("name", ""),
+                                "arguments": json.dumps(tu.get("input", {})),
+                            },
+                        })
+                    out.append({
+                        "role": "assistant",
+                        "content": text_parts or None,
+                        "tool_calls": openai_tool_calls,
+                    })
+                else:
+                    # Plain text block list
+                    joined = " ".join(b.get("text", "") for b in text_blocks if isinstance(b, dict)).strip()
+                    out.append({"role": role, "content": joined or ""})
+
+        return out
+
     async def _call_deepseek(
         self,
         prompt: str,
         model: str,
         system_prompt: str | None = None,
+        messages: list[dict] | None = None,
+        tools: list[dict] | None = None,
     ) -> ModelResponse:
-        """Call the DeepSeek API.
+        """Call the DeepSeek API with optional tool use.
 
-        Uses the OpenAI-compatible API at api.deepseek.com. Requires
-        the DEEPSEEK_API_KEY environment variable to be set.
+        Uses the OpenAI-compatible API at api.deepseek.com. Accepts tools
+        and messages in Anthropic format and converts them internally so the
+        conversation.py tool loop works without modification.
 
         Args:
-            prompt:        The prompt text.
-            model:         Model name (e.g. "deepseek-reasoner").
+            prompt:        The prompt text (used when messages is empty).
+            model:         Model name (e.g. "deepseek-v4-pro").
             system_prompt: Optional system message.
+            messages:      Optional pre-built Anthropic-format message list.
+            tools:         Optional tool definitions in Anthropic format.
 
         Returns:
-            ModelResponse with the result and token/cost tracking.
+            ModelResponse with the result and metadata. When tool calls are
+            present, raw_content contains _SyntheticBlock objects compatible
+            with the conversation.py tool loop.
         """
         if not _HAS_OPENAI:
             logger.warning("openai SDK not installed — returning error")
@@ -610,10 +714,8 @@ class ModelRouter:
                 backend="deepseek",
             )
 
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        openai_messages = self._anthropic_messages_to_openai(messages or [], prompt, system_prompt)
+        openai_tools = self._anthropic_tools_to_openai(tools) if tools else None
 
         start = time.perf_counter()
         try:
@@ -621,11 +723,15 @@ class ModelRouter:
                 api_key=api_key,
                 base_url="https://api.deepseek.com",
             )
-            response = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=8192,
-            )
+            kwargs: dict[str, Any] = {
+                "model": model,
+                "messages": openai_messages,
+                "max_tokens": 8192,
+            }
+            if openai_tools:
+                kwargs["tools"] = openai_tools
+                kwargs["tool_choice"] = "auto"
+            response = await client.chat.completions.create(**kwargs)
         except Exception as e:
             logger.error("DeepSeek API call failed: %s", e)
             return ModelResponse(
@@ -636,7 +742,38 @@ class ModelRouter:
 
         elapsed_ms = (time.perf_counter() - start) * 1000
 
-        text = response.choices[0].message.content or ""
+        choice = response.choices[0]
+        finish_reason = choice.finish_reason  # "stop" | "tool_calls" | "length"
+        stop_reason = "tool_use" if finish_reason == "tool_calls" else "end_turn"
+
+        text = choice.message.content or ""
+
+        # Build tool_calls and synthetic raw_content blocks for the tool loop
+        tool_calls = None
+        raw_content = []
+
+        if text:
+            raw_content.append(_SyntheticBlock(type="text", text=text))
+
+        if choice.message.tool_calls:
+            tool_calls = []
+            for tc in choice.message.tool_calls:
+                try:
+                    input_dict = json.loads(tc.function.arguments or "{}")
+                except json.JSONDecodeError:
+                    input_dict = {}
+                tool_calls.append({
+                    "id": tc.id,
+                    "name": tc.function.name,
+                    "input": input_dict,
+                })
+                raw_content.append(_SyntheticBlock(
+                    type="tool_use",
+                    id=tc.id,
+                    name=tc.function.name,
+                    input=input_dict,
+                ))
+
         prompt_tokens = getattr(response.usage, "prompt_tokens", 0) or 0
         response_tokens = getattr(response.usage, "completion_tokens", 0) or 0
         total_tokens = prompt_tokens + response_tokens
@@ -656,6 +793,9 @@ class ModelRouter:
             total_tokens=total_tokens,
             latency_ms=round(elapsed_ms, 1),
             cost_usd=round(cost_usd, 6),
+            tool_calls=tool_calls,
+            stop_reason=stop_reason,
+            raw_content=raw_content if raw_content else None,
         )
 
     # -------------------------------------------------------------------
